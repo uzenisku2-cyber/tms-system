@@ -4,6 +4,4 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Services;
 
-class VehicleService
-{
-}
+class VehicleService {}

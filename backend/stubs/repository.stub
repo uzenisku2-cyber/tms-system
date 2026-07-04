@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\{{ module }}\Repositories;
+
+use App\Core\Repositories\BaseRepository;
+use App\Modules\{{ module }}\Models\{{ model }};
+
+class {{ class }} extends BaseRepository
+{
+    public function __construct()
+    {
+        parent::__construct(new {{ model }}());
+    }
+}

@@ -11,8 +11,7 @@ class Generator
 {
     public function __construct(
         protected Filesystem $files,
-    ) {
-    }
+    ) {}
 
     /**
      * Vytvoří adresář, pokud neexistuje.

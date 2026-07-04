@@ -4,39 +4,21 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Support\Generator\Generator;
-use Illuminate\Console\Command;
+use App\Console\Commands\Generator\AbstractGeneratorCommand;
 
-class MakeServiceCommand extends Command
+class MakeServiceCommand extends AbstractGeneratorCommand
 {
     protected $signature = 'make:service {module} {name}';
 
     protected $description = 'Create a new module service';
 
-    public function __construct(
-        protected Generator $generator,
-    ) {
-        parent::__construct();
+    protected function stub(): string
+    {
+        return 'service.stub';
     }
 
-    public function handle(): int
+    protected function directory(): string
     {
-        $module = $this->argument('module');
-        $class = $this->argument('name');
-
-        $this->generator->generate(
-            'service.stub',
-            app_path(
-                "Modules/{$module}/Services/{$class}.php"
-            ),
-            [
-                'module' => $module,
-                'class' => $class,
-            ]
-        );
-
-        $this->info("Service {$class} created.");
-
-        return self::SUCCESS;
+        return 'Services';
     }
 }
