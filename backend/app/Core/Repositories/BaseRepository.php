@@ -13,8 +13,7 @@ abstract class BaseRepository implements RepositoryInterface
 {
     public function __construct(
         protected Model $model,
-    ) {
-    }
+    ) {}
 
     protected function query()
     {

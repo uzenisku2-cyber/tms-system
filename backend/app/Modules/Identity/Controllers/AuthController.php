@@ -13,8 +13,7 @@ class AuthController extends BaseController
 {
     public function __construct(
         private readonly AuthService $service,
-    ) {
-    }
+    ) {}
 
     public function login(LoginRequest $request): JsonResponse
     {

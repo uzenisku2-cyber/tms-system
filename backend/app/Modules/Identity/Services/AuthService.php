@@ -13,8 +13,7 @@ class AuthService extends BaseService
 {
     public function __construct(
         private readonly UserRepository $users
-    ) {
-    }
+    ) {}
 
     public function login(string $email, string $password): LoginResponseDto
     {
