@@ -393,7 +393,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php' => 
     array (
-      0 => '03304408f7302d4c049d9569b8e73a0f53022c161fe403b6223389bb3deffef0',
+      0 => 'd026c1565dfde39cba1d63b794af2e5e3324e757f9a4458c345f629175cfa3d3',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\repositories\\vehiclerepository',
@@ -499,44 +499,80 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/HR/Models/Employee.php' => 
+    '/var/www/backend/app/Console/Commands/Generator/MakeDtoCommand.php' => 
     array (
-      0 => '60a6332f9ae7ca6f6d42730a5a3840528ee8309bb1fb447aa6b71c4aed0ee3c7',
+      0 => '73c22b5ded8000a05b7ac73d69e95f4d1370dc4ea6664f2933074df6a2f00986',
       1 => 
       array (
-        0 => 'app\\modules\\hr\\models\\employee',
+        0 => 'app\\console\\commands\\generator\\makedtocommand',
       ),
       2 => 
       array (
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
       ),
       3 => 
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/HR/Repositories/EmployeeRepository.php' => 
+    '/var/www/backend/app/Console/Commands/Generator/MakeRequestCommand.php' => 
     array (
-      0 => '55d549714f3c6c51b6cee90568c3c40556bbee7928decd1ed5c7b677081766bc',
+      0 => '80858421bf9b4f2856ac971d7ff0dd03c82a89641d63b46ad62f94531b5263c4',
       1 => 
       array (
-        0 => 'app\\modules\\hr\\repositories\\employeerepository',
+        0 => 'app\\console\\commands\\generator\\makerequestcommand',
       ),
       2 => 
       array (
-        0 => 'app\\modules\\hr\\repositories\\__construct',
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
       ),
       3 => 
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/HR/Services/EmployeeService.php' => 
+    '/var/www/backend/app/Modules/Fleet/DTO/VehicleDto.php' => 
     array (
-      0 => 'd5b9a5a4e6d57a673c2cc69d8acc034b84865f3ddd9bdb7373213b2b4406461c',
+      0 => '36073f25c789205ed290c1a648268df54ee3717918356cb3fe887e9445a35f76',
       1 => 
       array (
-        0 => 'app\\modules\\hr\\services\\employeeservice',
+        0 => 'app\\modules\\fleet\\dto\\vehicledto',
       ),
       2 => 
       array (
+        0 => 'app\\modules\\fleet\\dto\\__construct',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Fleet/Requests/StoreVehicleRequest.php' => 
+    array (
+      0 => '10bbffd5d9fff05f29e37e2dd999b661870a40ad728c52e955593e7f6eb4c52a',
+      1 => 
+      array (
+        0 => 'app\\modules\\fleet\\requests\\storevehiclerequest',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\fleet\\requests\\authorize',
+        1 => 'app\\modules\\fleet\\requests\\rules',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Fleet/Requests/UpdateVehicleRequest.php' => 
+    array (
+      0 => '856f5f1bf2523fb2de700b6259fad0c8c58790b002a92c032052bb00c248b67d',
+      1 => 
+      array (
+        0 => 'app\\modules\\fleet\\requests\\updatevehiclerequest',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\fleet\\requests\\authorize',
+        1 => 'app\\modules\\fleet\\requests\\rules',
       ),
       3 => 
       array (

@@ -1,8 +1,8 @@
 <?php declare(strict_types = 1);
 
-// odsl-/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Modules\Fleet\Repositories\VehicleRepository
+// odsl-/var/www/backend/app/Modules/Fleet/DTO/VehicleDto.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Modules\Fleet\DTO\VehicleDto
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.70.0.3-8.4.23-d026c1565dfde39cba1d63b794af2e5e3324e757f9a4458c345f629175cfa3d3',
+   'variableKey' => 'v2-6.70.0.3-8.4.23-36073f25c789205ed290c1a648268df54ee3717918356cb3fe887e9445a35f76',
    'data' => 
   array (
     'locatedSource' => 
@@ -10,13 +10,13 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       'class' => 'PHPStan\\BetterReflection\\SourceLocator\\Located\\LocatedSource',
       'data' => 
       array (
-        'name' => 'App\\Modules\\Fleet\\Repositories\\VehicleRepository',
-        'filename' => '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php',
+        'name' => 'App\\Modules\\Fleet\\DTO\\VehicleDto',
+        'filename' => '/var/www/backend/app/Modules/Fleet/DTO/VehicleDto.php',
       ),
     ),
-    'namespace' => 'App\\Modules\\Fleet\\Repositories',
-    'name' => 'App\\Modules\\Fleet\\Repositories\\VehicleRepository',
-    'shortName' => 'VehicleRepository',
+    'namespace' => 'App\\Modules\\Fleet\\DTO',
+    'name' => 'App\\Modules\\Fleet\\DTO\\VehicleDto',
+    'shortName' => 'VehicleDto',
     'isInterface' => false,
     'isTrait' => false,
     'isEnum' => false,
@@ -26,11 +26,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 10,
-    'endLine' => 16,
+    'startLine' => 7,
+    'endLine' => 10,
     'startColumn' => 1,
     'endColumn' => 1,
-    'parentClassName' => 'App\\Core\\Repositories\\BaseRepository',
+    'parentClassName' => NULL,
     'implementsClassNames' => 
     array (
     ),
@@ -57,19 +57,19 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 12,
-        'endLine' => 15,
+        'startLine' => 9,
+        'endLine' => 9,
         'startColumn' => 5,
-        'endColumn' => 5,
+        'endColumn' => 36,
         'couldThrow' => false,
         'isClosure' => false,
         'isGenerator' => false,
         'isVariadic' => false,
         'modifiers' => 1,
-        'namespace' => 'App\\Modules\\Fleet\\Repositories',
-        'declaringClassName' => 'App\\Modules\\Fleet\\Repositories\\VehicleRepository',
-        'implementingClassName' => 'App\\Modules\\Fleet\\Repositories\\VehicleRepository',
-        'currentClassName' => 'App\\Modules\\Fleet\\Repositories\\VehicleRepository',
+        'namespace' => 'App\\Modules\\Fleet\\DTO',
+        'declaringClassName' => 'App\\Modules\\Fleet\\DTO\\VehicleDto',
+        'implementingClassName' => 'App\\Modules\\Fleet\\DTO\\VehicleDto',
+        'currentClassName' => 'App\\Modules\\Fleet\\DTO\\VehicleDto',
         'aliasName' => NULL,
       ),
     ),
