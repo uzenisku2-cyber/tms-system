@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
-
-use App\Console\Commands\Generator\AbstractGeneratorCommand;
+namespace App\Console\Commands\Generator;
 
 class MakeRepositoryCommand extends AbstractGeneratorCommand
 {
-    protected $signature = 'make:repository {module} {name} {model}';
+    protected $signature = 'tms:repository {module} {name} {model}';
 
     protected $description = 'Create a new module repository';
 

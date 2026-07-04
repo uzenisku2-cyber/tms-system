@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Generator;
 
 use App\Support\Generator\Generator;
 use Illuminate\Console\Command;
 
 class MakeModuleCommand extends Command
 {
-    protected $signature = 'make:module {name}';
+    protected $signature = 'tms:module {name}';
 
     protected $description = 'Create a new TMS module';
 

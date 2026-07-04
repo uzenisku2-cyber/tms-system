@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
-
-use App\Console\Commands\Generator\AbstractGeneratorCommand;
+namespace App\Console\Commands\Generator;
 
 class MakeServiceCommand extends AbstractGeneratorCommand
 {
-    protected $signature = 'make:service {module} {name}';
+    protected $signature = 'tms:service {module} {name}';
 
     protected $description = 'Create a new module service';
 

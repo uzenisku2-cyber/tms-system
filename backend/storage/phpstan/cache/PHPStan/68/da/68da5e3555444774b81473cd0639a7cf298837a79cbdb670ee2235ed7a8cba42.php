@@ -5,38 +5,6 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
    'variableKey' => 'v1-enums',
    'data' => 
   array (
-    '/var/www/backend/app/Console/Commands/MakeModuleCommand.php' => 
-    array (
-      0 => 'cc9e62ae11fd64168649eb65749e4e629e373e49d26b20f72bebd987245bf9c9',
-      1 => 
-      array (
-        0 => 'app\\console\\commands\\makemodulecommand',
-      ),
-      2 => 
-      array (
-        0 => 'app\\console\\commands\\__construct',
-        1 => 'app\\console\\commands\\handle',
-      ),
-      3 => 
-      array (
-      ),
-    ),
-    '/var/www/backend/app/Console/Commands/MakeServiceCommand.php' => 
-    array (
-      0 => '41ab597cf581b116a6eb28e1a668d0a4ecb41b09f777f48c64f58eae9309dfaf',
-      1 => 
-      array (
-        0 => 'app\\console\\commands\\makeservicecommand',
-      ),
-      2 => 
-      array (
-        0 => 'app\\console\\commands\\stub',
-        1 => 'app\\console\\commands\\directory',
-      ),
-      3 => 
-      array (
-      ),
-    ),
     '/var/www/backend/app/Core/Contracts/RepositoryInterface.php' => 
     array (
       0 => '9b6804d1f43fd839589945d66bbc02d843c30c7b1a9c3705028a31a3847217b2',
@@ -423,23 +391,6 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       array (
       ),
     ),
-    '/var/www/backend/app/Console/Commands/MakeRepositoryCommand.php' => 
-    array (
-      0 => '9e81100d5f845f391ab39f773443ab35effcfcbea63ad860d672306455819105',
-      1 => 
-      array (
-        0 => 'app\\console\\commands\\makerepositorycommand',
-      ),
-      2 => 
-      array (
-        0 => 'app\\console\\commands\\stub',
-        1 => 'app\\console\\commands\\directory',
-        2 => 'app\\console\\commands\\variables',
-      ),
-      3 => 
-      array (
-      ),
-    ),
     '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php' => 
     array (
       0 => '7fe204f0076f95927fa11386e43481edc6e22011ebc4d6cfe72b5b5c29828d84',
@@ -461,6 +412,128 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       1 => 
       array (
         0 => 'app\\modules\\fleet\\services\\driverservice',
+      ),
+      2 => 
+      array (
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Console/Commands/Generator/MakeModelCommand.php' => 
+    array (
+      0 => '46a07a6386219bd9d35d88674a73cfe935f8abff122fb284f6dd00e9b954c28b',
+      1 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\makemodelcommand',
+      ),
+      2 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Console/Commands/Generator/MakeModuleCommand.php' => 
+    array (
+      0 => 'e627b4f0ab04f89f29561b7f88390267508e2332e434e45f6d324084b0c6d203',
+      1 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\makemodulecommand',
+      ),
+      2 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\__construct',
+        1 => 'app\\console\\commands\\generator\\handle',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Console/Commands/Generator/MakeRepositoryCommand.php' => 
+    array (
+      0 => 'dadbcb41af80fdad4d4fcbcbdca3c3eb1585ebb1fef59d413aa9ad0a98904e76',
+      1 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\makerepositorycommand',
+      ),
+      2 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
+        2 => 'app\\console\\commands\\generator\\variables',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Console/Commands/Generator/MakeServiceCommand.php' => 
+    array (
+      0 => 'c1a3f5aaa096d0e76cc25875c7992a9af876529408787cfdfca0cfa01386f6c1',
+      1 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\makeservicecommand',
+      ),
+      2 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Fleet/Models/Vehicle.php' => 
+    array (
+      0 => '5c0dc5e3d9246c69403865cda18c7ccef852e6fe4448f3d6aab874f62fe278c6',
+      1 => 
+      array (
+        0 => 'app\\modules\\fleet\\models\\vehicle',
+      ),
+      2 => 
+      array (
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/HR/Models/Employee.php' => 
+    array (
+      0 => '60a6332f9ae7ca6f6d42730a5a3840528ee8309bb1fb447aa6b71c4aed0ee3c7',
+      1 => 
+      array (
+        0 => 'app\\modules\\hr\\models\\employee',
+      ),
+      2 => 
+      array (
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/HR/Repositories/EmployeeRepository.php' => 
+    array (
+      0 => '55d549714f3c6c51b6cee90568c3c40556bbee7928decd1ed5c7b677081766bc',
+      1 => 
+      array (
+        0 => 'app\\modules\\hr\\repositories\\employeerepository',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\hr\\repositories\\__construct',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/HR/Services/EmployeeService.php' => 
+    array (
+      0 => 'd5b9a5a4e6d57a673c2cc69d8acc034b84865f3ddd9bdb7373213b2b4406461c',
+      1 => 
+      array (
+        0 => 'app\\modules\\hr\\services\\employeeservice',
       ),
       2 => 
       array (
