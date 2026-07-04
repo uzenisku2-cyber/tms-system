@@ -1,20 +1,42 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
+use App\Support\Generator\Generator;
 use Illuminate\Console\Command;
 
-#[Signature('app:make-service-command')]
-#[Description('Command description')]
 class MakeServiceCommand extends Command
 {
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    protected $signature = 'make:service {module} {name}';
+
+    protected $description = 'Create a new module service';
+
+    public function __construct(
+        protected Generator $generator,
+    ) {
+        parent::__construct();
+    }
+
+    public function handle(): int
     {
-        //
+        $module = $this->argument('module');
+        $class = $this->argument('name');
+
+        $this->generator->generate(
+            'service.stub',
+            app_path(
+                "Modules/{$module}/Services/{$class}.php"
+            ),
+            [
+                'module' => $module,
+                'class' => $class,
+            ]
+        );
+
+        $this->info("Service {$class} created.");
+
+        return self::SUCCESS;
     }
 }
