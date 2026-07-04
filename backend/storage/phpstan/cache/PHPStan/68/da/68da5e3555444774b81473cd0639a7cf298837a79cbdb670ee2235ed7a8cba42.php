@@ -609,5 +609,174 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       array (
       ),
     ),
+    '/var/www/backend/app/Console/Commands/Generator/MakeControllerCommand.php' => 
+    array (
+      0 => 'e98463e2d96b21b655bdec35f7379f66c2a8fb99f98c157c976db41cc82237a2',
+      1 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\makecontrollercommand',
+      ),
+      2 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
+        2 => 'app\\console\\commands\\generator\\variables',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Console/Commands/Generator/MakeCrudCommand.php' => 
+    array (
+      0 => '3c67e976c08b4237b4020ac48760154f03271cbd05f93db761f9c15e5f494f3c',
+      1 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\makecrudcommand',
+      ),
+      2 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\handle',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php' => 
+    array (
+      0 => '807bc08b092988ef3b05d3e1f60ef6fbcbf424dbf3976421d7960dc8570ac9b5',
+      1 => 
+      array (
+        0 => 'app\\modules\\fleet\\controllers\\vehiclecontroller',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\fleet\\controllers\\__construct',
+        1 => 'app\\modules\\fleet\\controllers\\index',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Warehouse/Controllers/StockController.php' => 
+    array (
+      0 => '214b47b08c1b4e6e7531d7e31bea41d24ba3458d3dbd3a6e7a70d04079fe6584',
+      1 => 
+      array (
+        0 => 'app\\modules\\warehouse\\controllers\\stockcontroller',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\warehouse\\controllers\\__construct',
+        1 => 'app\\modules\\warehouse\\controllers\\index',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Warehouse/DTO/StockDto.php' => 
+    array (
+      0 => '6758ec7e8423b7f33e48ec95708957b38d0726490463ccd6672025dd3766854b',
+      1 => 
+      array (
+        0 => 'app\\modules\\warehouse\\dto\\stockdto',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\warehouse\\dto\\__construct',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Warehouse/Models/Stock.php' => 
+    array (
+      0 => '22a55164166ef34ecb41434824e1ef15a015b268b82a5c4fff1892ad5fed7e00',
+      1 => 
+      array (
+        0 => 'app\\modules\\warehouse\\models\\stock',
+      ),
+      2 => 
+      array (
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Warehouse/Repositories/StockRepository.php' => 
+    array (
+      0 => '6b7166354366feba60540aede8091ecdf164fa9dc95fbcc6be20cc0d72f7442c',
+      1 => 
+      array (
+        0 => 'app\\modules\\warehouse\\repositories\\stockrepository',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\warehouse\\repositories\\__construct',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Warehouse/Requests/StoreStockRequest.php' => 
+    array (
+      0 => 'efb0cda8d8a1de07019b06918904acc8b6d0f3be53566e33d3770a1b9ed43c55',
+      1 => 
+      array (
+        0 => 'app\\modules\\warehouse\\requests\\storestockrequest',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\warehouse\\requests\\authorize',
+        1 => 'app\\modules\\warehouse\\requests\\rules',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Warehouse/Requests/UpdateStockRequest.php' => 
+    array (
+      0 => '23d2026af6478420f5361d5ac9e4d5e9137a311911ef77e27c9b480136f9893c',
+      1 => 
+      array (
+        0 => 'app\\modules\\warehouse\\requests\\updatestockrequest',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\warehouse\\requests\\authorize',
+        1 => 'app\\modules\\warehouse\\requests\\rules',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Warehouse/Resources/StockResource.php' => 
+    array (
+      0 => '19ad6e07d8195b5be9b485438df499b7f278f5e896623ffd366db737bb34a039',
+      1 => 
+      array (
+        0 => 'app\\modules\\warehouse\\resources\\stockresource',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\warehouse\\resources\\toarray',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Warehouse/Services/StockService.php' => 
+    array (
+      0 => '738d23de870e5ba0d86eb2a5cdf6ce4e72192a238e940cd7d00db6a9e0894b86',
+      1 => 
+      array (
+        0 => 'app\\modules\\warehouse\\services\\stockservice',
+      ),
+      2 => 
+      array (
+      ),
+      3 => 
+      array (
+      ),
+    ),
   ),
 ));

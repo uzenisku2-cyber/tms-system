@@ -1907,6 +1907,30 @@ return [
       ),
     ),
   ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeControllerCommand.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\MethodWithoutImpurePointsCollector' => 
+    array (
+      0 => 
+      array (
+        0 => 'App\\Console\\Commands\\Generator\\MakeControllerCommand',
+        1 => 'stub',
+        2 => 'App\\Console\\Commands\\Generator\\MakeControllerCommand',
+        3 => 
+        array (
+        ),
+      ),
+      1 => 
+      array (
+        0 => 'App\\Console\\Commands\\Generator\\MakeControllerCommand',
+        1 => 'directory',
+        2 => 'App\\Console\\Commands\\Generator\\MakeControllerCommand',
+        3 => 
+        array (
+        ),
+      ),
+    ),
+  ),
   '/var/www/backend/app/Console/Commands/Generator/MakeDtoCommand.php' => 
   array (
     'PHPStan\\Rules\\DeadCode\\MethodWithoutImpurePointsCollector' => 
@@ -2149,6 +2173,19 @@ return [
         0 => 'Laravel\\Sanctum\\HasApiTokens',
         1 => 'Illuminate\\Database\\Eloquent\\Factories\\HasFactory',
         2 => 'Illuminate\\Notifications\\Notifiable',
+      ),
+    ),
+  ),
+  '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
+    array (
+      0 => 
+      array (
+        0 => 'App\\Modules\\Fleet\\Controllers\\VehicleController',
+        1 => 
+        array (
+        ),
       ),
     ),
   ),
@@ -2513,14 +2550,29 @@ return [
     'fileHash' => '0e8283af9b463f6e2ee44660c8713f785920c3ec070ebb182b9f90803b094d78',
     'dependentFiles' => 
     array (
-      0 => '/var/www/backend/app/Console/Commands/Generator/MakeDtoCommand.php',
-      1 => '/var/www/backend/app/Console/Commands/Generator/MakeModelCommand.php',
-      2 => '/var/www/backend/app/Console/Commands/Generator/MakeRepositoryCommand.php',
-      3 => '/var/www/backend/app/Console/Commands/Generator/MakeRequestCommand.php',
-      4 => '/var/www/backend/app/Console/Commands/Generator/MakeResourceCommand.php',
-      5 => '/var/www/backend/app/Console/Commands/Generator/MakeServiceCommand.php',
-      6 => '/var/www/backend/app/Console/Commands/MakeRepositoryCommand.php',
-      7 => '/var/www/backend/app/Console/Commands/MakeServiceCommand.php',
+      0 => '/var/www/backend/app/Console/Commands/Generator/MakeControllerCommand.php',
+      1 => '/var/www/backend/app/Console/Commands/Generator/MakeDtoCommand.php',
+      2 => '/var/www/backend/app/Console/Commands/Generator/MakeModelCommand.php',
+      3 => '/var/www/backend/app/Console/Commands/Generator/MakeRepositoryCommand.php',
+      4 => '/var/www/backend/app/Console/Commands/Generator/MakeRequestCommand.php',
+      5 => '/var/www/backend/app/Console/Commands/Generator/MakeResourceCommand.php',
+      6 => '/var/www/backend/app/Console/Commands/Generator/MakeServiceCommand.php',
+      7 => '/var/www/backend/app/Console/Commands/MakeRepositoryCommand.php',
+      8 => '/var/www/backend/app/Console/Commands/MakeServiceCommand.php',
+    ),
+  ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeControllerCommand.php' => 
+  array (
+    'fileHash' => 'e98463e2d96b21b655bdec35f7379f66c2a8fb99f98c157c976db41cc82237a2',
+    'dependentFiles' => 
+    array (
+    ),
+  ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeCrudCommand.php' => 
+  array (
+    'fileHash' => '3c67e976c08b4237b4020ac48760154f03271cbd05f93db761f9c15e5f494f3c',
+    'dependentFiles' => 
+    array (
     ),
   ),
   '/var/www/backend/app/Console/Commands/Generator/MakeDtoCommand.php' => 
@@ -2583,6 +2635,7 @@ return [
       3 => '/var/www/backend/app/Modules/Identity/Repositories/UserRepository.php',
       4 => '/var/www/backend/app/Modules/Identity/Services/AuthService.php',
       5 => '/var/www/backend/app/Modules/Identity/Services/UserService.php',
+      6 => '/var/www/backend/app/Modules/Warehouse/Repositories/StockRepository.php',
     ),
   ),
   '/var/www/backend/app/Core/DTO/BaseDto.php' => 
@@ -2597,9 +2650,11 @@ return [
     'fileHash' => 'c72006f91a02901b44a92f51e2c83459e804c49ae1725d003cecf809e41b2e7e',
     'dependentFiles' => 
     array (
-      0 => '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php',
-      1 => '/var/www/backend/app/Modules/Identity/Controllers/UserController.php',
-      2 => '/var/www/backend/app/Modules/Identity/Routes/api.php',
+      0 => '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php',
+      1 => '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php',
+      2 => '/var/www/backend/app/Modules/Identity/Controllers/UserController.php',
+      3 => '/var/www/backend/app/Modules/Identity/Routes/api.php',
+      4 => '/var/www/backend/app/Modules/Warehouse/Controllers/StockController.php',
     ),
   ),
   '/var/www/backend/app/Core/Repositories/BaseRepository.php' => 
@@ -2612,6 +2667,7 @@ return [
       2 => '/var/www/backend/app/Modules/Identity/Repositories/UserRepository.php',
       3 => '/var/www/backend/app/Modules/Identity/Services/AuthService.php',
       4 => '/var/www/backend/app/Modules/Identity/Services/UserService.php',
+      5 => '/var/www/backend/app/Modules/Warehouse/Repositories/StockRepository.php',
     ),
   ),
   '/var/www/backend/app/Core/Services/BaseService.php' => 
@@ -2631,15 +2687,19 @@ return [
     'dependentFiles' => 
     array (
       0 => '/var/www/backend/app/Core/Http/BaseController.php',
-      1 => '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php',
-      2 => '/var/www/backend/app/Modules/Identity/Controllers/UserController.php',
-      3 => '/var/www/backend/app/Modules/Identity/Routes/api.php',
+      1 => '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php',
+      2 => '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php',
+      3 => '/var/www/backend/app/Modules/Identity/Controllers/UserController.php',
+      4 => '/var/www/backend/app/Modules/Identity/Routes/api.php',
+      5 => '/var/www/backend/app/Modules/Warehouse/Controllers/StockController.php',
     ),
     'usedTraitDependentFiles' => 
     array (
       0 => '/var/www/backend/app/Core/Http/BaseController.php',
-      1 => '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php',
-      2 => '/var/www/backend/app/Modules/Identity/Controllers/UserController.php',
+      1 => '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php',
+      2 => '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php',
+      3 => '/var/www/backend/app/Modules/Identity/Controllers/UserController.php',
+      4 => '/var/www/backend/app/Modules/Warehouse/Controllers/StockController.php',
     ),
   ),
   '/var/www/backend/app/Http/Controllers/Controller.php' => 
@@ -2648,9 +2708,11 @@ return [
     'dependentFiles' => 
     array (
       0 => '/var/www/backend/app/Core/Http/BaseController.php',
-      1 => '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php',
-      2 => '/var/www/backend/app/Modules/Identity/Controllers/UserController.php',
-      3 => '/var/www/backend/app/Modules/Identity/Routes/api.php',
+      1 => '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php',
+      2 => '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php',
+      3 => '/var/www/backend/app/Modules/Identity/Controllers/UserController.php',
+      4 => '/var/www/backend/app/Modules/Identity/Routes/api.php',
+      5 => '/var/www/backend/app/Modules/Warehouse/Controllers/StockController.php',
     ),
   ),
   '/var/www/backend/app/Models/User.php' => 
@@ -2665,6 +2727,13 @@ return [
       4 => '/var/www/backend/app/Modules/Identity/Resources/UserResource.php',
       5 => '/var/www/backend/app/Modules/Identity/Services/AuthService.php',
       6 => '/var/www/backend/app/Modules/Identity/Services/UserService.php',
+    ),
+  ),
+  '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php' => 
+  array (
+    'fileHash' => '807bc08b092988ef3b05d3e1f60ef6fbcbf424dbf3976421d7960dc8570ac9b5',
+    'dependentFiles' => 
+    array (
     ),
   ),
   '/var/www/backend/app/Modules/Fleet/DTO/VehicleDto.php' => 
@@ -2722,6 +2791,7 @@ return [
     'fileHash' => 'd7050984b7c133dadb17f0e4123cf199a20daf7f4071913465877023e686125d',
     'dependentFiles' => 
     array (
+      0 => '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php',
     ),
   ),
   '/var/www/backend/app/Modules/Identity/Controllers/AuthController.php' => 
@@ -3030,6 +3100,55 @@ return [
     0 => 'laravel/framework',
     1 => 'symfony/http-foundation',
   ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeControllerCommand.php' => 
+  array (
+    0 => 'symfony/console',
+    1 => 'laravel/framework',
+  ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeCrudCommand.php' => 
+  array (
+    0 => 'symfony/console',
+    1 => 'laravel/framework',
+  ),
+  '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php' => 
+  array (
+    0 => 'laravel/framework',
+    1 => 'symfony/http-foundation',
+  ),
+  '/var/www/backend/app/Modules/Warehouse/Controllers/StockController.php' => 
+  array (
+    0 => 'laravel/framework',
+    1 => 'symfony/http-foundation',
+  ),
+  '/var/www/backend/app/Modules/Warehouse/DTO/StockDto.php' => 
+  array (
+  ),
+  '/var/www/backend/app/Modules/Warehouse/Models/Stock.php' => 
+  array (
+    0 => 'laravel/framework',
+  ),
+  '/var/www/backend/app/Modules/Warehouse/Repositories/StockRepository.php' => 
+  array (
+    0 => 'laravel/framework',
+  ),
+  '/var/www/backend/app/Modules/Warehouse/Requests/StoreStockRequest.php' => 
+  array (
+    0 => 'laravel/framework',
+    1 => 'symfony/http-foundation',
+  ),
+  '/var/www/backend/app/Modules/Warehouse/Requests/UpdateStockRequest.php' => 
+  array (
+    0 => 'laravel/framework',
+    1 => 'symfony/http-foundation',
+  ),
+  '/var/www/backend/app/Modules/Warehouse/Resources/StockResource.php' => 
+  array (
+    0 => 'laravel/framework',
+    1 => 'symfony/http-foundation',
+  ),
+  '/var/www/backend/app/Modules/Warehouse/Services/StockService.php' => 
+  array (
+  ),
 ),
 	'exportedNodesCallback' => static function (): array { return array (
   '/var/www/backend/app/Console/Commands/Generator/AbstractGeneratorCommand.php' => 
@@ -3138,6 +3257,230 @@ return [
           ),
         )),
         4 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'handle',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'int',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeControllerCommand.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Console\\Commands\\Generator\\MakeControllerCommand',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => 'App\\Console\\Commands\\Generator\\AbstractGeneratorCommand',
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedPropertiesNode::__set_state(array(
+           'names' => 
+          array (
+            0 => 'signature',
+          ),
+           'phpDoc' => NULL,
+           'type' => NULL,
+           'public' => false,
+           'private' => false,
+           'static' => false,
+           'readonly' => false,
+           'abstract' => false,
+           'final' => false,
+           'publicSet' => false,
+           'protectedSet' => false,
+           'privateSet' => false,
+           'virtual' => false,
+           'attributes' => 
+          array (
+          ),
+           'hooks' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedPropertiesNode::__set_state(array(
+           'names' => 
+          array (
+            0 => 'description',
+          ),
+           'phpDoc' => NULL,
+           'type' => NULL,
+           'public' => false,
+           'private' => false,
+           'static' => false,
+           'readonly' => false,
+           'abstract' => false,
+           'final' => false,
+           'publicSet' => false,
+           'protectedSet' => false,
+           'privateSet' => false,
+           'virtual' => false,
+           'attributes' => 
+          array (
+          ),
+           'hooks' => 
+          array (
+          ),
+        )),
+        2 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'stub',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => false,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'string',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        3 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'directory',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => false,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'string',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        4 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'variables',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => false,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'array',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeCrudCommand.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Console\\Commands\\Generator\\MakeCrudCommand',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => 'Illuminate\\Console\\Command',
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedPropertiesNode::__set_state(array(
+           'names' => 
+          array (
+            0 => 'signature',
+          ),
+           'phpDoc' => NULL,
+           'type' => NULL,
+           'public' => false,
+           'private' => false,
+           'static' => false,
+           'readonly' => false,
+           'abstract' => false,
+           'final' => false,
+           'publicSet' => false,
+           'protectedSet' => false,
+           'privateSet' => false,
+           'virtual' => false,
+           'attributes' => 
+          array (
+          ),
+           'hooks' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedPropertiesNode::__set_state(array(
+           'names' => 
+          array (
+            0 => 'description',
+          ),
+           'phpDoc' => NULL,
+           'type' => NULL,
+           'public' => false,
+           'private' => false,
+           'static' => false,
+           'readonly' => false,
+           'abstract' => false,
+           'final' => false,
+           'publicSet' => false,
+           'protectedSet' => false,
+           'privateSet' => false,
+           'virtual' => false,
+           'attributes' => 
+          array (
+          ),
+           'hooks' => 
+          array (
+          ),
+        )),
+        2 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'handle',
            'phpDoc' => NULL,
@@ -4820,6 +5163,81 @@ return [
             0 => '[\'password\', \'remember_token\']',
           ),
         )),
+      ),
+    )),
+  ),
+  '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Modules\\Fleet\\Controllers\\VehicleController',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => 'App\\Core\\Http\\BaseController',
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => '__construct',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => NULL,
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'service',
+               'type' => 'App\\Modules\\Fleet\\Services\\VehicleService',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+               'phpDoc' => NULL,
+               'flags' => 2,
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'index',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'Illuminate\\Http\\JsonResponse',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
       ),
     )),
   ),

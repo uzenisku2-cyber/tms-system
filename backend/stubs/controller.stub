@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\{{ module }}\Controllers;
+
+use App\Core\Http\BaseController;
+use App\Modules\{{ module }}\Services\{{ service }};
+use Illuminate\Http\JsonResponse;
+
+class {{ class }} extends BaseController
+{
+    public function __construct(
+        protected {{ service }} $service,
+    ) {
+    }
+
+    public function index(): JsonResponse
+    {
+        return $this->success([]);
+    }
+}
