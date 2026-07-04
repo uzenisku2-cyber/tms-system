@@ -1887,43 +1887,6 @@ return [
 	'projectExtensionFiles' => array (
 ),
 	'errorsCallback' => static function (): array { return array (
-  '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php' => 
-  array (
-    0 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Instantiated class App\\Models\\Vehicle not found.',
-       'file' => '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php',
-       'line' => 14,
-       'canBeIgnored' => true,
-       'filePath' => '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Learn more at https://phpstan.org/user-guide/discovering-symbols',
-       'nodeLine' => 14,
-       'nodeType' => 'PhpParser\\Node\\Expr\\New_',
-       'identifier' => 'class.notFound',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    1 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #1 $model of method App\\Core\\Repositories\\BaseRepository::__construct() expects Illuminate\\Database\\Eloquent\\Model, App\\Models\\Vehicle given.',
-       'file' => '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php',
-       'line' => 14,
-       'canBeIgnored' => true,
-       'filePath' => '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 14,
-       'nodeType' => 'PhpParser\\Node\\Expr\\StaticCall',
-       'identifier' => 'argument.type',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-  ),
 ); },
 	'locallyIgnoredErrorsCallback' => static function (): array { return array (
 ); },
@@ -2119,6 +2082,18 @@ return [
   ),
   '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php' => 
   array (
+    'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
+    array (
+      0 => 
+      array (
+        0 => 'App\\Modules\\Fleet\\Repositories\\VehicleRepository',
+        1 => 
+        array (
+          0 => 'm' . "\0" . 'app\\core\\repositories\\baserepository' . "\0" . '__construct',
+          1 => 'm' . "\0" . 'illuminate\\database\\eloquent\\model' . "\0" . '__construct',
+        ),
+      ),
+    ),
     'PHPStan\\Rules\\DeadCode\\PossiblyPureStaticCallCollector' => 
     array (
       0 => 
@@ -2549,11 +2524,12 @@ return [
     'fileHash' => '5c0dc5e3d9246c69403865cda18c7ccef852e6fe4448f3d6aab874f62fe278c6',
     'dependentFiles' => 
     array (
+      0 => '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php',
     ),
   ),
   '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php' => 
   array (
-    'fileHash' => '7fe204f0076f95927fa11386e43481edc6e22011ebc4d6cfe72b5b5c29828d84',
+    'fileHash' => '03304408f7302d4c049d9569b8e73a0f53022c161fe403b6223389bb3deffef0',
     'dependentFiles' => 
     array (
     ),
@@ -2827,6 +2803,7 @@ return [
   ),
   '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php' => 
   array (
+    0 => 'laravel/framework',
   ),
   '/var/www/backend/app/Modules/Fleet/Services/DriverService.php' => 
   array (

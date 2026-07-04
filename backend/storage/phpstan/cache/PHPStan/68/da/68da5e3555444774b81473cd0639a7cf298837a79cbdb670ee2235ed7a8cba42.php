@@ -393,7 +393,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php' => 
     array (
-      0 => '7fe204f0076f95927fa11386e43481edc6e22011ebc4d6cfe72b5b5c29828d84',
+      0 => '03304408f7302d4c049d9569b8e73a0f53022c161fe403b6223389bb3deffef0',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\repositories\\vehiclerepository',

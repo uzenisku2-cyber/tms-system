@@ -2,7 +2,7 @@
 
 // odsl-/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Modules\Fleet\Repositories\VehicleRepository
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.70.0.3-8.4.23-7fe204f0076f95927fa11386e43481edc6e22011ebc4d6cfe72b5b5c29828d84',
+   'variableKey' => 'v2-6.70.0.3-8.4.23-03304408f7302d4c049d9569b8e73a0f53022c161fe403b6223389bb3deffef0',
    'data' => 
   array (
     'locatedSource' => 
