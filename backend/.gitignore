@@ -36,4 +36,7 @@ Homestead.yaml
 Thumbs.db
 
 # PHPStan
-backend/storage/phpstan/
+# Storage
+/storage/phpstan/
+/storage/logs/
+/storage/framework/
