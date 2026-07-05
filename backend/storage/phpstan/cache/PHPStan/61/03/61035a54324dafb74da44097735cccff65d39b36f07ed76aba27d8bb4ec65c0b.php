@@ -2,7 +2,7 @@
 
 // odsl-/var/www/backend/app/Modules/Fleet/Requests/StoreVehicleRequest.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Modules\Fleet\Requests\StoreVehicleRequest
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.70.0.3-8.4.23-10bbffd5d9fff05f29e37e2dd999b661870a40ad728c52e955593e7f6eb4c52a',
+   'variableKey' => 'v2-6.70.0.3-8.4.23-c738efaa8b76536e48cb46f523fd1873350f78bd5d5f286e5356a3cc5bb74218',
    'data' => 
   array (
     'locatedSource' => 
@@ -27,7 +27,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     array (
     ),
     'startLine' => 9,
-    'endLine' => 20,
+    'endLine' => 29,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => 'Illuminate\\Foundation\\Http\\FormRequest',
@@ -101,7 +101,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         ),
         'docComment' => NULL,
         'startLine' => 16,
-        'endLine' => 19,
+        'endLine' => 28,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

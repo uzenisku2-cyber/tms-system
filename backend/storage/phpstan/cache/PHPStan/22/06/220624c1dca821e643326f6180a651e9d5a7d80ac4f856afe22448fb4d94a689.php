@@ -2,7 +2,7 @@
 
 // odsl-/var/www/backend/app/Modules/Fleet/Resources/VehicleResource.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Modules\Fleet\Resources\VehicleResource
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.70.0.3-8.4.23-d5a89ab5b9a46a149f3a882f2a625b589fa615b7612ff116ba21d59a22316266',
+   'variableKey' => 'v2-6.70.0.3-8.4.23-b88266237f98dcc2036aba3a8afa7ac3f5d78e71e87032bfffd5787a70f837f6',
    'data' => 
   array (
     'locatedSource' => 
@@ -26,8 +26,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 10,
-    'endLine' => 18,
+    'startLine' => 11,
+    'endLine' => 35,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
@@ -69,8 +69,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 12,
-            'endLine' => 12,
+            'startLine' => 16,
+            'endLine' => 16,
             'startColumn' => 29,
             'endColumn' => 44,
             'parameterIndex' => 0,
@@ -90,9 +90,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'attributes' => 
         array (
         ),
-        'docComment' => NULL,
-        'startLine' => 12,
-        'endLine' => 17,
+        'docComment' => '/**
+ * @return array<string, mixed>
+ */',
+        'startLine' => 16,
+        'endLine' => 34,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

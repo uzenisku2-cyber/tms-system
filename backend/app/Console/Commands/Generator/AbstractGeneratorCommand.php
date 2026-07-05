@@ -27,6 +27,14 @@ abstract class AbstractGeneratorCommand extends Command
         ];
     }
 
+    /**
+     * Název výsledného souboru.
+     */
+    protected function filename(): string
+    {
+        return $this->argument('name').'.php';
+    }
+
     public function handle(): int
     {
         $module = (string) $this->argument('module');
@@ -42,7 +50,7 @@ abstract class AbstractGeneratorCommand extends Command
 
         $this->generator->generate(
             $this->stub(),
-            "{$modulePath}/{$this->directory()}/{$class}.php",
+            "{$modulePath}/{$this->directory()}/{$this->filename()}",
             $this->variables(),
         );
 

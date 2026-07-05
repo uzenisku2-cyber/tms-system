@@ -2,7 +2,7 @@
 
 // odsl-/var/www/backend/app/Modules/Fleet/Requests/UpdateVehicleRequest.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Modules\Fleet\Requests\UpdateVehicleRequest
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.70.0.3-8.4.23-856f5f1bf2523fb2de700b6259fad0c8c58790b002a92c032052bb00c248b67d',
+   'variableKey' => 'v2-6.70.0.3-8.4.23-1126e06f007b390a4e1441490cdbec55366596fa5a1fb94a1cae3c978924773d',
    'data' => 
   array (
     'locatedSource' => 
@@ -26,8 +26,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 9,
-    'endLine' => 20,
+    'startLine' => 10,
+    'endLine' => 42,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => 'Illuminate\\Foundation\\Http\\FormRequest',
@@ -65,8 +65,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 11,
-        'endLine' => 14,
+        'startLine' => 12,
+        'endLine' => 15,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -100,8 +100,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 16,
-        'endLine' => 19,
+        'startLine' => 17,
+        'endLine' => 41,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

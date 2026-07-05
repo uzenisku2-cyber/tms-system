@@ -138,13 +138,18 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Services/VehicleService.php' => 
     array (
-      0 => 'd7050984b7c133dadb17f0e4123cf199a20daf7f4071913465877023e686125d',
+      0 => 'e06ee8ac3a9f4229a1dbe0ae9233053575628f8282b56b95d0b7f5692e9ab989',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\services\\vehicleservice',
       ),
       2 => 
       array (
+        0 => 'app\\modules\\fleet\\services\\__construct',
+        1 => 'app\\modules\\fleet\\services\\all',
+        2 => 'app\\modules\\fleet\\services\\create',
+        3 => 'app\\modules\\fleet\\services\\update',
+        4 => 'app\\modules\\fleet\\services\\delete',
       ),
       3 => 
       array (
@@ -374,7 +379,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Console/Commands/Generator/AbstractGeneratorCommand.php' => 
     array (
-      0 => '0e8283af9b463f6e2ee44660c8713f785920c3ec070ebb182b9f90803b094d78',
+      0 => '90f012a3ceaed2bd883749ea516ea88813c462b4963dd99002d758b49383e92e',
       1 => 
       array (
         0 => 'app\\console\\commands\\generator\\abstractgeneratorcommand',
@@ -385,7 +390,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         1 => 'app\\console\\commands\\generator\\stub',
         2 => 'app\\console\\commands\\generator\\directory',
         3 => 'app\\console\\commands\\generator\\variables',
-        4 => 'app\\console\\commands\\generator\\handle',
+        4 => 'app\\console\\commands\\generator\\filename',
+        5 => 'app\\console\\commands\\generator\\handle',
       ),
       3 => 
       array (
@@ -393,7 +399,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Repositories/VehicleRepository.php' => 
     array (
-      0 => 'd026c1565dfde39cba1d63b794af2e5e3324e757f9a4458c345f629175cfa3d3',
+      0 => '301f15b817971769057ee2293bc03b152dfff329aaf33e028fa76ec945344d73',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\repositories\\vehiclerepository',
@@ -401,6 +407,10 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       2 => 
       array (
         0 => 'app\\modules\\fleet\\repositories\\__construct',
+        1 => 'app\\modules\\fleet\\repositories\\all',
+        2 => 'app\\modules\\fleet\\repositories\\createfromdto',
+        3 => 'app\\modules\\fleet\\repositories\\updatefromdto',
+        4 => 'app\\modules\\fleet\\repositories\\deletevehicle',
       ),
       3 => 
       array (
@@ -487,7 +497,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Models/Vehicle.php' => 
     array (
-      0 => '5c0dc5e3d9246c69403865cda18c7ccef852e6fe4448f3d6aab874f62fe278c6',
+      0 => '4bf11c62348115c0afdc5abea9dfb26c7fac9b7ddbf633d89466ad3176b64a59',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\models\\vehicle',
@@ -533,7 +543,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/DTO/VehicleDto.php' => 
     array (
-      0 => '36073f25c789205ed290c1a648268df54ee3717918356cb3fe887e9445a35f76',
+      0 => '82962ea703a4c55efddafbad15e8106ce4fbc94112cfd57979d7c7023eaaa4b7',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\dto\\vehicledto',
@@ -541,6 +551,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       2 => 
       array (
         0 => 'app\\modules\\fleet\\dto\\__construct',
+        1 => 'app\\modules\\fleet\\dto\\fromarray',
+        2 => 'app\\modules\\fleet\\dto\\toarray',
       ),
       3 => 
       array (
@@ -548,7 +560,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Requests/StoreVehicleRequest.php' => 
     array (
-      0 => '10bbffd5d9fff05f29e37e2dd999b661870a40ad728c52e955593e7f6eb4c52a',
+      0 => 'c738efaa8b76536e48cb46f523fd1873350f78bd5d5f286e5356a3cc5bb74218',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\requests\\storevehiclerequest',
@@ -564,7 +576,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Requests/UpdateVehicleRequest.php' => 
     array (
-      0 => '856f5f1bf2523fb2de700b6259fad0c8c58790b002a92c032052bb00c248b67d',
+      0 => '1126e06f007b390a4e1441490cdbec55366596fa5a1fb94a1cae3c978924773d',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\requests\\updatevehiclerequest',
@@ -596,7 +608,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Resources/VehicleResource.php' => 
     array (
-      0 => 'd5a89ab5b9a46a149f3a882f2a625b589fa615b7612ff116ba21d59a22316266',
+      0 => 'b88266237f98dcc2036aba3a8afa7ac3f5d78e71e87032bfffd5787a70f837f6',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\resources\\vehicleresource',
@@ -643,7 +655,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/var/www/backend/app/Modules/Fleet/Controllers/VehicleController.php' => 
     array (
-      0 => '807bc08b092988ef3b05d3e1f60ef6fbcbf424dbf3976421d7960dc8570ac9b5',
+      0 => '322b6882e860f86b9548ea01dd40b106b030197bcbe72480621168837c3911a5',
       1 => 
       array (
         0 => 'app\\modules\\fleet\\controllers\\vehiclecontroller',
@@ -652,48 +664,53 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       array (
         0 => 'app\\modules\\fleet\\controllers\\__construct',
         1 => 'app\\modules\\fleet\\controllers\\index',
+        2 => 'app\\modules\\fleet\\controllers\\store',
+        3 => 'app\\modules\\fleet\\controllers\\show',
+        4 => 'app\\modules\\fleet\\controllers\\update',
+        5 => 'app\\modules\\fleet\\controllers\\destroy',
       ),
       3 => 
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/Warehouse/Controllers/StockController.php' => 
+    '/var/www/backend/app/Console/Commands/Generator/MakeMigrationCommand.php' => 
     array (
-      0 => '214b47b08c1b4e6e7531d7e31bea41d24ba3458d3dbd3a6e7a70d04079fe6584',
+      0 => '5721c264372ed143e088c8a0611d094529c4ac8a330e8b2cbbd387f451508625',
       1 => 
       array (
-        0 => 'app\\modules\\warehouse\\controllers\\stockcontroller',
+        0 => 'app\\console\\commands\\generator\\makemigrationcommand',
       ),
       2 => 
       array (
-        0 => 'app\\modules\\warehouse\\controllers\\__construct',
-        1 => 'app\\modules\\warehouse\\controllers\\index',
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
+        2 => 'app\\console\\commands\\generator\\filename',
+        3 => 'app\\console\\commands\\generator\\variables',
       ),
       3 => 
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/Warehouse/DTO/StockDto.php' => 
+    '/var/www/backend/app/Modules/Fleet/Database/Migrations/2026_07_04_225154_create_vehicles_table.php' => 
     array (
-      0 => '6758ec7e8423b7f33e48ec95708957b38d0726490463ccd6672025dd3766854b',
+      0 => 'b8ea559faa61461ec6b2fff1ab2e6cf96d542cd548916e694d66ff2cc63c895d',
       1 => 
       array (
-        0 => 'app\\modules\\warehouse\\dto\\stockdto',
       ),
       2 => 
       array (
-        0 => 'app\\modules\\warehouse\\dto\\__construct',
+        0 => 'up',
+        1 => 'down',
       ),
       3 => 
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/Warehouse/Models/Stock.php' => 
+    '/var/www/backend/app/Modules/Fleet/Routes/api.php' => 
     array (
-      0 => '22a55164166ef34ecb41434824e1ef15a015b268b82a5c4fff1892ad5fed7e00',
+      0 => 'c0e3d232c68e9cbe14a6a33bae24bd166818fc41cd32f6cf0ccaf782cc8a8bc6',
       1 => 
       array (
-        0 => 'app\\modules\\warehouse\\models\\stock',
       ),
       2 => 
       array (
@@ -702,77 +719,49 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/Warehouse/Repositories/StockRepository.php' => 
+    '/var/www/backend/app/Providers/ModuleServiceProvider.php' => 
     array (
-      0 => '6b7166354366feba60540aede8091ecdf164fa9dc95fbcc6be20cc0d72f7442c',
+      0 => 'ec65fd0993ceb7948f12707eac88e28e29f43c12d5328c62b3c547e798fe98af',
       1 => 
       array (
-        0 => 'app\\modules\\warehouse\\repositories\\stockrepository',
+        0 => 'app\\providers\\moduleserviceprovider',
       ),
       2 => 
       array (
-        0 => 'app\\modules\\warehouse\\repositories\\__construct',
+        0 => 'app\\providers\\boot',
+        1 => 'app\\providers\\loadmodule',
       ),
       3 => 
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/Warehouse/Requests/StoreStockRequest.php' => 
+    '/var/www/backend/app/Console/Commands/Generator/MakeFactoryCommand.php' => 
     array (
-      0 => 'efb0cda8d8a1de07019b06918904acc8b6d0f3be53566e33d3770a1b9ed43c55',
+      0 => 'daa8e7f09a7e06cac50b3b42e76b51bb660f352fe61bd32f6010d6562f7ec74f',
       1 => 
       array (
-        0 => 'app\\modules\\warehouse\\requests\\storestockrequest',
+        0 => 'app\\console\\commands\\generator\\makefactorycommand',
       ),
       2 => 
       array (
-        0 => 'app\\modules\\warehouse\\requests\\authorize',
-        1 => 'app\\modules\\warehouse\\requests\\rules',
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
+        2 => 'app\\console\\commands\\generator\\variables',
       ),
       3 => 
       array (
       ),
     ),
-    '/var/www/backend/app/Modules/Warehouse/Requests/UpdateStockRequest.php' => 
+    '/var/www/backend/app/Modules/Fleet/Database/Factories/VehicleFactory.php' => 
     array (
-      0 => '23d2026af6478420f5361d5ac9e4d5e9137a311911ef77e27c9b480136f9893c',
+      0 => '1d2395f43a713cf84e0f393a4435dffdfb53aa7598dd98fcbacfca617647b446',
       1 => 
       array (
-        0 => 'app\\modules\\warehouse\\requests\\updatestockrequest',
+        0 => 'app\\modules\\fleet\\database\\factories\\vehiclefactory',
       ),
       2 => 
       array (
-        0 => 'app\\modules\\warehouse\\requests\\authorize',
-        1 => 'app\\modules\\warehouse\\requests\\rules',
-      ),
-      3 => 
-      array (
-      ),
-    ),
-    '/var/www/backend/app/Modules/Warehouse/Resources/StockResource.php' => 
-    array (
-      0 => '19ad6e07d8195b5be9b485438df499b7f278f5e896623ffd366db737bb34a039',
-      1 => 
-      array (
-        0 => 'app\\modules\\warehouse\\resources\\stockresource',
-      ),
-      2 => 
-      array (
-        0 => 'app\\modules\\warehouse\\resources\\toarray',
-      ),
-      3 => 
-      array (
-      ),
-    ),
-    '/var/www/backend/app/Modules/Warehouse/Services/StockService.php' => 
-    array (
-      0 => '738d23de870e5ba0d86eb2a5cdf6ce4e72192a238e940cd7d00db6a9e0894b86',
-      1 => 
-      array (
-        0 => 'app\\modules\\warehouse\\services\\stockservice',
-      ),
-      2 => 
-      array (
+        0 => 'app\\modules\\fleet\\database\\factories\\definition',
       ),
       3 => 
       array (

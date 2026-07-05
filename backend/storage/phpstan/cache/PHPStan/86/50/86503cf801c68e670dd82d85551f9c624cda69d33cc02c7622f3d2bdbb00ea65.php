@@ -2,7 +2,7 @@
 
 // odsl-/var/www/backend/app/Console/Commands/Generator/AbstractGeneratorCommand.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Console\Commands\Generator\AbstractGeneratorCommand
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.70.0.3-8.4.23-0e8283af9b463f6e2ee44660c8713f785920c3ec070ebb182b9f90803b094d78',
+   'variableKey' => 'v2-6.70.0.3-8.4.23-90f012a3ceaed2bd883749ea516ea88813c462b4963dd99002d758b49383e92e',
    'data' => 
   array (
     'locatedSource' => 
@@ -27,7 +27,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     array (
     ),
     'startLine' => 10,
-    'endLine' => 53,
+    'endLine' => 61,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => 'Illuminate\\Console\\Command',
@@ -234,6 +234,43 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'currentClassName' => 'App\\Console\\Commands\\Generator\\AbstractGeneratorCommand',
         'aliasName' => NULL,
       ),
+      'filename' => 
+      array (
+        'name' => 'filename',
+        'parameters' => 
+        array (
+        ),
+        'returnsReference' => false,
+        'returnType' => 
+        array (
+          'class' => 'PHPStan\\BetterReflection\\Reflection\\ReflectionNamedType',
+          'data' => 
+          array (
+            'name' => 'string',
+            'isIdentifier' => true,
+          ),
+        ),
+        'attributes' => 
+        array (
+        ),
+        'docComment' => '/**
+ * Název výsledného souboru.
+ */',
+        'startLine' => 33,
+        'endLine' => 36,
+        'startColumn' => 5,
+        'endColumn' => 5,
+        'couldThrow' => false,
+        'isClosure' => false,
+        'isGenerator' => false,
+        'isVariadic' => false,
+        'modifiers' => 2,
+        'namespace' => 'App\\Console\\Commands\\Generator',
+        'declaringClassName' => 'App\\Console\\Commands\\Generator\\AbstractGeneratorCommand',
+        'implementingClassName' => 'App\\Console\\Commands\\Generator\\AbstractGeneratorCommand',
+        'currentClassName' => 'App\\Console\\Commands\\Generator\\AbstractGeneratorCommand',
+        'aliasName' => NULL,
+      ),
       'handle' => 
       array (
         'name' => 'handle',
@@ -254,8 +291,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 30,
-        'endLine' => 52,
+        'startLine' => 38,
+        'endLine' => 60,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
