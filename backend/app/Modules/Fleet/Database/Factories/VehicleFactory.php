@@ -19,6 +19,25 @@ class VehicleFactory extends Factory
      */
     public function definition(): array
     {
-        return [];
+        return [
+            'registration_number' => strtoupper(fake()->bothify('?? ###??')),
+            'vin' => strtoupper(fake()->bothify('#################')),
+            'manufacturer' => fake()->randomElement([
+                'Volvo',
+                'Scania',
+                'Mercedes-Benz',
+                'MAN',
+                'DAF',
+            ]),
+            'model' => fake()->word(),
+            'year' => fake()->numberBetween(2015, now()->year),
+            'fuel_type' => fake()->randomElement([
+                'diesel',
+                'electric',
+                'lng',
+            ]),
+            'mileage' => fake()->numberBetween(0, 900000),
+            'active' => fake()->boolean(90),
+        ];
     }
 }

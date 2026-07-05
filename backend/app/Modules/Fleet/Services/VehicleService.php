@@ -7,6 +7,7 @@ namespace App\Modules\Fleet\Services;
 use App\Modules\Fleet\DTO\VehicleDto;
 use App\Modules\Fleet\Models\Vehicle;
 use App\Modules\Fleet\Repositories\VehicleRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 class VehicleService
@@ -18,6 +19,11 @@ class VehicleService
     public function all(): Collection
     {
         return $this->repository->all();
+    }
+
+    public function paginate(array $filters): LengthAwarePaginator
+    {
+        return $this->repository->paginateFiltered($filters);
     }
 
     public function create(

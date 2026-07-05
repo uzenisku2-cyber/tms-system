@@ -9,6 +9,7 @@ use App\Modules\Fleet\DTO\VehicleDto;
 use App\Modules\Fleet\Models\Vehicle;
 use App\Modules\Fleet\Requests\StoreVehicleRequest;
 use App\Modules\Fleet\Requests\UpdateVehicleRequest;
+use App\Modules\Fleet\Requests\VehicleIndexRequest;
 use App\Modules\Fleet\Resources\VehicleResource;
 use App\Modules\Fleet\Services\VehicleService;
 use Illuminate\Http\JsonResponse;
@@ -19,18 +20,17 @@ class VehicleController extends BaseController
         protected VehicleService $service,
     ) {}
 
-    public function index(): JsonResponse
+    public function index(VehicleIndexRequest $request): JsonResponse
     {
         return $this->success(
             VehicleResource::collection(
-                $this->service->all()
+                $this->service->paginate($request->validated())
             )
         );
     }
 
-    public function store(
-        StoreVehicleRequest $request,
-    ): JsonResponse {
+    public function store(StoreVehicleRequest $request): JsonResponse
+    {
         $vehicle = $this->service->create(
             VehicleDto::fromArray(
                 $request->validated()
@@ -44,9 +44,8 @@ class VehicleController extends BaseController
         );
     }
 
-    public function show(
-        Vehicle $vehicle,
-    ): JsonResponse {
+    public function show(Vehicle $vehicle): JsonResponse
+    {
         return $this->success(
             new VehicleResource($vehicle)
         );
@@ -68,9 +67,8 @@ class VehicleController extends BaseController
         );
     }
 
-    public function destroy(
-        Vehicle $vehicle,
-    ): JsonResponse {
+    public function destroy(Vehicle $vehicle): JsonResponse
+    {
         $this->service->delete($vehicle);
 
         return $this->success(
