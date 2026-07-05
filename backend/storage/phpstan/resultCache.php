@@ -2709,6 +2709,13 @@ return [
     array (
     ),
   ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeSeederCommand.php' => 
+  array (
+    'fileHash' => '218512e622ba072071e478248d539d4c5f06aa1dbe673c4c9fd6dfaa4ed5f43e',
+    'dependentFiles' => 
+    array (
+    ),
+  ),
   '/var/www/backend/app/Console/Commands/Generator/MakeServiceCommand.php' => 
   array (
     'fileHash' => 'c1a3f5aaa096d0e76cc25875c7992a9af876529408787cfdfca0cfa01386f6c1',
@@ -2854,6 +2861,13 @@ return [
   '/var/www/backend/app/Modules/Fleet/Database/Migrations/2026_07_04_225154_create_vehicles_table.php' => 
   array (
     'fileHash' => 'b8ea559faa61461ec6b2fff1ab2e6cf96d542cd548916e694d66ff2cc63c895d',
+    'dependentFiles' => 
+    array (
+    ),
+  ),
+  '/var/www/backend/app/Modules/Fleet/Database/Seeders/VehicleSeeder.php' => 
+  array (
+    'fileHash' => 'e9617935fc1ca3145115d8e60613b0243122d2eaa756b2eefbfc34cb6d2ce5cc',
     'dependentFiles' => 
     array (
     ),
@@ -3313,6 +3327,13 @@ return [
   array (
   ),
   '/var/www/backend/app/Modules/Fleet/Database/Factories/VehicleFactory.php' => 
+  array (
+    0 => 'laravel/framework',
+  ),
+  '/var/www/backend/app/Console/Commands/Generator/MakeSeederCommand.php' => 
+  array (
+  ),
+  '/var/www/backend/app/Modules/Fleet/Database/Seeders/VehicleSeeder.php' => 
   array (
     0 => 'laravel/framework',
   ),
@@ -6006,6 +6027,50 @@ return [
            'final' => false,
            'static' => false,
            'returnType' => 'array',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
+  '/var/www/backend/app/Modules/Fleet/Database/Seeders/VehicleSeeder.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Modules\\Fleet\\Database\\Seeders\\VehicleSeeder',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => 'Illuminate\\Database\\Seeder',
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'run',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'void',
            'parameters' => 
           array (
           ),

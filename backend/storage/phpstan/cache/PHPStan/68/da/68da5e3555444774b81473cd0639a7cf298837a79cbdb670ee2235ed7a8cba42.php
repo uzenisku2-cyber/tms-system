@@ -767,5 +767,36 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       array (
       ),
     ),
+    '/var/www/backend/app/Console/Commands/Generator/MakeSeederCommand.php' => 
+    array (
+      0 => '218512e622ba072071e478248d539d4c5f06aa1dbe673c4c9fd6dfaa4ed5f43e',
+      1 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\makeseedercommand',
+      ),
+      2 => 
+      array (
+        0 => 'app\\console\\commands\\generator\\stub',
+        1 => 'app\\console\\commands\\generator\\directory',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/var/www/backend/app/Modules/Fleet/Database/Seeders/VehicleSeeder.php' => 
+    array (
+      0 => 'e9617935fc1ca3145115d8e60613b0243122d2eaa756b2eefbfc34cb6d2ce5cc',
+      1 => 
+      array (
+        0 => 'app\\modules\\fleet\\database\\seeders\\vehicleseeder',
+      ),
+      2 => 
+      array (
+        0 => 'app\\modules\\fleet\\database\\seeders\\run',
+      ),
+      3 => 
+      array (
+      ),
+    ),
   ),
 ));
