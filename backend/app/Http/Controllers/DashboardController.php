@@ -287,6 +287,80 @@ class DashboardController extends Controller
 
 
 
+        $operations = [
+
+
+            'today' => [
+
+
+                'created' =>
+
+                    Trip::whereDate(
+                        'created_at',
+                        Carbon::today()
+                    )->count(),
+
+
+
+                'finished' =>
+
+                    Trip::where(
+                        'status',
+                        Trip::STATUS_FINISHED
+                    )
+                    ->whereDate(
+                        'finished_at',
+                        Carbon::today()
+                    )
+                    ->count(),
+
+
+
+                'cancelled' =>
+
+                    Trip::where(
+                        'status',
+                        Trip::STATUS_CANCELLED
+                    )
+                    ->whereDate(
+                        'cancelled_at',
+                        Carbon::today()
+                    )
+                    ->count(),
+
+
+            ],
+
+
+
+            'fleet' => [
+
+
+                'total' =>
+
+                    Vehicle::count(),
+
+
+
+                'active' =>
+
+                    Vehicle::where(
+                        'active',
+                        true
+                    )->count(),
+
+
+            ],
+
+
+        ];
+
+
+
+
+
+
+
         return new DashboardResource([
 
 
@@ -313,6 +387,11 @@ class DashboardController extends Controller
             'alerts' =>
 
                 $alerts,
+
+
+            'operations' =>
+
+                $operations,
 
 
             'notifications' =>

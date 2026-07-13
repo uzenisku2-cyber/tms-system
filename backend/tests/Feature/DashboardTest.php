@@ -60,6 +60,7 @@ class DashboardTest extends TestCase
 
 
 
+
     protected function createTrip(
 
         User $user,
@@ -330,6 +331,95 @@ class DashboardTest extends TestCase
             1
 
         );
+
+
+    }
+    public function test_dashboard_returns_operations_data(): void
+    {
+
+
+        $user = $this->authenticate();
+
+
+
+
+        $this->createTrip(
+
+            $user,
+
+            Trip::STATUS_STARTED
+
+        );
+
+
+
+
+        $response = $this->getJson(
+
+            '/api/v1/dashboard'
+
+        );
+
+
+
+
+        $response->assertStatus(200);
+
+
+
+
+        $response->assertJsonStructure([
+
+
+
+            'data' => [
+
+
+
+                'operations' => [
+
+
+
+                    'today' => [
+
+
+                        'created',
+
+
+                        'finished',
+
+
+                        'cancelled',
+
+
+                    ],
+
+
+
+
+                    'fleet' => [
+
+
+                        'total',
+
+
+                        'active',
+
+
+                    ],
+
+
+
+                ],
+
+
+
+            ],
+
+
+
+        ]);
+
 
 
     }

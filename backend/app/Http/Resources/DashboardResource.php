@@ -7,7 +7,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Http\Resources\AlertResource;
 
 
 class DashboardResource extends JsonResource
@@ -54,48 +53,57 @@ class DashboardResource extends JsonResource
             'alerts' => [
 
 
-    'open' =>
+                'open' =>
 
-        $this->resource['alerts']['open'] ?? 0,
-
-
-
-    'critical' =>
-
-        $this->resource['alerts']['critical'] ?? 0,
+                    $this->resource['alerts']['open'] ?? 0,
 
 
 
-    'latest' =>
+                'critical' =>
 
-        AlertResource::collection(
-
-            $this->resource['alerts']['latest'] ?? []
-
-        ),
+                    $this->resource['alerts']['critical'] ?? 0,
 
 
-],
+
+                'latest' =>
+
+                    AlertResource::collection(
+
+                        $this->resource['alerts']['latest'] ?? []
+
+                    ),
+
+
+            ],
+
+
+
+            'operations' =>
+
+                $this->resource['operations'] ?? [],
+
+
 
             'notifications' => [
 
 
-    'unread' =>
+                'unread' =>
 
-        $this->resource['notifications']['unread'] ?? 0,
-
-
-
-    'latest' =>
-
-        NotificationResource::collection(
-
-            $this->resource['notifications']['latest'] ?? []
-
-        ),
+                    $this->resource['notifications']['unread'] ?? 0,
 
 
-],
+
+                'latest' =>
+
+                    NotificationResource::collection(
+
+                        $this->resource['notifications']['latest'] ?? []
+
+                    ),
+
+
+            ],
+
 
         ];
 
