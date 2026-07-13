@@ -4,45 +4,107 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Models;
 
-use App\Modules\Fleet\Database\Factories\VehicleFactory;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\User;
+use App\Modules\Trips\Models\Trip;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * @property int $id
- * @property string $registration_number
- * @property string $vin
- * @property string $manufacturer
- * @property string $model
- * @property int|null $year
- * @property string|null $fuel_type
- * @property int $mileage
- * @property bool $active
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- *
- * @method static VehicleFactory factory($count = null, $state = [])
- */
 class Vehicle extends Model
 {
-    use HasFactory;
+    protected $fillable = [
 
-    protected $guarded = [];
+        'user_id',
 
-    /**
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'year' => 'integer',
-        'mileage' => 'integer',
-        'active' => 'boolean',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'registration_number',
+
+        'vin',
+
+        'manufacturer',
+
+        'model',
+
+        'year',
+
+        'fuel_type',
+
+        'mileage',
+
+        'active',
+
     ];
 
-    protected static function newFactory(): VehicleFactory
+
+    protected $casts = [
+
+        'active' => 'boolean',
+
+        'year' => 'integer',
+
+        'mileage' => 'integer',
+
+    ];
+
+
+    /**
+     * Uživatel, kterému vozidlo patří.
+     */
+    public function user(): BelongsTo
     {
-        return VehicleFactory::new();
+        return $this->belongsTo(
+            User::class
+        );
+    }
+
+
+    /**
+     * Jízdy tohoto vozidla.
+     */
+    public function trips(): HasMany
+    {
+        return $this->hasMany(
+            Trip::class,
+            'vehicle_id'
+        );
+    }
+
+
+    /**
+     * Má vozidlo aktivní jízdu?
+     */
+    public function hasActiveTrip(): bool
+    {
+        return $this->trips()
+
+            ->whereIn(
+                'status',
+                [
+                    Trip::STATUS_ASSIGNED,
+                    Trip::STATUS_STARTED,
+                ]
+            )
+
+            ->exists();
+    }
+
+
+    /**
+     * Je vozidlo dostupné?
+     */
+    public function isAvailable(): bool
+    {
+        return !$this->hasActiveTrip();
+    }
+
+
+    /**
+     * Označení vozidla.
+     */
+    public function getLabelAttribute(): string
+    {
+        return trim(
+            $this->manufacturer . ' ' . $this->model
+            . ' (' . $this->registration_number . ')'
+        );
     }
 }

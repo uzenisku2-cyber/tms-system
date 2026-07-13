@@ -1,50 +1,47 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Modules\Fleet\Services;
 
-use App\Modules\Fleet\DTO\VehicleDto;
-use App\Modules\Fleet\Models\Vehicle;
-use App\Modules\Fleet\Repositories\VehicleRepository;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
+use App\Modules\Fleet\Application\Commands\CreateVehicleCommand;
+use App\Modules\Fleet\Application\CommandHandlers\CreateVehicleHandler;
+
+use App\Modules\Fleet\Application\DTO\VehicleDto;
+use App\Modules\Fleet\Domain\Models\Vehicle;
 
 class VehicleService
 {
     public function __construct(
-        protected VehicleRepository $repository,
+        private CreateVehicleHandler $createHandler
     ) {}
 
-    public function all(): Collection
+    /**
+     * CREATE VEHICLE (WRITE CQRS ENTRY POINT)
+     */
+    public function create(VehicleDto $dto): Vehicle
     {
-        return $this->repository->all();
-    }
-
-    public function paginate(array $filters): LengthAwarePaginator
-    {
-        return $this->repository->paginateFiltered($filters);
-    }
-
-    public function create(
-        VehicleDto $dto,
-    ): Vehicle {
-        return $this->repository->createFromDto($dto);
-    }
-
-    public function update(
-        Vehicle $vehicle,
-        VehicleDto $dto,
-    ): Vehicle {
-        return $this->repository->updateFromDto(
-            $vehicle,
-            $dto,
+        $command = new CreateVehicleCommand(
+            userId: auth()->id(),
+            data: $dto->toArray()
         );
+
+        return $this->createHandler->handle($command);
     }
 
-    public function delete(
-        Vehicle $vehicle,
-    ): bool {
-        return $this->repository->deleteVehicle($vehicle);
+    /**
+     * UPDATE (zatím klasicky – později přes UpdateVehicleCommand)
+     */
+    public function update(Vehicle $vehicle, VehicleDto $dto): Vehicle
+    {
+        $vehicle->update($dto->toArray());
+
+        return $vehicle;
+    }
+
+    /**
+     * DELETE (zatím klasicky – později přes DeleteVehicleCommand)
+     */
+    public function delete(Vehicle $vehicle): void
+    {
+        $vehicle->delete();
     }
 }

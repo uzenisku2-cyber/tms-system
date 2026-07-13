@@ -1,13 +1,16 @@
 <?php
 
-declare(strict_types=1);
-
-use App\Modules\Fleet\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
+use App\Modules\Fleet\Controllers\VehicleController;
 
-Route::prefix('fleet')->group(function (): void {
-    Route::apiResource(
-        'vehicles',
-        VehicleController::class
-    );
+/*
+|--------------------------------------------------------------------------
+| FLEET MODULE
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::apiResource('vehicles', VehicleController::class);
+
 });

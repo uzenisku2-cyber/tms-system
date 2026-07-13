@@ -1,19 +1,21 @@
 <?php
 
-use App\Modules\Identity\Controllers\AuthController;
-use App\Modules\Identity\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Modules\Identity\Controllers\AuthController;
 
-Route::post('/login', [AuthController::class, 'login']);
+/*
+|--------------------------------------------------------------------------
+| AUTH MODULE (Identity)
+|--------------------------------------------------------------------------
+*/
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::prefix('auth')->group(function () {
 
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/login', [AuthController::class, 'login']);
 
-    Route::get('/users', [UserController::class, 'index']);
-    Route::get('/users/{id}', [UserController::class, 'show']);
-    Route::post('/users', [UserController::class, 'store']);
-    Route::put('/users/{id}', [UserController::class, 'update']);
-    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me', [AuthController::class, 'me']);
+    });
+
 });

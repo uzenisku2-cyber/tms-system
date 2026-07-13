@@ -1,78 +1,176 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Modules\Fleet\Controllers;
 
-use App\Core\Http\BaseController;
-use App\Modules\Fleet\DTO\VehicleDto;
+use App\Core\Bus\CommandBus;
+use App\Core\Observability\Trace;
+use App\Http\Controllers\Controller;
+use App\Modules\Fleet\Application\Commands\CreateVehicleCommand;
 use App\Modules\Fleet\Models\Vehicle;
-use App\Modules\Fleet\Requests\StoreVehicleRequest;
-use App\Modules\Fleet\Requests\UpdateVehicleRequest;
-use App\Modules\Fleet\Requests\VehicleIndexRequest;
-use App\Modules\Fleet\Resources\VehicleResource;
-use App\Modules\Fleet\Services\VehicleService;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class VehicleController extends BaseController
+class VehicleController extends Controller
 {
-    public function __construct(
-        protected VehicleService $service,
-    ) {}
-
-    public function index(VehicleIndexRequest $request): JsonResponse
+    public function index()
     {
-        return $this->success(
-            VehicleResource::collection(
-                $this->service->paginate($request->validated())
+        Trace::log('http.index', [
+            'endpoint' => 'vehicles.index',
+            'user_id' => auth()->id(),
+        ]);
+
+        return response()->json(
+            Vehicle::with('user')
+                ->where('user_id', auth()->id())
+                ->get()
+        );
+    }
+
+
+    public function store(Request $request, CommandBus $bus)
+    {
+        $validated = $request->validate([
+            'plate_number' => [
+                'required',
+                'string',
+                'unique:vehicles,registration_number',
+            ],
+
+            'manufacturer' => [
+                'required',
+                'string',
+            ],
+
+            'model' => [
+                'required',
+                'string',
+            ],
+
+            'vin' => [
+                'nullable',
+                'string',
+            ],
+        ]);
+
+
+        Trace::log('http.store', [
+            'endpoint' => 'vehicles.store',
+            'user_id' => auth()->id(),
+            'payload' => $validated,
+        ]);
+
+
+        $bus->dispatch(
+            new CreateVehicleCommand(
+                userId: auth()->id(),
+                data: [
+                    'plate_number' => $validated['plate_number'],
+                    'vin' => $validated['vin'] ?? null,
+                    'manufacturer' => $validated['manufacturer'],
+                    'model' => $validated['model'],
+                ]
             )
         );
+
+
+        return response()->json([
+            'status' => 'queued',
+        ], 202);
     }
 
-    public function store(StoreVehicleRequest $request): JsonResponse
+
+    public function show(Vehicle $vehicle)
     {
-        $vehicle = $this->service->create(
-            VehicleDto::fromArray(
-                $request->validated()
-            )
-        );
+        $this->authorizeVehicle($vehicle);
 
-        return $this->success(
-            new VehicleResource($vehicle),
-            'Created',
-            201,
+
+        Trace::log('http.show', [
+            'vehicle_id' => $vehicle->id,
+        ]);
+
+
+        return response()->json(
+            $vehicle->load('user')
         );
     }
 
-    public function show(Vehicle $vehicle): JsonResponse
+
+    public function update(Request $request, Vehicle $vehicle)
     {
-        return $this->success(
-            new VehicleResource($vehicle)
-        );
+        $this->authorizeVehicle($vehicle);
+
+
+        $validated = $request->validate([
+            'manufacturer' => [
+                'sometimes',
+                'string',
+            ],
+
+            'model' => [
+                'sometimes',
+                'string',
+            ],
+
+            'fuel_type' => [
+                'nullable',
+                'string',
+            ],
+
+            'year' => [
+                'nullable',
+                'integer',
+            ],
+
+            'mileage' => [
+                'nullable',
+                'integer',
+            ],
+
+            'active' => [
+                'nullable',
+                'boolean',
+            ],
+        ]);
+
+
+        Trace::log('http.update', [
+            'vehicle_id' => $vehicle->id,
+            'payload' => $validated,
+        ]);
+
+
+        $vehicle->update($validated);
+
+
+        return response()->json([
+            'status' => 'updated',
+            'data' => $vehicle,
+        ]);
     }
 
-    public function update(
-        UpdateVehicleRequest $request,
-        Vehicle $vehicle,
-    ): JsonResponse {
-        $vehicle = $this->service->update(
-            $vehicle,
-            VehicleDto::fromArray(
-                $request->validated()
-            )
-        );
 
-        return $this->success(
-            new VehicleResource($vehicle)
-        );
-    }
-
-    public function destroy(Vehicle $vehicle): JsonResponse
+    public function destroy(Vehicle $vehicle)
     {
-        $this->service->delete($vehicle);
+        $this->authorizeVehicle($vehicle);
 
-        return $this->success(
-            message: 'Deleted'
-        );
+
+        Trace::log('http.destroy', [
+            'vehicle_id' => $vehicle->id,
+        ]);
+
+
+        $vehicle->delete();
+
+
+        return response()->json([
+            'status' => 'deleted',
+        ]);
+    }
+
+
+    private function authorizeVehicle(Vehicle $vehicle): void
+    {
+        if ($vehicle->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized vehicle access.');
+        }
     }
 }
