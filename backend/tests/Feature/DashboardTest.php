@@ -236,7 +236,105 @@ class DashboardTest extends TestCase
                 'alerts',
 
 
+                'operations',
+
+
+                'fleet_health',
+
+
                 'notifications',
+
+
+            ],
+
+
+
+        ]);
+
+
+
+    }
+
+
+
+
+
+
+
+
+
+    public function test_dashboard_returns_fleet_health(): void
+    {
+
+
+        $user = $this->authenticate();
+
+
+
+
+        $this->createTrip(
+
+            $user,
+
+            Trip::STATUS_STARTED
+
+        );
+
+
+
+
+        $response = $this->getJson(
+
+            '/api/v1/dashboard'
+
+        );
+
+
+
+
+        $response->assertStatus(200);
+
+
+
+
+        $response->assertJsonStructure([
+
+
+
+            'data' => [
+
+
+
+                'fleet_health' => [
+
+
+                    'vehicles_total',
+
+
+                    'vehicles_active',
+
+
+                    'vehicles_idle',
+
+
+
+                    'gps' => [
+
+
+                        'fresh',
+
+
+                        'stale',
+
+
+                        'lost',
+
+
+                    ],
+
+
+                ],
+
 
 
             ],
@@ -293,6 +391,11 @@ class DashboardTest extends TestCase
             '/api/v1/dashboard'
 
         );
+        $response = $this->getJson(
+
+            '/api/v1/dashboard'
+
+        );
 
 
 
@@ -334,6 +437,15 @@ class DashboardTest extends TestCase
 
 
     }
+
+
+
+
+
+
+
+
+
     public function test_dashboard_returns_operations_data(): void
     {
 

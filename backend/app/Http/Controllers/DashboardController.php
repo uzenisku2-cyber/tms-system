@@ -361,6 +361,155 @@ class DashboardController extends Controller
 
 
 
+        $fleetHealth = [
+
+
+            'vehicles_total' =>
+
+                Vehicle::count(),
+
+
+
+            'vehicles_active' =>
+
+                Vehicle::where(
+                    'active',
+                    true
+                )->count(),
+
+
+
+            'vehicles_idle' =>
+
+                Vehicle::where(
+                    'active',
+                    true
+                )
+                ->get()
+                ->filter(function (Vehicle $vehicle) {
+
+
+                    return ! $vehicle->hasActiveTrip();
+
+
+                })
+                ->count(),
+
+
+
+            'gps' => [
+
+
+                'fresh' => 0,
+
+
+                'stale' => 0,
+
+
+                'lost' => 0,
+
+
+            ],
+
+
+        ];
+
+
+
+
+        $activeVehicleTrips =
+
+            Trip::whereIn(
+
+                'status',
+
+                [
+
+                    Trip::STATUS_ASSIGNED,
+
+                    Trip::STATUS_STARTED,
+
+                ]
+
+            )
+            ->with([
+
+                'locations',
+
+            ])
+            ->get();
+
+
+
+
+        foreach ($activeVehicleTrips as $trip) {
+
+
+            $location =
+
+                $trip->locations()
+                    ->latest()
+                    ->first();
+
+
+
+            if (! $location) {
+
+
+                $fleetHealth['gps']['lost']++;
+
+
+                continue;
+
+
+            }
+
+
+
+            $age = abs(
+
+                Carbon::now('UTC')
+                    ->diffInSeconds(
+
+                        Carbon::parse(
+                            $location->created_at
+                        )
+
+                    )
+
+            );
+
+
+
+            if ($age < 60) {
+
+
+                $fleetHealth['gps']['fresh']++;
+
+
+            } elseif ($age < 300) {
+
+
+                $fleetHealth['gps']['stale']++;
+
+
+            } else {
+
+
+                $fleetHealth['gps']['lost']++;
+
+
+            }
+
+
+        }
+
+
+
+
+
+
+
         return new DashboardResource([
 
 
@@ -392,6 +541,11 @@ class DashboardController extends Controller
             'operations' =>
 
                 $operations,
+
+
+            'fleet_health' =>
+
+                $fleetHealth,
 
 
             'notifications' =>

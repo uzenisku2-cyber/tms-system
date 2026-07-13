@@ -84,6 +84,12 @@ class DashboardResource extends JsonResource
 
 
 
+            'fleet_health' =>
+
+                $this->resource['fleet_health'] ?? [],
+
+
+
             'notifications' => [
 
 
