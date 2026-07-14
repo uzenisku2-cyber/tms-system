@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Trips\Domain\Listeners;
 
 use App\Core\Events\EventEnvelope;
+use App\Core\EventStreaming\RealtimePublisher;
 use Illuminate\Support\Facades\Cache;
 
 
@@ -17,8 +18,11 @@ class UpdateTripRealtimeProjection
 
 
         if (
+
             $event->eventType !==
+
             'App\Modules\Trips\Domain\Events\TripLocationUpdated'
+
         ) {
 
             return;
@@ -26,32 +30,49 @@ class UpdateTripRealtimeProjection
         }
 
 
+
         $payload = $event->payload;
+
+
+
+        $state = [
+
+            'trip_id' => $payload['trip_id'],
+
+            'latitude' => $payload['latitude'],
+
+            'longitude' => $payload['longitude'],
+
+            'speed' => $payload['speed'],
+
+            'heading' => $payload['heading'],
+
+            'updated_at' => $payload['occurred_at'],
+
+        ];
+
 
 
         Cache::put(
 
             "trip_live_{$payload['trip_id']}",
 
-            [
-
-                'trip_id' => $payload['trip_id'],
-
-                'latitude' => $payload['latitude'],
-
-                'longitude' => $payload['longitude'],
-
-                'speed' => $payload['speed'],
-
-                'heading' => $payload['heading'],
-
-                'updated_at' => $payload['occurred_at'],
-
-            ],
+            $state,
 
             now()->addMinutes(30)
 
         );
+
+
+
+        RealtimePublisher::publish(
+
+            "trip.{$payload['trip_id']}",
+
+            $state
+
+        );
+
 
     }
 
