@@ -45,6 +45,23 @@ services:
       - redis
 
 
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: tms-reverb
+    working_dir: /var/www/backend
+    volumes:
+      - ./backend:/var/www/backend
+    command: php artisan reverb:start
+    restart: unless-stopped
+    depends_on:
+      - app
+      - redis
+    ports:
+      - "8080:8080"
+
+
   nginx:
     image: nginx:alpine
     container_name: tms-nginx
