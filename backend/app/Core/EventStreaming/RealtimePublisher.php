@@ -4,28 +4,33 @@ declare(strict_types=1);
 
 namespace App\Core\EventStreaming;
 
-use Illuminate\Support\Facades\Log;
+use App\Core\EventStreaming\Contracts\RealtimeTransport;
+use App\Core\EventStreaming\Transports\LogRealtimeTransport;
 
 
 class RealtimePublisher
 {
+
 
     public static function publish(
         string $channel,
         array $payload
     ): void {
 
-        Log::info(
-            'REALTIME_BROADCAST',
-            [
 
-                'channel' => $channel,
+        $transport = new LogRealtimeTransport();
 
-                'payload' => $payload,
 
-            ]
+        $transport->publish(
+
+            $channel,
+
+            $payload
+
         );
 
+
     }
+
 
 }
