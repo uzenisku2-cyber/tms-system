@@ -4,116 +4,62 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-
 class DashboardResource extends JsonResource
 {
-
-
     public function toArray(
         Request $request
-    ): array
-    {
-
+    ): array {
 
         return [
 
+            'trips' => $this->resource['trips'] ?? [],
 
-            'trips' =>
+            'drivers' => $this->resource['drivers'] ?? [],
 
-                $this->resource['trips'] ?? [],
+            'vehicles' => $this->resource['vehicles'] ?? [],
 
+            'active_trips' => ActiveTripResource::collection(
 
+                $this->resource['active_trips'] ?? []
 
-            'drivers' =>
-
-                $this->resource['drivers'] ?? [],
-
-
-
-            'vehicles' =>
-
-                $this->resource['vehicles'] ?? [],
-
-
-
-            'active_trips' =>
-
-                ActiveTripResource::collection(
-
-                    $this->resource['active_trips'] ?? []
-
-                ),
-
-
+            ),
 
             'alerts' => [
 
+            'open' => $this->resource['alerts']['open'] ?? 0,
 
-                'open' =>
+            'critical' => $this->resource['alerts']['critical'] ?? 0,
 
-                    $this->resource['alerts']['open'] ?? 0,
+            'latest' => AlertResource::collection(
 
+                $this->resource['alerts']['latest'] ?? []
 
-
-                'critical' =>
-
-                    $this->resource['alerts']['critical'] ?? 0,
-
-
-
-                'latest' =>
-
-                    AlertResource::collection(
-
-                        $this->resource['alerts']['latest'] ?? []
-
-                    ),
-
+            ),
 
             ],
 
+            'operations' => $this->resource['operations'] ?? [],
 
+            'fleet_health' => $this->resource['fleet_health'] ?? [],
 
-            'operations' =>
-
-                $this->resource['operations'] ?? [],
-
-
-
-            'fleet_health' =>
-
-                $this->resource['fleet_health'] ?? [],
-
-
+            'operations_live' => $this->resource['operations_live'] ?? [],
 
             'notifications' => [
 
+                'unread' => $this->resource['notifications']['unread'] ?? 0,
 
-                'unread' =>
+                'latest' => NotificationResource::collection(
 
-                    $this->resource['notifications']['unread'] ?? 0,
+                    $this->resource['notifications']['latest'] ?? []
 
-
-
-                'latest' =>
-
-                    NotificationResource::collection(
-
-                        $this->resource['notifications']['latest'] ?? []
-
-                    ),
-
+                ),
 
             ],
-
 
         ];
 
     }
-
-
 }

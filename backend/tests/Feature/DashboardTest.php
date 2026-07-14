@@ -242,6 +242,9 @@ class DashboardTest extends TestCase
                 'fleet_health',
 
 
+                'operations_live',
+
+
                 'notifications',
 
 
@@ -355,6 +358,108 @@ class DashboardTest extends TestCase
 
 
 
+    public function test_dashboard_returns_operations_live(): void
+    {
+
+
+        $user = $this->authenticate();
+
+
+
+
+        $this->createTrip(
+
+            $user,
+
+            Trip::STATUS_STARTED
+
+        );
+
+
+
+
+        $response = $this->getJson(
+
+            '/api/v1/dashboard'
+
+        );
+
+
+
+
+        $response->assertStatus(200);
+
+
+
+
+        $response->assertJsonStructure([
+
+
+
+            'data' => [
+
+
+
+                'operations_live' => [
+
+
+                    'active_trips',
+
+
+                    'gps' => [
+
+
+                        'fresh',
+
+
+                        'stale',
+
+
+                        'lost',
+
+
+                    ],
+
+
+                    'eta_delays',
+
+
+                    'critical_alerts',
+
+
+                ],
+
+
+
+            ],
+
+
+
+        ]);
+
+
+
+
+        $response->assertJsonPath(
+
+            'data.operations_live.active_trips',
+
+            1
+
+        );
+
+
+
+    }
+
+
+
+
+
+
+
+
+
     public function test_dashboard_counts_trips(): void
     {
 
@@ -391,15 +496,6 @@ class DashboardTest extends TestCase
             '/api/v1/dashboard'
 
         );
-        $response = $this->getJson(
-
-            '/api/v1/dashboard'
-
-        );
-
-
-
-
         $response->assertStatus(200);
 
 

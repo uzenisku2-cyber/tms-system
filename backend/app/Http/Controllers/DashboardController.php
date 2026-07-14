@@ -442,6 +442,118 @@ class DashboardController extends Controller
 
 
 
+                $operationsLive = [
+
+
+            'active_trips' =>
+
+                $activeVehicleTrips->count(),
+
+
+
+            'gps' => [
+
+
+                'fresh' => 0,
+
+
+                'stale' => 0,
+
+
+                'lost' => 0,
+
+
+            ],
+
+
+
+            'eta_delays' =>
+
+                Alert::where(
+                    'type',
+                    'eta_delay'
+                )
+                ->whereNull(
+                    'resolved_at'
+                )
+                ->count(),
+
+
+
+            'critical_alerts' =>
+
+                Alert::whereNull(
+                    'resolved_at'
+                )
+                ->where(
+                    'severity',
+                    'critical'
+                )
+                ->count(),
+
+
+        ];
+
+
+
+
+
+                       $operationsLive = [
+
+
+            'active_trips' =>
+
+                $activeVehicleTrips->count(),
+
+
+
+            'gps' => [
+
+
+                'fresh' => 0,
+
+
+                'stale' => 0,
+
+
+                'lost' => 0,
+
+
+            ],
+
+
+
+            'eta_delays' =>
+
+                Alert::where(
+                    'type',
+                    'eta_delay'
+                )
+                ->whereNull(
+                    'resolved_at'
+                )
+                ->count(),
+
+
+
+            'critical_alerts' =>
+
+                Alert::whereNull(
+                    'resolved_at'
+                )
+                ->where(
+                    'severity',
+                    'critical'
+                )
+                ->count(),
+
+
+        ];
+
+
+
+
+
         foreach ($activeVehicleTrips as $trip) {
 
 
@@ -457,6 +569,8 @@ class DashboardController extends Controller
 
 
                 $fleetHealth['gps']['lost']++;
+
+                $operationsLive['gps']['lost']++;
 
 
                 continue;
@@ -486,11 +600,15 @@ class DashboardController extends Controller
 
                 $fleetHealth['gps']['fresh']++;
 
+                $operationsLive['gps']['fresh']++;
+
 
             } elseif ($age < 300) {
 
 
                 $fleetHealth['gps']['stale']++;
+
+                $operationsLive['gps']['stale']++;
 
 
             } else {
@@ -498,13 +616,13 @@ class DashboardController extends Controller
 
                 $fleetHealth['gps']['lost']++;
 
+                $operationsLive['gps']['lost']++;
+
 
             }
 
 
         }
-
-
 
 
 
@@ -548,14 +666,17 @@ class DashboardController extends Controller
                 $fleetHealth,
 
 
+            'operations_live' =>
+
+                $operationsLive,
+
+
             'notifications' =>
 
                 $notifications,
 
 
         ]);
-
-
     }
 
 
