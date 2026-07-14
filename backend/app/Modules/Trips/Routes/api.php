@@ -20,6 +20,7 @@ use App\Http\Controllers\TripLiveController;
 use App\Http\Controllers\TripProgressController;
 use App\Http\Controllers\TripEtaController;
 use App\Http\Controllers\DriverTripController;
+use App\Http\Controllers\TripRealtimeController;
 
 use App\Modules\Trips\Controllers\TripController;
 use App\Modules\Trips\Controllers\TripAssignmentController;
@@ -74,7 +75,19 @@ Route::middleware('auth:sanctum')
             ]
         );
 
+/*
+|--------------------------------------------------------------------------
+| Realtime Projection
+|--------------------------------------------------------------------------
+*/
 
+Route::get(
+    '/trips/{trip}/realtime',
+    [
+        TripRealtimeController::class,
+        'show'
+    ]
+);
 
 
 
