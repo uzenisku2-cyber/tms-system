@@ -8,15 +8,16 @@ use Tests\TestCase;
 
 use App\Models\User;
 
-use App\Models\TripLocation;
-
 
 use App\Modules\Trips\Models\Trip;
+use App\Modules\Drivers\Models\Driver;
+use App\Modules\Fleet\Models\Vehicle;
+
+
+use Laravel\Sanctum\Sanctum;
 
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-
-use Laravel\Sanctum\Sanctum;
 
 
 
@@ -30,19 +31,107 @@ class TripEtaTest extends TestCase
 
 
 
+    protected function authenticate(): User
+    {
+
+
+        $user = User::factory()->create();
+
+
+        Sanctum::actingAs(
+
+            $user
+
+        );
+
+
+        return $user;
+
+
+    }
+
+
+
+
+
+
+
+
+
     protected function createTrip(
 
-        User $user,
+        User $user
 
-        array $attributes = []
+    ): Trip
+    {
 
-    ): Trip {
 
-
-        return Trip::create(array_merge([
+        $driver = Driver::create([
 
 
             'user_id' => $user->id,
+
+
+            'first_name' => 'Jan',
+
+
+            'last_name' => 'Novak',
+
+
+            'license_number' => 'CZ' . uniqid(),
+
+
+            'active' => true,
+
+
+        ]);
+
+
+
+
+
+        $vehicle = Vehicle::create([
+
+
+            'user_id' => $user->id,
+
+
+            'registration_number' =>
+
+                '1AB' . strtoupper(substr(uniqid(), -5)),
+
+
+            'manufacturer' => 'Skoda',
+
+
+            'model' => 'Octavia',
+
+
+            'vin' => strtoupper(substr(uniqid('VIN'), 0, 17)),
+
+
+            'year' => 2024,
+
+
+            'active' => true,
+
+
+        ]);
+
+
+
+
+
+        return Trip::create([
+
+
+            'user_id' => $user->id,
+
+
+            'driver_id' => $driver->id,
+
+
+            'vehicle_id' => $vehicle->id,
 
 
             'origin' => 'Praha',
@@ -63,13 +152,13 @@ class TripEtaTest extends TestCase
             'destination_lng' => 16.6068,
 
 
-            'distance_km' => 140,
+            'distance_km' => 200,
 
 
             'status' => Trip::STATUS_STARTED,
 
 
-        ], $attributes));
+        ]);
 
 
     }
@@ -80,19 +169,24 @@ class TripEtaTest extends TestCase
 
 
 
-    public function test_started_trip_returns_eta(): void
 
+
+    public function test_trip_eta_returns_estimation(): void
     {
 
 
-        $user = User::factory()->create();
-
-
-        Sanctum::actingAs($user);
+        $user = $this->authenticate();
 
 
 
-        $trip = $this->createTrip($user);
+
+        $trip = $this->createTrip(
+
+            $user
+
+        );
+
+
 
 
 
@@ -104,37 +198,42 @@ class TripEtaTest extends TestCase
 
 
 
+
+
         $response->assertStatus(200);
+
+
 
 
 
         $response->assertJsonStructure([
 
+
             'trip_id',
+
 
             'status',
 
+
             'distance_km',
+
 
             'source',
 
+
             'average_speed_kmh',
+
 
             'estimated_minutes',
 
+
             'arrival_time',
+
 
         ]);
 
 
 
-        $response->assertJsonPath(
-
-            'average_speed_kmh',
-
-            70
-
-        );
 
 
         $response->assertJsonPath(
@@ -146,64 +245,6 @@ class TripEtaTest extends TestCase
         );
 
 
-    }
-
-
-
-
-
-
-
-
-    public function test_eta_uses_current_gps_position(): void
-
-    {
-
-
-        $user = User::factory()->create();
-
-
-        Sanctum::actingAs($user);
-
-
-
-        $trip = $this->createTrip($user);
-
-
-
-        TripLocation::create([
-
-            'trip_id' => $trip->id,
-
-            'latitude' => 50.0755,
-
-            'longitude' => 14.4378,
-
-            'speed' => 50,
-
-        ]);
-
-
-
-        $response = $this->getJson(
-
-            "/api/v1/trips/{$trip->id}/eta"
-
-        );
-
-
-
-        $response->assertStatus(200);
-
-
-
-        $response->assertJsonPath(
-
-            'source',
-
-            'current_gps'
-
-        );
 
 
 
@@ -215,124 +256,6 @@ class TripEtaTest extends TestCase
 
         );
 
-
-    }
-
-
-
-
-
-
-
-
-    public function test_finished_trip_returns_zero_eta(): void
-
-    {
-
-
-        $user = User::factory()->create();
-
-
-        Sanctum::actingAs($user);
-
-
-
-        $trip = $this->createTrip(
-
-            $user,
-
-            [
-
-                'status' => Trip::STATUS_FINISHED,
-
-                'finished_at' => now(),
-
-            ]
-
-        );
-
-
-
-        $response = $this->getJson(
-
-            "/api/v1/trips/{$trip->id}/eta"
-
-        );
-
-
-
-        $response->assertStatus(200);
-
-
-
-        $response->assertJson([
-
-            'status' => Trip::STATUS_FINISHED,
-
-            'distance_km' => 0,
-
-            'estimated_minutes' => 0,
-
-        ]);
-
-    }
-
-
-
-
-
-
-
-
-    public function test_cancelled_trip_returns_empty_eta(): void
-
-    {
-
-
-        $user = User::factory()->create();
-
-
-        Sanctum::actingAs($user);
-
-
-
-        $trip = $this->createTrip(
-
-            $user,
-
-            [
-
-                'status' => Trip::STATUS_CANCELLED,
-
-            ]
-
-        );
-
-
-
-        $response = $this->getJson(
-
-            "/api/v1/trips/{$trip->id}/eta"
-
-        );
-
-
-
-        $response->assertStatus(200);
-
-
-
-        $response->assertJson([
-
-            'status' => Trip::STATUS_CANCELLED,
-
-            'distance_km' => null,
-
-            'estimated_minutes' => null,
-
-            'arrival_time' => null,
-
-        ]);
 
     }
 

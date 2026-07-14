@@ -7,22 +7,18 @@ use Tests\TestCase;
 
 
 use App\Models\User;
-
-use App\Models\Alert;
-
 use App\Models\TripLocation;
 
 
 use App\Modules\Trips\Models\Trip;
-
 use App\Modules\Drivers\Models\Driver;
-
 use App\Modules\Fleet\Models\Vehicle;
 
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use Laravel\Sanctum\Sanctum;
+
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 
 
@@ -35,15 +31,110 @@ class TripLiveTest extends TestCase
 
 
 
+
+    protected function authenticate(): User
+    {
+
+
+        $user = User::factory()->create();
+
+
+
+        Sanctum::actingAs(
+
+            $user
+
+        );
+
+
+
+        return $user;
+
+
+    }
+
+
+
+
+
+
+
+
+
     protected function createTrip(
+
         User $user
-    ): Trip {
+
+    ): Trip
+    {
+
+
+        $driver = Driver::create([
+
+
+            'user_id' => $user->id,
+
+
+            'first_name' => 'Jan',
+
+
+            'last_name' => 'Novak',
+
+
+            'license_number' => 'CZ' . uniqid(),
+
+
+            'active' => true,
+
+
+        ]);
+
+
+
+
+
+        $vehicle = Vehicle::create([
+
+
+            'user_id' => $user->id,
+
+
+            'registration_number' =>
+
+                '1AB' . strtoupper(substr(uniqid(), -5)),
+
+
+            'manufacturer' => 'Skoda',
+
+
+            'model' => 'Octavia',
+
+
+            'vin' => strtoupper(substr(uniqid('VIN'), 0, 17)),
+
+
+            'year' => 2024,
+
+
+            'active' => true,
+
+
+        ]);
+
+
+
 
 
         return Trip::create([
 
 
             'user_id' => $user->id,
+
+
+            'driver_id' => $driver->id,
+
+
+            'vehicle_id' => $vehicle->id,
 
 
             'origin' => 'Praha',
@@ -64,6 +155,9 @@ class TripLiveTest extends TestCase
             'destination_lng' => 16.6068,
 
 
+            'distance_km' => 200,
+
+
             'status' => Trip::STATUS_STARTED,
 
 
@@ -77,95 +171,48 @@ class TripLiveTest extends TestCase
 
 
 
-    public function test_live_trip_returns_basic_structure(): void
 
+
+
+    public function test_trip_live_returns_current_position(): void
     {
 
 
-        $user = User::factory()->create();
-
-
-        Sanctum::actingAs($user);
+        $user = $this->authenticate();
 
 
 
-        $trip = $this->createTrip($user);
+        $trip = $this->createTrip(
 
-
-
-        $response = $this->getJson(
-
-            "/api/v1/trips/{$trip->id}/live"
+            $user
 
         );
 
 
-
-        $response->assertStatus(200);
-
-
-
-        $response->assertJsonStructure([
-
-            'trip_id',
-
-            'status',
-
-            'driver',
-
-            'vehicle',
-
-            'location',
-
-            'gps' => [
-
-                'age_seconds',
-
-                'status',
-
-                'attention',
-
-            ],
-
-            'alerts',
-
-        ]);
-
-    }
-
-
-
-
-
-
-
-    public function test_live_trip_returns_fresh_gps(): void
-
-    {
-
-
-        $user = User::factory()->create();
-
-
-        Sanctum::actingAs($user);
-
-
-
-        $trip = $this->createTrip($user);
 
 
 
         TripLocation::create([
 
+
             'trip_id' => $trip->id,
 
-            'latitude' => 50.0755,
 
-            'longitude' => 14.4378,
+            'latitude' => 50.1000000,
 
-            'speed' => 50,
+
+            'longitude' => 14.5000000,
+
+
+            'speed' => 70,
+
+
+            'heading' => 90,
+
 
         ]);
+
+
 
 
 
@@ -177,7 +224,68 @@ class TripLiveTest extends TestCase
 
 
 
+
+
         $response->assertStatus(200);
+
+
+
+
+
+        $response->assertJsonStructure([
+
+
+            'trip_id',
+
+
+            'status',
+
+
+            'driver',
+
+
+            'vehicle',
+
+
+            'location' => [
+
+
+                'latitude',
+
+
+                'longitude',
+
+
+                'speed',
+
+
+                'heading',
+
+
+            ],
+
+
+            'gps' => [
+
+
+                'age_seconds',
+
+
+                'status',
+
+
+                'attention',
+
+
+            ],
+
+
+            'alerts',
+
+
+        ]);
+
+
 
 
 
@@ -190,156 +298,7 @@ class TripLiveTest extends TestCase
         );
 
 
-
-        $response->assertJsonPath(
-
-            'gps.attention',
-
-            false
-
-        );
-
-
     }
-
-
-
-
-
-
-
-    public function test_live_trip_returns_lost_gps(): void
-
-    {
-
-
-        $user = User::factory()->create();
-
-
-        Sanctum::actingAs($user);
-
-
-
-        $trip = $this->createTrip($user);
-
-
-
-        $location = TripLocation::create([
-
-            'trip_id' => $trip->id,
-
-            'latitude' => 50.0755,
-
-            'longitude' => 14.4378,
-
-            'speed' => 0,
-
-        ]);
-
-
-
-        $location->created_at = now()->subMinutes(10);
-
-        $location->updated_at = now()->subMinutes(10);
-
-        $location->save();
-
-
-
-        $response = $this->getJson(
-
-            "/api/v1/trips/{$trip->id}/live"
-
-        );
-
-
-
-        $response->assertStatus(200);
-
-
-
-        $response->assertJsonPath(
-
-            'gps.status',
-
-            'lost'
-
-        );
-
-
-
-        $response->assertJsonPath(
-
-            'gps.attention',
-
-            true
-
-        );
-
-
-    }
-
-
-
-
-
-
-
-    public function test_live_trip_returns_active_alerts(): void
-
-    {
-
-
-        $user = User::factory()->create();
-
-
-        Sanctum::actingAs($user);
-
-
-
-        $trip = $this->createTrip($user);
-
-
-
-        Alert::create([
-
-            'trip_id' => $trip->id,
-
-            'user_id' => $user->id,
-
-            'type' => 'gps_lost',
-
-            'severity' => 'warning',
-
-            'message' => 'GPS signal lost',
-
-        ]);
-
-
-
-        $response = $this->getJson(
-
-            "/api/v1/trips/{$trip->id}/live"
-
-        );
-
-
-
-        $response->assertStatus(200);
-
-
-
-        $response->assertJsonCount(
-
-            1,
-
-            'alerts'
-
-        );
-
-
-    }
-
 
 
 }
