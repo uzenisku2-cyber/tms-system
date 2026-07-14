@@ -17,6 +17,7 @@ return Application::configure(
 
 
     ->withRouting(
+        channels: __DIR__.'/../routes/channels.php',
 
         web: __DIR__ . '/../routes/web.php',
 
