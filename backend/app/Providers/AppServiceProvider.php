@@ -1,13 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
-use App\Support\Generator\Generator;
+use App\Core\Events\EventEnvelope;
 use App\Models\TripLocation;
+use App\Modules\Trips\Domain\Listeners\UpdateTripRealtimeProjection;
 use App\Observers\TripLocationObserver;
-
-use Illuminate\Support\ServiceProvider;
+use App\Support\Generator\Generator;
 use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -33,8 +37,19 @@ class AppServiceProvider extends ServiceProvider
         );
 
 
+
         TripLocation::observe(
             TripLocationObserver::class
+        );
+
+
+
+        Event::listen(
+
+            EventEnvelope::class,
+
+            UpdateTripRealtimeProjection::class
+
         );
 
     }
