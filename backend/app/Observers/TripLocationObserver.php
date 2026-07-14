@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Observers;
 
+use App\Core\EventBus\EventBus;
 use App\Models\TripLocation;
+use App\Modules\Trips\Domain\Events\TripLocationUpdated;
 use Illuminate\Support\Facades\Cache;
 
 
@@ -15,11 +19,19 @@ class TripLocationObserver
      */
     public function created(
         TripLocation $tripLocation
-    ): void
-    {
+    ): void {
 
         $this->clearDistanceCache(
             $tripLocation
+        );
+
+
+        EventBus::dispatch(
+
+            TripLocationUpdated::fromLocation(
+                $tripLocation
+            )
+
         );
 
     }
@@ -31,11 +43,19 @@ class TripLocationObserver
      */
     public function updated(
         TripLocation $tripLocation
-    ): void
-    {
+    ): void {
 
         $this->clearDistanceCache(
             $tripLocation
+        );
+
+
+        EventBus::dispatch(
+
+            TripLocationUpdated::fromLocation(
+                $tripLocation
+            )
+
         );
 
     }
@@ -47,8 +67,7 @@ class TripLocationObserver
      */
     public function deleted(
         TripLocation $tripLocation
-    ): void
-    {
+    ): void {
 
         $this->clearDistanceCache(
             $tripLocation
@@ -61,11 +80,12 @@ class TripLocationObserver
 
     protected function clearDistanceCache(
         TripLocation $tripLocation
-    ): void
-    {
+    ): void {
 
         Cache::forget(
+
             "trip_distance_{$tripLocation->trip_id}"
+
         );
 
     }
