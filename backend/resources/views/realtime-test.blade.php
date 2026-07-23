@@ -319,7 +319,7 @@ data.longitude ?? '-';
 
 document.getElementById('speed')
 .innerText =
-(data.speed ?? '-') 
+(data.speed ?? '-')
 +
 ' km/h';
 
