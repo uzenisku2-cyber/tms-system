@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Domain\Services;
 
-use App\Modules\Fleet\Models\Vehicle;
+use App\Models\Vehicle;
 use App\Modules\Fleet\DTO\VehicleDto;
 
 class VehicleDomainService

@@ -13,8 +13,6 @@ return [
         'null'
     ),
 
-
-
     /*
     |--------------------------------------------------------------------------
     | Broadcast Connections
@@ -22,8 +20,6 @@ return [
     */
 
     'connections' => [
-
-
 
         // =====================================
         // Laravel Reverb
@@ -45,7 +41,6 @@ return [
                 'REVERB_APP_ID'
             ),
 
-
             'options' => [
 
                 /*
@@ -57,32 +52,25 @@ return [
                     'tms-reverb'
                 ),
 
-
                 'port' => env(
                     'REVERB_PORT',
                     8080
                 ),
-
 
                 'scheme' => env(
                     'REVERB_SCHEME',
                     'http'
                 ),
 
-
                 'useTLS' => false,
 
             ],
-
 
             'client_options' => [
 
             ],
 
         ],
-
-
-
 
         // =====================================
         // Pusher (ponecháno)
@@ -104,19 +92,15 @@ return [
                 'PUSHER_APP_ID'
             ),
 
-
             'options' => [
 
-                'cluster' =>
-                    env(
-                        'PUSHER_APP_CLUSTER'
-                    ),
+                'cluster' => env(
+                    'PUSHER_APP_CLUSTER'
+                ),
 
-
-                'host' =>
-                    env(
-                        'PUSHER_HOST'
-                    )
+                'host' => env(
+                    'PUSHER_HOST'
+                )
                     ?:
                     'api-'.
                     env(
@@ -125,43 +109,32 @@ return [
                     ).
                     '.pusher.com',
 
+                'port' => env(
+                    'PUSHER_PORT',
+                    443
+                ),
 
-                'port' =>
-                    env(
-                        'PUSHER_PORT',
-                        443
-                    ),
-
-
-                'scheme' =>
-                    env(
-                        'PUSHER_SCHEME',
-                        'https'
-                    ),
-
+                'scheme' => env(
+                    'PUSHER_SCHEME',
+                    'https'
+                ),
 
                 'encrypted' => true,
 
-
-                'useTLS' =>
-                    env(
-                        'PUSHER_SCHEME',
-                        'https'
-                    )
+                'useTLS' => env(
+                    'PUSHER_SCHEME',
+                    'https'
+                )
                     ===
                     'https',
 
             ],
-
 
             'client_options' => [
 
             ],
 
         ],
-
-
-
 
         // =====================================
         // Ably
@@ -177,9 +150,6 @@ return [
 
         ],
 
-
-
-
         // =====================================
         // Log
         // =====================================
@@ -189,9 +159,6 @@ return [
             'driver' => 'log',
 
         ],
-
-
-
 
         // =====================================
         // Null
@@ -203,8 +170,6 @@ return [
 
         ],
 
-
     ],
-
 
 ];

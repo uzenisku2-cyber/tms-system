@@ -27,8 +27,8 @@ Route::prefix('v1')->group(function (): void {
     ];
 
     foreach ($moduleRouteFiles as $moduleRouteFile) {
-        if (!is_file($moduleRouteFile)) {
-            throw new \RuntimeException(
+        if (! is_file($moduleRouteFile)) {
+            throw new RuntimeException(
                 "Module API route file not found: {$moduleRouteFile}"
             );
         }

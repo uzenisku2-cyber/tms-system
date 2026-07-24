@@ -4,23 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Trips\Domain\Listeners;
 
-
 use App\Core\Events\EventEnvelope;
 use App\Core\EventStreaming\RealtimePublisher;
 use App\Modules\Trips\Models\Trip;
-
 use Illuminate\Support\Facades\Cache;
-
-
 
 class UpdateTripRealtimeProjection
 {
-
-
     public function handle(
         EventEnvelope $event
     ): void {
-
 
         if (
 
@@ -34,177 +27,81 @@ class UpdateTripRealtimeProjection
 
         }
 
-
-
-
-
         $payload = $event->payload;
-
-
-
-
 
         $trip = Trip::with([
 
             'vehicle',
 
-            'driver'
+            'driver',
 
         ])
+            ->find(
 
-        ->find(
+                $payload['trip_id']
 
-            $payload['trip_id']
+            );
 
-        );
-
-
-
-
-
+        $vehicle = $trip?->vehicle;
+        $driver = $trip?->driver;
 
         $state = [
-
-
 
             /*
              * TRIP
              */
 
-            'trip_id' =>
-
-                $payload['trip_id'],
-
-
-
-
-
-
+            'trip_id' => $payload['trip_id'],
 
             /*
              * VEHICLE
              */
 
-            'vehicle_id' =>
+            'vehicle_id' => $vehicle?->getKey(),
 
-                $trip?->vehicle?->id,
+            'vehicle_type' => $vehicle?->getAttribute('vehicle_type'),
 
+            'manufacturer' => $vehicle?->getAttribute('manufacturer'),
 
-            'vehicle_type' =>
+            'model' => $vehicle?->getAttribute('model'),
 
-                $trip?->vehicle?->vehicle_type,
+            'registration_number' => $vehicle?->getAttribute('registration_number'),
 
-
-            'manufacturer' =>
-
-                $trip?->vehicle?->manufacturer,
-
-
-            'model' =>
-
-                $trip?->vehicle?->model,
-
-
-            'registration_number' =>
-
-                $trip?->vehicle?->registration_number,
-
-
-            'color' =>
-
-                $trip?->vehicle?->color,
-
-
-
-
-
-
+            'color' => $vehicle?->getAttribute('color'),
 
             /*
              * DRIVER
              */
 
-            'driver_id' =>
+            'driver_id' => $driver?->getKey(),
 
-                $trip?->driver?->id,
-
-
-            'driver_name' =>
-
-                $trip?->driver?->full_name,
-
-
-
-
-
-
+            'driver_name' => $driver?->getAttribute('full_name'),
 
             /*
              * GPS
              */
 
-            'latitude' =>
+            'latitude' => $payload['latitude'],
 
-                $payload['latitude'],
+            'longitude' => $payload['longitude'],
 
+            'speed' => $payload['speed'],
 
-            'longitude' =>
-
-                $payload['longitude'],
-
-
-            'speed' =>
-
-                $payload['speed'],
-
-
-            'heading' =>
-
-                $payload['heading'],
-
-
-
-
-
-
+            'heading' => $payload['heading'],
 
             /*
              * STATUS
              */
 
-            'status' =>
-
-                ($payload['speed'] ?? 0) > 0
+            'status' => ($payload['speed'] ?? 0) > 0
 
                     ? 'MOVING'
 
                     : 'STOPPED',
 
-
-
-
-
-
-            'last_seen_at' =>
-
-                $payload['occurred_at'],
-
-
+            'last_seen_at' => $payload['occurred_at'],
 
         ];
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         Cache::put(
 
@@ -216,12 +113,6 @@ class UpdateTripRealtimeProjection
 
         );
 
-
-
-
-
-
-
         RealtimePublisher::publish(
 
             "trip.{$payload['trip_id']}",
@@ -230,8 +121,5 @@ class UpdateTripRealtimeProjection
 
         );
 
-
     }
-
-
 }

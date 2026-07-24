@@ -11,6 +11,4 @@ use App\Modules\Fleet\Models\Vehicle as FleetVehicle;
  *
  * Compatibility bridge retained for legacy class references.
  */
-class Vehicle extends FleetVehicle
-{
-}
+class Vehicle extends FleetVehicle {}

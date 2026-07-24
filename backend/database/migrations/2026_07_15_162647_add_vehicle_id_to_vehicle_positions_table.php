@@ -19,13 +19,12 @@ return new class extends Migration
         });
     }
 
-
     public function down(): void
     {
         Schema::table('vehicle_positions', function (Blueprint $table) {
 
             $table->dropForeign([
-                'vehicle_id'
+                'vehicle_id',
             ]);
 
             $table->dropColumn('vehicle_id');

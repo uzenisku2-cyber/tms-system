@@ -94,13 +94,12 @@ class GpsController extends Controller
             'longitude' => (float) $position->longitude,
             'speed' => (int) $position->speed,
             'heading' => (int) $position->heading,
-            'recorded_at' =>
-                $position->created_at?->toIso8601String(),
+            'recorded_at' => $position->created_at?->toIso8601String(),
         ];
 
         event(
             new TripRealtimeBroadcast(
-                'trip.' . $trip->getKey(),
+                'trip.'.$trip->getKey(),
                 $payload
             )
         );

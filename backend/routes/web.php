@@ -1,8 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VehiclePositionController;
-
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,12 +12,9 @@ use App\Http\Controllers\VehiclePositionController;
 |
 */
 
-
 Route::get('/', function () {
     return view('welcome');
 });
-
-
 
 /*
 |--------------------------------------------------------------------------
@@ -31,8 +27,6 @@ if (app()->environment('local')) {
         return view('realtime-test');
     });
 }
-
-
 
 /*
 |--------------------------------------------------------------------------

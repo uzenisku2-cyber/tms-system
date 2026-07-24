@@ -47,8 +47,7 @@ class VehicleController extends Controller
 
                 return [
                     'id' => $vehicle->id,
-                    'registration_number' =>
-                        $vehicle->registration_number,
+                    'registration_number' => $vehicle->registration_number,
                     'manufacturer' => $vehicle->manufacturer,
                     'model' => $vehicle->model,
                     'year' => $vehicle->year,
@@ -56,8 +55,7 @@ class VehicleController extends Controller
                     'vehicle_size' => $vehicle->vehicle_size,
                     'color' => $vehicle->color,
                     'icon' => $vehicle->icon,
-                    'manufacturer_logo' =>
-                        $vehicle->manufacturer_logo,
+                    'manufacturer_logo' => $vehicle->manufacturer_logo,
                     'body_style' => $vehicle->body_style,
                     'latest_location' => $latestPosition === null
                         ? null
@@ -67,10 +65,9 @@ class VehicleController extends Controller
                             'longitude' => $latestPosition->longitude,
                             'speed' => $latestPosition->speed,
                             'heading' => $latestPosition->heading,
-                            'recorded_at' =>
-                                $latestPosition
-                                    ->created_at
-                                    ?->toIso8601String(),
+                            'recorded_at' => $latestPosition
+                                ->created_at
+                                ?->toIso8601String(),
                         ],
                 ];
             }

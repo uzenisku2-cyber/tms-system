@@ -7,11 +7,38 @@ namespace App\Modules\Fleet\Models;
 use App\Models\User;
 use App\Models\VehiclePosition;
 use App\Modules\Trips\Models\Trip;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int|null $user_id
+ * @property string $registration_number
+ * @property string $vin
+ * @property string $manufacturer
+ * @property string $model
+ * @property int|null $year
+ * @property string|null $vehicle_type
+ * @property string|null $vehicle_size
+ * @property string|null $color
+ * @property string|null $icon
+ * @property string|null $manufacturer_logo
+ * @property string|null $body_style
+ * @property string|null $fuel_type
+ * @property int $mileage
+ * @property bool $active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User|null $user
+ * @property-read Collection<int, Trip> $trips
+ * @property-read Collection<int, VehiclePosition> $positions
+ * @property-read VehiclePosition|null $latestPosition
+ * @property-read string $label
+ */
 class Vehicle extends Model
 {
     protected $fillable = [
@@ -38,11 +65,17 @@ class Vehicle extends Model
         'mileage' => 'integer',
     ];
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return HasMany<Trip, $this>
+     */
     public function trips(): HasMany
     {
         return $this->hasMany(
@@ -51,6 +84,9 @@ class Vehicle extends Model
         );
     }
 
+    /**
+     * @return HasMany<VehiclePosition, $this>
+     */
     public function positions(): HasMany
     {
         return $this->hasMany(
@@ -59,6 +95,9 @@ class Vehicle extends Model
         );
     }
 
+    /**
+     * @return HasOne<VehiclePosition, $this>
+     */
     public function latestPosition(): HasOne
     {
         return $this->hasOne(
@@ -83,7 +122,7 @@ class Vehicle extends Model
 
     public function isAvailable(): bool
     {
-        return !$this->hasActiveTrip();
+        return ! $this->hasActiveTrip();
     }
 
     public function getLabelAttribute(): string

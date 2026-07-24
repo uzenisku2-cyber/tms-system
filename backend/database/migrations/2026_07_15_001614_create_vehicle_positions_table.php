@@ -33,13 +33,11 @@ return new class extends Migration
             // čas uložení GPS bodu
             $table->timestamps();
 
-
             // rychlé hledání historie konkrétní jízdy
             $table->index('trip_id');
 
         });
     }
-
 
     /**
      * Reverse the migrations.

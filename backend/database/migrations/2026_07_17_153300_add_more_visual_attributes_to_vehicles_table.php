@@ -4,17 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-
 return new class extends Migration
 {
-
     public function up(): void
     {
 
         Schema::table('vehicles', function (Blueprint $table) {
 
-
-            if (!Schema::hasColumn('vehicles', 'vehicle_size')) {
+            if (! Schema::hasColumn('vehicles', 'vehicle_size')) {
 
                 $table->string('vehicle_size')
                     ->nullable()
@@ -22,9 +19,7 @@ return new class extends Migration
 
             }
 
-
-
-            if (!Schema::hasColumn('vehicles', 'manufacturer_logo')) {
+            if (! Schema::hasColumn('vehicles', 'manufacturer_logo')) {
 
                 $table->string('manufacturer_logo')
                     ->nullable()
@@ -32,9 +27,7 @@ return new class extends Migration
 
             }
 
-
-
-            if (!Schema::hasColumn('vehicles', 'body_style')) {
+            if (! Schema::hasColumn('vehicles', 'body_style')) {
 
                 $table->string('body_style')
                     ->nullable()
@@ -42,47 +35,34 @@ return new class extends Migration
 
             }
 
-
         });
 
     }
-
-
 
     public function down(): void
     {
 
         Schema::table('vehicles', function (Blueprint $table) {
 
-
             $columns = [];
 
-
-
-            foreach([
+            foreach ([
                 'vehicle_size',
                 'manufacturer_logo',
-                'body_style'
-            ] as $column)
-            {
+                'body_style',
+            ] as $column) {
 
-                if(Schema::hasColumn('vehicles',$column))
-                {
+                if (Schema::hasColumn('vehicles', $column)) {
                     $columns[] = $column;
                 }
 
             }
 
-
-
-            if(count($columns))
-            {
+            if (count($columns)) {
                 $table->dropColumn($columns);
             }
-
 
         });
 
     }
-
 };

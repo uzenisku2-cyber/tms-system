@@ -81,6 +81,7 @@ class BroadcastChannelSecurityTest extends TestCase
             ->get('/realtime-test')
             ->assertNotFound();
     }
+
     public function test_trip_realtime_event_uses_private_channel(): void
     {
         $event = new TripRealtimeBroadcast(
@@ -109,6 +110,7 @@ class BroadcastChannelSecurityTest extends TestCase
             $event->broadcastAs()
         );
     }
+
     public function test_guest_cannot_authorize_private_trip_channel(): void
     {
         $this
@@ -170,10 +172,8 @@ class BroadcastChannelSecurityTest extends TestCase
     {
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->getKey(),
-            'registration_number' =>
-                'BC-' . $user->getKey(),
-            'vin' =>
-                'BCAST' .
+            'registration_number' => 'BC-'.$user->getKey(),
+            'vin' => 'BCAST'.
                 str_pad(
                     (string) $user->getKey(),
                     12,
@@ -204,8 +204,7 @@ class BroadcastChannelSecurityTest extends TestCase
     {
         return [
             'socket_id' => '1234.5678',
-            'channel_name' =>
-                'private-trip.' . $tripId,
+            'channel_name' => 'private-trip.'.$tripId,
         ];
     }
 }
