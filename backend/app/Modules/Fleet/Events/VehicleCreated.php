@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Events;
 
-use App\Models\Vehicle;
+use App\Modules\Fleet\Models\Vehicle;
 
 class VehicleCreated
 {

@@ -1,33 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Modules\Fleet\Models\Vehicle as FleetVehicle;
 
-
-class Vehicle extends Model
+/**
+ * @deprecated Use App\Modules\Fleet\Models\Vehicle.
+ *
+ * Compatibility bridge retained for legacy class references.
+ */
+class Vehicle extends FleetVehicle
 {
-
-    protected $fillable = [
-        'registration_number',
-        'vin',
-        'manufacturer',
-        'model',
-        'year',
-        'fuel_type',
-        'mileage',
-        'active',
-    ];
-
-
-
-    public function positions(): HasMany
-    {
-        return $this->hasMany(
-            VehiclePosition::class,
-            'vehicle_id'
-        );
-    }
-
 }

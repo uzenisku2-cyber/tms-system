@@ -12,14 +12,25 @@ class TripLocationUpdated
 {
 
     public function __construct(
+
         public readonly int $tripId,
+
+        public readonly ?int $vehicleId,
+
         public readonly float $latitude,
+
         public readonly float $longitude,
+
         public readonly ?int $speed,
+
         public readonly ?int $heading,
+
         public readonly string $occurredAt,
+
     ) {
     }
+
+
 
 
 
@@ -27,19 +38,47 @@ class TripLocationUpdated
         TripLocation $location
     ): self {
 
+
+        $location->load(
+            'trip'
+        );
+
+
+
         return new self(
 
-            tripId: $location->trip_id,
+            tripId:
+                $location->trip_id,
 
-            latitude: (float) $location->latitude,
 
-            longitude: (float) $location->longitude,
 
-            speed: $location->speed,
+            vehicleId:
+                $location->trip->vehicle_id,
 
-            heading: $location->heading,
 
-            occurredAt: now()->toISOString(),
+
+            latitude:
+                (float) $location->latitude,
+
+
+
+            longitude:
+                (float) $location->longitude,
+
+
+
+            speed:
+                $location->speed,
+
+
+
+            heading:
+                $location->heading,
+
+
+
+            occurredAt:
+                now()->toISOString(),
 
         );
 
@@ -47,23 +86,48 @@ class TripLocationUpdated
 
 
 
+
+
     public function toArray(): array
     {
+
         return [
 
-            'trip_id' => $this->tripId,
+            'trip_id' =>
+                $this->tripId,
 
-            'latitude' => $this->latitude,
 
-            'longitude' => $this->longitude,
 
-            'speed' => $this->speed,
+            'vehicle_id' =>
+                $this->vehicleId,
 
-            'heading' => $this->heading,
 
-            'occurred_at' => $this->occurredAt,
+
+            'latitude' =>
+                $this->latitude,
+
+
+
+            'longitude' =>
+                $this->longitude,
+
+
+
+            'speed' =>
+                $this->speed,
+
+
+
+            'heading' =>
+                $this->heading,
+
+
+
+            'occurred_at' =>
+                $this->occurredAt,
 
         ];
+
     }
 
 }

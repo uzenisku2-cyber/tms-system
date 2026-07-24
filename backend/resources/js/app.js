@@ -1,132 +1,92 @@
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
+import {
+    connectRealtime,
+    disconnectRealtime,
+    leaveTripRealtime,
+    subscribeTripRealtime,
+} from './realtime/tripRealtime';
 
+function setConnectionStatus(message) {
+    const status = document.getElementById(
+        'status'
+    );
 
-window.Pusher = Pusher;
+    if (status) {
+        status.textContent = message;
+    }
+}
 
+function bindConnectionStatus(echo) {
+    const connection =
+        echo.connector.pusher.connection;
 
-// ==============================
-// Laravel Reverb Echo
-// ==============================
+    connection.bind(
+        'connected',
+        () => {
+            setConnectionStatus(
+                'CONNECTED - AUTHENTICATED'
+            );
+        }
+    );
 
-window.Echo = new Echo({
+    connection.bind(
+        'error',
+        (error) => {
 
-    broadcaster: 'reverb',
+            setConnectionStatus(
+                'DISCONNECTED'
+            );
+        }
+    );
 
-    key: import.meta.env.VITE_REVERB_APP_KEY,
+    connection.bind(
+        'disconnected',
+        () => {
+            setConnectionStatus(
+                'DISCONNECTED'
+            );
+        }
+    );
 
-    wsHost: import.meta.env.VITE_REVERB_HOST,
+    if (connection.state === 'connected') {
+        setConnectionStatus(
+            'CONNECTED - AUTHENTICATED'
+        );
+    }
+}
 
-    wsPort: Number(
-        import.meta.env.VITE_REVERB_PORT ?? 8080
-    ),
+window.TmsRealtime = Object.freeze({
+    connect(token) {
+        setConnectionStatus(
+            'CONNECTING - AUTHENTICATING'
+        );
 
-    wssPort: Number(
-        import.meta.env.VITE_REVERB_PORT ?? 8080
-    ),
+        const echo = connectRealtime(
+            token
+        );
 
-    forceTLS: false,
+        bindConnectionStatus(
+            echo
+        );
 
-    enabledTransports: [
-        'ws'
-    ],
+        return echo;
+    },
 
+    subscribeTrip(tripId, callback) {
+        return subscribeTripRealtime(
+            tripId,
+            callback
+        );
+    },
+
+    leaveTrip() {
+        leaveTripRealtime();
+    },
+
+    disconnect() {
+        disconnectRealtime();
+
+        setConnectionStatus(
+            'AUTHENTICATION REQUIRED'
+        );
+    },
 });
-
-
-console.log(
-    'Echo initialized',
-    window.Echo
-);
-
-
-
-// ==============================
-// WebSocket connection status
-// ==============================
-
-window.Echo.connector.pusher.connection.bind(
-    'connected',
-    () => {
-
-        console.log(
-            'Reverb connected'
-        );
-
-    }
-);
-
-
-window.Echo.connector.pusher.connection.bind(
-    'error',
-    (error) => {
-
-        console.error(
-            'Reverb error',
-            error
-        );
-
-    }
-);
-
-
-
-// ==============================
-// DEBUG - všechny příchozí eventy
-// ==============================
-
-window.Echo.connector.pusher.bind_global(
-    (eventName, data) => {
-
-        console.log(
-            'GLOBAL EVENT',
-            eventName,
-            data
-        );
-
-    }
-);
-
-
-
-// ==============================
-// Trip realtime tracking
-// ==============================
-
-const tripChannel = window.Echo.channel(
-    'trip.6'
-);
-
-
-console.log(
-    'Subscribed to trip.6'
-);
-
-
-
-// Laravel Event:
-// broadcastAs()
-// => trip.position.updated
-//
-// Echo listener:
-// listen('.trip.position.updated')
-
-
-tripChannel.listen(
-    '.trip.position.updated',
-    (event) => {
-
-        console.log(
-            'REALTIME EVENT',
-            event
-        );
-
-
-        // zde později aktualizace mapy
-        // marker.setLatLng([
-        //     event.latitude,
-        //     event.longitude
-        // ]);
-
-    }
-);

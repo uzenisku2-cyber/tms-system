@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace App\Modules\Trips\Domain\Listeners;
 
+
 use App\Core\Events\EventEnvelope;
 use App\Core\EventStreaming\RealtimePublisher;
+use App\Modules\Trips\Models\Trip;
+
 use Illuminate\Support\Facades\Cache;
+
 
 
 class UpdateTripRealtimeProjection
 {
+
 
     public function handle(
         EventEnvelope $event
@@ -31,25 +36,173 @@ class UpdateTripRealtimeProjection
 
 
 
+
+
         $payload = $event->payload;
+
+
+
+
+
+        $trip = Trip::with([
+
+            'vehicle',
+
+            'driver'
+
+        ])
+
+        ->find(
+
+            $payload['trip_id']
+
+        );
+
+
+
 
 
 
         $state = [
 
-            'trip_id' => $payload['trip_id'],
 
-            'latitude' => $payload['latitude'],
 
-            'longitude' => $payload['longitude'],
+            /*
+             * TRIP
+             */
 
-            'speed' => $payload['speed'],
+            'trip_id' =>
 
-            'heading' => $payload['heading'],
+                $payload['trip_id'],
 
-            'updated_at' => $payload['occurred_at'],
+
+
+
+
+
+
+            /*
+             * VEHICLE
+             */
+
+            'vehicle_id' =>
+
+                $trip?->vehicle?->id,
+
+
+            'vehicle_type' =>
+
+                $trip?->vehicle?->vehicle_type,
+
+
+            'manufacturer' =>
+
+                $trip?->vehicle?->manufacturer,
+
+
+            'model' =>
+
+                $trip?->vehicle?->model,
+
+
+            'registration_number' =>
+
+                $trip?->vehicle?->registration_number,
+
+
+            'color' =>
+
+                $trip?->vehicle?->color,
+
+
+
+
+
+
+
+            /*
+             * DRIVER
+             */
+
+            'driver_id' =>
+
+                $trip?->driver?->id,
+
+
+            'driver_name' =>
+
+                $trip?->driver?->full_name,
+
+
+
+
+
+
+
+            /*
+             * GPS
+             */
+
+            'latitude' =>
+
+                $payload['latitude'],
+
+
+            'longitude' =>
+
+                $payload['longitude'],
+
+
+            'speed' =>
+
+                $payload['speed'],
+
+
+            'heading' =>
+
+                $payload['heading'],
+
+
+
+
+
+
+
+            /*
+             * STATUS
+             */
+
+            'status' =>
+
+                ($payload['speed'] ?? 0) > 0
+
+                    ? 'MOVING'
+
+                    : 'STOPPED',
+
+
+
+
+
+
+            'last_seen_at' =>
+
+                $payload['occurred_at'],
+
+
 
         ];
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -65,6 +218,10 @@ class UpdateTripRealtimeProjection
 
 
 
+
+
+
+
         RealtimePublisher::publish(
 
             "trip.{$payload['trip_id']}",
@@ -75,5 +232,6 @@ class UpdateTripRealtimeProjection
 
 
     }
+
 
 }

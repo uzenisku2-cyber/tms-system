@@ -26,9 +26,11 @@ Route::get('/', function () {
 |--------------------------------------------------------------------------
 */
 
-Route::get('/realtime-test', function () {
-    return view('realtime-test');
-});
+if (app()->environment('local')) {
+    Route::get('/realtime-test', function () {
+        return view('realtime-test');
+    });
+}
 
 
 

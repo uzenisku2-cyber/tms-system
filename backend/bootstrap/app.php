@@ -17,7 +17,6 @@ return Application::configure(
 
 
     ->withRouting(
-        channels: __DIR__.'/../routes/channels.php',
 
         web: __DIR__ . '/../routes/web.php',
 
@@ -30,6 +29,15 @@ return Application::configure(
     )
 
 
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        [
+            'middleware' => [
+                'api',
+                'auth:sanctum',
+            ],
+        ]
+    )
     ->withMiddleware(function (Middleware $middleware) {
 
 

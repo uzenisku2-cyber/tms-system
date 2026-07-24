@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use App\Modules\Fleet\Models\Vehicle;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VehiclePosition extends Model
 {
@@ -15,7 +19,6 @@ class VehiclePosition extends Model
         'heading',
     ];
 
-
     protected $casts = [
         'latitude' => 'float',
         'longitude' => 'float',
@@ -23,8 +26,7 @@ class VehiclePosition extends Model
         'heading' => 'integer',
     ];
 
-
-    public function vehicle()
+    public function vehicle(): BelongsTo
     {
         return $this->belongsTo(
             Vehicle::class

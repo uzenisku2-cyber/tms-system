@@ -5,61 +5,44 @@ declare(strict_types=1);
 namespace App\Modules\Fleet\Models;
 
 use App\Models\User;
+use App\Models\VehiclePosition;
 use App\Modules\Trips\Models\Trip;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Vehicle extends Model
 {
     protected $fillable = [
-
         'user_id',
-
         'registration_number',
-
         'vin',
-
         'manufacturer',
-
         'model',
-
         'year',
-
+        'vehicle_type',
+        'vehicle_size',
+        'color',
+        'icon',
+        'manufacturer_logo',
+        'body_style',
         'fuel_type',
-
         'mileage',
-
         'active',
-
     ];
-
 
     protected $casts = [
-
         'active' => 'boolean',
-
         'year' => 'integer',
-
         'mileage' => 'integer',
-
     ];
 
-
-    /**
-     * Uživatel, kterému vozidlo patří.
-     */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(
-            User::class
-        );
+        return $this->belongsTo(User::class);
     }
 
-
-    /**
-     * Jízdy tohoto vozidla.
-     */
     public function trips(): HasMany
     {
         return $this->hasMany(
@@ -68,14 +51,26 @@ class Vehicle extends Model
         );
     }
 
+    public function positions(): HasMany
+    {
+        return $this->hasMany(
+            VehiclePosition::class,
+            'vehicle_id'
+        );
+    }
 
-    /**
-     * Má vozidlo aktivní jízdu?
-     */
+    public function latestPosition(): HasOne
+    {
+        return $this->hasOne(
+            VehiclePosition::class,
+            'vehicle_id'
+        )->latestOfMany();
+    }
+
     public function hasActiveTrip(): bool
     {
-        return $this->trips()
-
+        return $this
+            ->trips()
             ->whereIn(
                 'status',
                 [
@@ -83,28 +78,23 @@ class Vehicle extends Model
                     Trip::STATUS_STARTED,
                 ]
             )
-
             ->exists();
     }
 
-
-    /**
-     * Je vozidlo dostupné?
-     */
     public function isAvailable(): bool
     {
         return !$this->hasActiveTrip();
     }
 
-
-    /**
-     * Označení vozidla.
-     */
     public function getLabelAttribute(): string
     {
         return trim(
-            $this->manufacturer . ' ' . $this->model
-            . ' (' . $this->registration_number . ')'
+            $this->manufacturer
+            .' '
+            .$this->model
+            .' ('
+            .$this->registration_number
+            .')'
         );
     }
 }
