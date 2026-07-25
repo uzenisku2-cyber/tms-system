@@ -4,70 +4,94 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Modules\Organizations\Models\Organization;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
-class RolePermissionSeeder extends Seeder
+final class RolePermissionSeeder extends Seeder
 {
-    public function run(): void
-    {
-        $guard = 'sanctum';
+    private const GUARD = 'web';
 
-        $permissions = [
+    /** @var list<string> */
+    private const PERMISSIONS = [
+        'vehicles.view',
+        'vehicles.create',
+        'vehicles.update',
+        'vehicles.delete',
+        'users.manage',
+    ];
+
+    /** @var array<string, list<string>> */
+    private const ROLE_PERMISSIONS = [
+        'super-admin' => [
             'vehicles.view',
             'vehicles.create',
             'vehicles.update',
             'vehicles.delete',
             'users.manage',
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate([
-                'name' => $permission,
-                'guard_name' => $guard,
-            ]);
-        }
-
-        $superAdmin = Role::firstOrCreate([
-            'name' => 'super-admin',
-            'guard_name' => $guard,
-        ]);
-
-        $admin = Role::firstOrCreate([
-            'name' => 'admin',
-            'guard_name' => $guard,
-        ]);
-
-        $manager = Role::firstOrCreate([
-            'name' => 'manager',
-            'guard_name' => $guard,
-        ]);
-
-        $user = Role::firstOrCreate([
-            'name' => 'user',
-            'guard_name' => $guard,
-        ]);
-
-        // FULL ACCESS
-        $superAdmin->syncPermissions(Permission::all());
-
-        // ADMIN
-        $admin->syncPermissions([
+        ],
+        'admin' => [
             'vehicles.view',
             'vehicles.create',
             'vehicles.update',
-        ]);
-
-        // MANAGER
-        $manager->syncPermissions([
+        ],
+        'manager' => [
             'vehicles.view',
             'vehicles.create',
-        ]);
-
-        // USER
-        $user->syncPermissions([
+        ],
+        'user' => [
             'vehicles.view',
-        ]);
+        ],
+    ];
+
+    public function run(): void
+    {
+        $registrar = app(PermissionRegistrar::class);
+
+        $registrar->forgetCachedPermissions();
+        $registrar->setPermissionsTeamId(null);
+
+        foreach (self::PERMISSIONS as $permissionName) {
+            Permission::findOrCreate(
+                $permissionName,
+                self::GUARD,
+            );
+        }
+
+        try {
+            Organization::query()
+                ->where(
+                    'status',
+                    Organization::STATUS_ACTIVE,
+                )
+                ->orderBy('id')
+                ->each(
+                    function (
+                        Organization $organization,
+                    ) use ($registrar): void {
+                        $organizationId = (int) $organization->getKey();
+
+                        $registrar->setPermissionsTeamId(
+                            $organizationId,
+                        );
+
+                        foreach (
+                            self::ROLE_PERMISSIONS as $roleName => $permissions
+                        ) {
+                            $role = Role::findOrCreate(
+                                $roleName,
+                                self::GUARD,
+                            );
+
+                            $role->syncPermissions($permissions);
+                        }
+                    },
+                );
+        } finally {
+            $registrar->setPermissionsTeamId(null);
+            $registrar->forgetCachedPermissions();
+        }
     }
 }

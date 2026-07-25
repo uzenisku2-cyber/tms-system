@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Identity\Services;
 
 use App\Core\Services\BaseService;
@@ -19,7 +21,11 @@ class AuthService extends BaseService
     {
         $user = $this->users->findByEmail($email);
 
-        if (! $user || ! Hash::check($password, $user->password)) {
+        if (
+            ! $user
+            || ! Hash::check($password, $user->password)
+            || ! $user->canAuthenticate()
+        ) {
             throw new AuthenticationException('Invalid credentials.');
         }
 
