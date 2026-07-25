@@ -10,9 +10,7 @@ class DriverCreated
     use Dispatchable;
     use SerializesModels;
 
-
     public function __construct(
         public int $driverId,
-        public array $payload
     ) {}
 }

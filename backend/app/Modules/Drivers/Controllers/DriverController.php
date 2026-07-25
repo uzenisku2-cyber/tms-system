@@ -20,7 +20,6 @@ class DriverController extends Controller
         );
     }
 
-
     public function store(
         Request $request,
         CommandBus $bus
@@ -28,32 +27,23 @@ class DriverController extends Controller
 
         $validated = $request->validate([
 
-            'first_name' =>
-                'required|string',
+            'first_name' => 'required|string',
 
-            'last_name' =>
-                'required|string',
+            'last_name' => 'required|string',
 
-            'license_number' =>
-                'required|string|unique:drivers,license_number',
+            'license_number' => 'required|string|unique:drivers,license_number',
 
-            'phone' =>
-                'nullable|string',
+            'phone' => 'nullable|string',
 
-            'email' =>
-                'nullable|email',
+            'email' => 'nullable|email',
 
-            'license_category' =>
-                'nullable|string',
+            'license_category' => 'nullable|string',
 
         ]);
-
 
         Trace::log('driver.store', [
             'user_id' => auth()->id(),
-            'payload' => $validated,
         ]);
-
 
         $bus->dispatch(
             new CreateDriverCommand(
@@ -62,12 +52,10 @@ class DriverController extends Controller
             )
         );
 
-
         return response()->json([
             'status' => 'queued',
         ], 202);
     }
-
 
     public function show(Driver $driver)
     {
@@ -78,14 +66,12 @@ class DriverController extends Controller
         );
     }
 
-
     public function update(
         Request $request,
         Driver $driver
     ) {
 
         $this->authorizeDriver($driver);
-
 
         $driver->update(
             $request->validate([
@@ -96,13 +82,11 @@ class DriverController extends Controller
             ])
         );
 
-
         return response()->json([
             'status' => 'updated',
             'data' => $driver,
         ]);
     }
-
 
     public function destroy(Driver $driver)
     {
@@ -114,7 +98,6 @@ class DriverController extends Controller
             'status' => 'deleted',
         ]);
     }
-
 
     private function authorizeDriver(Driver $driver): void
     {
