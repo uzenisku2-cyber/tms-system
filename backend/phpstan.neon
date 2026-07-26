@@ -15,3 +15,8 @@ parameters:
         - bootstrap/cache/*
         - storage/*
         - vendor/*
+    ignoreErrors:
+        -
+            identifier: nullsafe.neverNull
+            path: database/migrations/2026_07_25_213500_enable_organization_scope_for_permission_tables.php
+            count: 1
