@@ -1,0 +1,117 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: tms
+          POSTGRES_USER: tms
+          POSTGRES_PASSWORD: tms123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U tms"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed PHP files
+        id: changed_php
+        shell: bash
+        working-directory: .
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            range="$PR_BASE_SHA...$PR_HEAD_SHA"
+          else
+            head="$GITHUB_SHA"
+            base="$PUSH_BEFORE_SHA"
+
+            if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+              base="$(git rev-parse "$head^" 2>/dev/null || git hash-object -t tree /dev/null)"
+            fi
+
+            range="$base..$head"
+          fi
+
+          git diff --name-only --diff-filter=ACMR "$range" -- backend |
+            awk '/\.php$/ { sub(/^backend\//, ""); print }' \
+            > /tmp/changed-php-files.txt
+
+          count="$(wc -l < /tmp/changed-php-files.txt | tr -d ' ')"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+          echo "Changed PHP files: $count"
+          cat /tmp/changed-php-files.txt
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          extensions: mbstring, pdo_pgsql
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare Laravel
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan migrate --force
+
+      - name: Run Pint for changed PHP files
+        if: steps.changed_php.outputs.count != '0'
+        shell: bash
+        run: |
+          mapfile -t files < /tmp/changed-php-files.txt
+          vendor/bin/pint --test "${files[@]}"
+
+      - name: Run PHPStan for changed PHP files
+        if: steps.changed_php.outputs.count != '0'
+        shell: bash
+        run: |
+          mapfile -t files < /tmp/changed-php-files.txt
+          vendor/bin/phpstan analyse --memory-limit=512M --no-progress "${files[@]}"
+
+      - name: Run PHPUnit
+        run: php artisan test

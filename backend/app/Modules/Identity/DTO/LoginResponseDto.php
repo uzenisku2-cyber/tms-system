@@ -11,6 +11,5 @@ final readonly class LoginResponseDto
     public function __construct(
         public string $token,
         public User $user,
-    ) {
-    }
+    ) {}
 }
