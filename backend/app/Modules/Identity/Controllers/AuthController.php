@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Identity\Controllers;
 
 use App\Core\Http\BaseController;
@@ -37,7 +39,7 @@ class AuthController extends BaseController
         );
     }
 
-    public function user(Request $request): JsonResponse
+    public function me(Request $request): JsonResponse
     {
         return $this->success(
             new UserResource($request->user())

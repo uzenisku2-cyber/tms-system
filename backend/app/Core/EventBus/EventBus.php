@@ -7,8 +7,8 @@ namespace App\Core\EventBus;
 use App\Core\Events\EventEnvelope;
 use App\Core\EventStore\EventStore;
 use App\Core\EventStreaming\EventPublisher;
+use App\Core\Organizations\OrganizationContext;
 use App\Core\Telemetry\TraceContext;
-use Illuminate\Support\Facades\Auth;
 
 class EventBus
 {
@@ -22,13 +22,13 @@ class EventBus
         $traceId = TraceContext::get();
 
         // 2. TENANT CONTEXT (multi-tenant SaaS ready)
-        $tenantId = Auth::user()?->tenant_id;
+        $organizationId = app(OrganizationContext::class)->id();
 
         // 3. BUILD STANDARDIZED EVENT ENVELOPE
         $envelope = EventEnvelope::wrap(
             event: $event,
             traceId: $traceId,
-            tenantId: $tenantId
+            tenantId: $organizationId === null ? null : (string) $organizationId
         );
 
         // 4. EVENT STORE (source of truth / replay / audit)

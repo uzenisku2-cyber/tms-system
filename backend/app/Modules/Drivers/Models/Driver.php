@@ -9,86 +9,107 @@ use App\Modules\Trips\Models\Trip;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $first_name
+ * @property string $last_name
+ * @property string|null $phone
+ * @property string|null $email
+ * @property string $license_number
+ * @property string|null $license_category
+ * @property bool $active
+ * @property string $status
+ * @property Carbon|null $status_changed_at
+ */
 class Driver extends Model
 {
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_SUSPENDED = 'suspended';
+
+    public const STATUS_INACTIVE = 'inactive';
+
+    /** @var list<string> */
+    public const STATUSES = [
+        self::STATUS_ACTIVE,
+        self::STATUS_SUSPENDED,
+        self::STATUS_INACTIVE,
+    ];
+
+    /** @var list<string> */
     protected $fillable = [
-
         'user_id',
-
         'first_name',
-
         'last_name',
-
         'phone',
-
         'email',
-
         'license_number',
-
         'license_category',
-
         'active',
-
     ];
 
-
-    protected $casts = [
-
-        'active' => 'boolean',
-
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'active' => true,
+        'status' => self::STATUS_ACTIVE,
     ];
 
-
-    /**
-     * Uživatel, kterému řidič patří.
-     */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(
-            User::class
-        );
+        return $this->belongsTo(User::class);
     }
 
-
-    /**
-     * Jízdy tohoto řidiče.
-     */
+    /** @return HasMany<Trip, $this> */
     public function trips(): HasMany
     {
-        return $this->hasMany(
-            Trip::class,
-            'driver_id'
-        );
+        return $this->hasMany(Trip::class, 'driver_id');
     }
 
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
 
-    /**
-     * Má řidič právě aktivní jízdu?
-     */
+    public function isSuspended(): bool
+    {
+        return $this->status === self::STATUS_SUSPENDED;
+    }
+
+    public function isInactive(): bool
+    {
+        return $this->status === self::STATUS_INACTIVE;
+    }
+
+    public function canOperate(): bool
+    {
+        return $this->isActive();
+    }
+
     public function hasActiveTrip(): bool
     {
         return $this->trips()
-
-            ->whereIn(
-                'status',
-                [
-                    Trip::STATUS_ASSIGNED,
-                    Trip::STATUS_STARTED,
-                ]
-            )
-
+            ->whereIn('status', [
+                Trip::STATUS_ASSIGNED,
+                Trip::STATUS_STARTED,
+            ])
             ->exists();
     }
 
-
-    /**
-     * Celé jméno řidiče.
-     */
     public function getFullNameAttribute(): string
     {
-        return trim(
-            $this->first_name . ' ' . $this->last_name
-        );
+        return trim($this->first_name.' '.$this->last_name);
+    }
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+            'status_changed_at' => 'datetime',
+        ];
     }
 }
