@@ -2,6 +2,4 @@
 
 namespace App\Core\DTO;
 
-abstract readonly class BaseDto
-{
-}
+abstract readonly class BaseDto {}

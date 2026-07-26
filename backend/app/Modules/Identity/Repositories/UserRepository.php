@@ -11,7 +11,7 @@ class UserRepository extends BaseRepository
 {
     public function __construct()
     {
-        parent::__construct(new User());
+        parent::__construct(new User);
     }
 
     public function findByEmail(string $email): ?User
@@ -38,12 +38,12 @@ class UserRepository extends BaseRepository
     }
 
     public function updateUser(User $user, array $data): User
-{
-    if (isset($data['password'])) {
-        $data['password'] = Hash::make($data['password']);
-    }
+    {
+        if (isset($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        }
 
-    /** @var User */
-    return $this->update($user, $data);
-}
+        /** @var User */
+        return $this->update($user, $data);
+    }
 }

@@ -11,8 +11,7 @@ class UserService extends BaseService
 {
     public function __construct(
         private readonly UserRepository $users,
-    ) {
-    }
+    ) {}
 
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {

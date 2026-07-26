@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\DummyModule\Database\Factories;
+
+use App\Modules\DummyModule\Models\DummyModel;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<DummyModel>
+ */
+class DummyClass extends Factory
+{
+    protected $model = DummyModel::class;
+
+    public function definition(): array
+    {
+        return [];
+    }
+}

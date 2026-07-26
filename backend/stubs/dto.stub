@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\{{ module }}\DTO;
+
+class {{ class }}
+{
+    public function __construct()
+    {
+    }
+}
