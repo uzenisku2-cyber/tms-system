@@ -99,18 +99,15 @@ jobs:
           php artisan key:generate
           php artisan migrate --force
 
-      # Temporary recovery-only exception for PR #3.
-      # Historical Pint/PHPStan debt is audited separately; PHPUnit remains mandatory.
-      # Remove these conditions immediately after PR #3 is merged.
       - name: Run Pint for changed PHP files
-        if: ${{ steps.changed_php.outputs.count != '0' && (github.event_name != 'pull_request' || github.event.pull_request.number != 3 || github.head_ref != 'recovery/v0.4.0-main-history') }}
+        if: steps.changed_php.outputs.count != '0'
         shell: bash
         run: |
           mapfile -t files < /tmp/changed-php-files.txt
           vendor/bin/pint --test "${files[@]}"
 
       - name: Run PHPStan for changed PHP files
-        if: ${{ steps.changed_php.outputs.count != '0' && (github.event_name != 'pull_request' || github.event.pull_request.number != 3 || github.head_ref != 'recovery/v0.4.0-main-history') }}
+        if: steps.changed_php.outputs.count != '0'
         shell: bash
         run: |
           mapfile -t files < /tmp/changed-php-files.txt
