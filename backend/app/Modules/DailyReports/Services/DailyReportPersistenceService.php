@@ -2128,6 +2128,18 @@ final class DailyReportPersistenceService
                 $dailyReport->getAttribute($kilometresField);
         }
 
+        $enteredOnBehalf = $dailyReport->getAttribute(
+            'entered_on_behalf',
+        );
+
+        if (! is_bool($enteredOnBehalf)) {
+            throw new LogicException(
+                'Daily report entered-on-behalf state is not available.',
+            );
+        }
+
+        $attributes['entered_on_behalf'] = $enteredOnBehalf;
+
         $serviceDate = $dailyReport->getAttribute(
             'service_date',
         );
