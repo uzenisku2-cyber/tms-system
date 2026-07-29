@@ -21,6 +21,15 @@ final class RolePermissionSeeder extends Seeder
         'vehicles.update',
         'vehicles.delete',
         'users.manage',
+        'daily-reports.view',
+        'daily-reports.create',
+        'daily-reports.update',
+        'daily-reports.submit',
+        'daily-reports.enter-for-driver',
+        'daily-reports.review',
+        'daily-reports.request-correction',
+        'daily-reports.approve',
+        'daily-reports.close',
     ];
 
     /** @var array<string, list<string>> */
