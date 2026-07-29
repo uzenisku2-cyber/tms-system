@@ -123,7 +123,7 @@ final class BootstrapAdminSeederTest extends TestCase
             'organization_memberships',
             2,
         );
-        $this->assertDatabaseCount('permissions', 5);
+        $this->assertDatabaseCount('permissions', 14);
         $this->assertDatabaseCount('roles', 4);
         $this->assertDatabaseCount(
             'role_has_permissions',

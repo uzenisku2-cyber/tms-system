@@ -37,7 +37,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
 
         self::assertSame(
-            5,
+            14,
             DB::table('permissions')->count(),
         );
 
@@ -81,9 +81,49 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            5,
+            14,
             DB::table('permissions')
                 ->where('guard_name', 'web')
+                ->count(),
+        );
+
+        $dailyReportPermissions = [
+            'daily-reports.view',
+            'daily-reports.create',
+            'daily-reports.update',
+            'daily-reports.submit',
+            'daily-reports.enter-for-driver',
+            'daily-reports.review',
+            'daily-reports.request-correction',
+            'daily-reports.approve',
+            'daily-reports.close',
+        ];
+
+        $seededDailyReportPermissions = DB::table('permissions')
+            ->whereIn('name', $dailyReportPermissions)
+            ->where('guard_name', 'web')
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+
+        sort($dailyReportPermissions);
+
+        self::assertSame(
+            $dailyReportPermissions,
+            $seededDailyReportPermissions,
+        );
+
+        $dailyReportPermissionIds = DB::table('permissions')
+            ->whereIn('name', $dailyReportPermissions)
+            ->pluck('id');
+
+        self::assertSame(
+            0,
+            DB::table('role_has_permissions')
+                ->whereIn(
+                    'permission_id',
+                    $dailyReportPermissionIds,
+                )
                 ->count(),
         );
 
