@@ -119,18 +119,23 @@ class PriceListVersion extends Model
             $serviceDate,
         )->startOfDay();
 
-        if (
-            $this->valid_from
-                ->startOfDay()
-                ->isAfter($date)
-        ) {
+        $validFrom = CarbonImmutable::parse(
+            (string) $this->valid_from,
+        )->startOfDay();
+
+        if ($validFrom->isAfter($date)) {
             return false;
         }
 
-        return $this->valid_until === null
-            || ! $this->valid_until
-                ->startOfDay()
-                ->isBefore($date);
+        if ($this->valid_until === null) {
+            return true;
+        }
+
+        $validUntil = CarbonImmutable::parse(
+            (string) $this->valid_until,
+        )->startOfDay();
+
+        return ! $validUntil->isBefore($date);
     }
 
     public function isReplaced(): bool

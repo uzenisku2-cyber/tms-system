@@ -181,7 +181,9 @@ final class PricingModelFoundationTest extends TestCase
 
         self::assertSame(
             '2026-08-01',
-            $version->valid_from?->format('Y-m-d'),
+            CarbonImmutable::parse(
+                (string) $version->valid_from,
+            )->format('Y-m-d'),
         );
 
         self::assertSame(
