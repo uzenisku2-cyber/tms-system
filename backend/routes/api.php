@@ -22,6 +22,7 @@ Route::prefix('v1')->group(function (): void {
         app_path('Modules/Identity/Routes/api.php'),
         app_path('Modules/Drivers/Routes/api.php'),
         app_path('Modules/DailyReports/Routes/api.php'),
+        app_path('Modules/Pricing/Routes/api.php'),
         app_path('Modules/Fleet/Routes/api.php'),
         app_path('Modules/Trips/Routes/api.php'),
         app_path('Modules/Notifications/Routes/api.php'),

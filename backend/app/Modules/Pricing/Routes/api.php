@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Modules\Pricing\Controllers\PriceListController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+])
+    ->prefix('price-lists')
+    ->name('price-lists.')
+    ->group(function (): void {
+        Route::middleware('perm:pricing.view')
+            ->group(function (): void {
+                Route::get(
+                    '/',
+                    [PriceListController::class, 'index'],
+                )->name('index');
+
+                Route::get(
+                    '/{priceList}/versions',
+                    [PriceListController::class, 'versions'],
+                )
+                    ->whereUuid('priceList')
+                    ->name('versions.index');
+
+                Route::get(
+                    '/{priceList}/versions/{version}',
+                    [PriceListController::class, 'version'],
+                )
+                    ->whereUuid('priceList')
+                    ->whereNumber('version')
+                    ->name('versions.show');
+
+                Route::get(
+                    '/{priceList}',
+                    [PriceListController::class, 'show'],
+                )
+                    ->whereUuid('priceList')
+                    ->name('show');
+            });
+    });
