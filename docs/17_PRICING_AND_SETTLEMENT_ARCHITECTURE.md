@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.3
+# TMS Pricing and Settlement Architecture v1.4
 
 ## 1. Purpose
 
@@ -844,6 +844,42 @@ The unit follows these rules:
 - internal database identifiers are not exposed by the API Resource
 - approval and its audit metadata are persisted atomically
 - activation and replacement remain deferred
+
+### 16.6 Sprint 010 Price-List Version Activation Foundation
+
+The Sprint 010 write unit implements:
+
+~~~text
+POST /api/v1/price-lists/{priceList}/versions/{version}/activate
+~~~
+
+The unit follows these rules:
+
+- the route requires Sanctum authentication
+- the route requires a verified `X-Organization-ID` context
+- the route requires the organization-scoped `pricing.manage` permission
+- aggregate lookup uses the price-list `public_id`
+- the version is resolved only through its owner-scoped parent by `version_number`
+- only the owner organization may activate a version
+- the request provides `expected_lock_version`
+- archived price lists cannot have versions activated
+- only the aggregate current version may be activated
+- only a version in `approved` status may be activated
+- stale lock versions are rejected with HTTP `409`
+- approval metadata must remain complete before activation
+- `valid_from` is required before activation
+- `valid_until`, when present, must not precede `valid_from`
+- Sprint 010 supports first activation only
+- an existing active version causes HTTP `409` because automatic replacement remains deferred
+- successful activation changes the selected version status to `active`
+- successful activation records `activated_at`
+- successful activation changes the parent price-list status to `active`
+- activation preserves `lock_version`, `version_number` and `price_lists.current_version`
+- activation preserves approval metadata, effective-period metadata, change reason and pricing items
+- the endpoint returns the active version through `PriceListVersionResource`
+- internal database identifiers are not exposed by the API Resource
+- version activation and parent price-list status mutation are persisted atomically
+- automatic active-version replacement remains deferred to a separately defined workflow
 
 ## 17. Transaction and Concurrency Rules
 
