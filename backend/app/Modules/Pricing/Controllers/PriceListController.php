@@ -6,6 +6,7 @@ namespace App\Modules\Pricing\Controllers;
 
 use App\Core\Http\BaseController;
 use App\Models\User;
+use App\Modules\Pricing\Requests\ActivatePriceListVersionRequest;
 use App\Modules\Pricing\Requests\ApprovePriceListVersionRequest;
 use App\Modules\Pricing\Requests\PriceListIndexRequest;
 use App\Modules\Pricing\Requests\StorePriceListRequest;
@@ -90,6 +91,25 @@ final class PriceListController extends BaseController
                 ),
             ),
             'Price list version approved.',
+        );
+    }
+
+    public function activateVersion(
+        ActivatePriceListVersionRequest $request,
+        string $priceList,
+        string $version,
+        PriceListWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new PriceListVersionResource(
+                $writes->activateApprovedVersion(
+                    $this->actor($request),
+                    $priceList,
+                    (int) $version,
+                    $request->validated(),
+                ),
+            ),
+            'Price list version activated.',
         );
     }
 

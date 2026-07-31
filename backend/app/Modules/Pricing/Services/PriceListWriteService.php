@@ -11,6 +11,7 @@ use App\Modules\Organizations\Models\OrganizationRelationship;
 use App\Modules\Pricing\Models\PriceList;
 use App\Modules\Pricing\Models\PriceListItem;
 use App\Modules\Pricing\Models\PriceListVersion;
+use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LogicException;
@@ -604,6 +605,169 @@ final class PriceListWriteService
                     'items',
                 ]) ?? throw new LogicException(
                     'The approved price-list version could not be reloaded.',
+                );
+            },
+            3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function activateApprovedVersion(
+        User $actor,
+        string $publicId,
+        int $versionNumber,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $actorId = (int) $actor->getKey();
+
+        if ($actorId < 1) {
+            throw new LogicException(
+                'The authenticated user has no valid identifier.',
+            );
+        }
+
+        if ($publicId === '') {
+            throw new LogicException(
+                'The price-list public identifier is required.',
+            );
+        }
+
+        if ($versionNumber < 1) {
+            throw new LogicException(
+                'The price-list version number must be positive.',
+            );
+        }
+
+        $expectedLockVersion = $this->positiveInteger(
+            $input,
+            'expected_lock_version',
+        );
+
+        return DB::transaction(
+            function () use (
+                $organizationId,
+                $publicId,
+                $versionNumber,
+                $expectedLockVersion,
+            ): PriceListVersion {
+                $priceList = PriceList::query()
+                    ->forOwnerOrganization($organizationId)
+                    ->where('public_id', $publicId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($priceList->isArchived()) {
+                    throw new ConflictHttpException(
+                        'Archived price lists cannot activate versions.',
+                    );
+                }
+
+                $version = $priceList->versions()
+                    ->where('version_number', $versionNumber)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $currentVersion = (int) $priceList->getAttribute(
+                    'current_version',
+                );
+
+                if ($currentVersion !== $versionNumber) {
+                    throw new ConflictHttpException(
+                        'Only the current price-list version may be activated.',
+                    );
+                }
+
+                if (! $version->isApproved()) {
+                    throw new ConflictHttpException(
+                        'Only approved price-list versions may be activated.',
+                    );
+                }
+
+                $currentLockVersion = (int) $version->getAttribute(
+                    'lock_version',
+                );
+
+                if ($currentLockVersion !== $expectedLockVersion) {
+                    throw new ConflictHttpException(
+                        'The price-list approved version has changed.',
+                    );
+                }
+
+                $approvedByUserId = (int) $version->getAttribute(
+                    'approved_by_user_id',
+                );
+
+                $approvedAt = $version->getAttribute(
+                    'approved_at',
+                );
+
+                if (
+                    $approvedByUserId < 1
+                    || ! $approvedAt instanceof DateTimeInterface
+                ) {
+                    throw new ConflictHttpException(
+                        'Only approved price-list versions may be activated.',
+                    );
+                }
+
+                $validFrom = $version->getAttribute(
+                    'valid_from',
+                );
+
+                $validUntil = $version->getAttribute(
+                    'valid_until',
+                );
+
+                if (
+                    ! $validFrom instanceof DateTimeInterface
+                    || (
+                        $validUntil !== null
+                        && (
+                            ! $validUntil instanceof DateTimeInterface
+                            || $validUntil < $validFrom
+                        )
+                    )
+                ) {
+                    throw new ConflictHttpException(
+                        'A valid effective period is required before activation.',
+                    );
+                }
+
+                $activeVersion = $priceList->versions()
+                    ->where('status', PriceListVersion::STATUS_ACTIVE)
+                    ->where('version_number', '<>', $versionNumber)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($activeVersion instanceof PriceListVersion) {
+                    throw new ConflictHttpException(
+                        'Price-list version replacement remains deferred.',
+                    );
+                }
+
+                $version->fill([
+                    'status' => PriceListVersion::STATUS_ACTIVE,
+                    'activated_at' => now(),
+                ]);
+
+                $version->saveOrFail();
+
+                $priceList->setAttribute(
+                    'status',
+                    PriceList::STATUS_ACTIVE,
+                );
+
+                $priceList->saveOrFail();
+
+                return $version->fresh([
+                    'items',
+                ]) ?? throw new LogicException(
+                    'The activated price-list version could not be reloaded.',
                 );
             },
             3,
