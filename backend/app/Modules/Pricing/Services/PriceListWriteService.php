@@ -233,6 +233,129 @@ final class PriceListWriteService
     /**
      * @param  array<string, mixed>  $input
      */
+    public function createDraftVersion(
+        User $actor,
+        string $publicId,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $actorId = (int) $actor->getKey();
+
+        if ($actorId < 1) {
+            throw new LogicException(
+                'The authenticated user has no valid identifier.',
+            );
+        }
+
+        if ($publicId === '') {
+            throw new LogicException(
+                'The price-list public identifier is required.',
+            );
+        }
+
+        $expectedCurrentVersion = $this->positiveInteger(
+            $input,
+            'expected_current_version',
+        );
+
+        $validFrom = $this->nullableString(
+            $input,
+            'valid_from',
+        );
+
+        $validUntil = $this->nullableString(
+            $input,
+            'valid_until',
+        );
+
+        $changeReason = $this->nullableString(
+            $input,
+            'change_reason',
+        );
+
+        return DB::transaction(
+            function () use (
+                $organizationId,
+                $actorId,
+                $publicId,
+                $expectedCurrentVersion,
+                $validFrom,
+                $validUntil,
+                $changeReason,
+            ): PriceListVersion {
+                $priceList = PriceList::query()
+                    ->forOwnerOrganization($organizationId)
+                    ->where('public_id', $publicId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($priceList->isArchived()) {
+                    throw new ConflictHttpException(
+                        'Archived price lists cannot receive new versions.',
+                    );
+                }
+
+                $currentVersion = (int) $priceList->getAttribute(
+                    'current_version',
+                );
+
+                if ($currentVersion !== $expectedCurrentVersion) {
+                    throw new ConflictHttpException(
+                        'The price list has changed.',
+                    );
+                }
+
+                $current = $priceList->versions()
+                    ->where('version_number', $currentVersion)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $current instanceof PriceListVersion) {
+                    throw new LogicException(
+                        'The current price-list version is unavailable.',
+                    );
+                }
+
+                if ($current->isDraft()) {
+                    throw new ConflictHttpException(
+                        'A draft price-list version already exists.',
+                    );
+                }
+
+                $nextVersion = $currentVersion + 1;
+
+                $version = $priceList->versions()->create([
+                    'version_number' => $nextVersion,
+                    'lock_version' => 1,
+                    'status' => PriceListVersion::STATUS_DRAFT,
+                    'valid_from' => $validFrom,
+                    'valid_until' => $validUntil,
+                    'change_reason' => $changeReason,
+                    'created_by_user_id' => $actorId,
+                ]);
+
+                $priceList->setAttribute(
+                    'current_version',
+                    $nextVersion,
+                );
+
+                $priceList->saveOrFail();
+
+                return $version->fresh([
+                    'items',
+                ]) ?? throw new LogicException(
+                    'The created price-list version could not be reloaded.',
+                );
+            },
+            3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
     public function updateDraftVersion(
         User $actor,
         string $publicId,

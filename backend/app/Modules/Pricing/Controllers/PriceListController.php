@@ -8,6 +8,7 @@ use App\Core\Http\BaseController;
 use App\Models\User;
 use App\Modules\Pricing\Requests\PriceListIndexRequest;
 use App\Modules\Pricing\Requests\StorePriceListRequest;
+use App\Modules\Pricing\Requests\StorePriceListVersionRequest;
 use App\Modules\Pricing\Requests\UpdatePriceListVersionRequest;
 use App\Modules\Pricing\Resources\PriceListResource;
 use App\Modules\Pricing\Resources\PriceListVersionResource;
@@ -31,6 +32,24 @@ final class PriceListController extends BaseController
                 ),
             ),
             'Price list draft created.',
+            201,
+        );
+    }
+
+    public function storeVersion(
+        StorePriceListVersionRequest $request,
+        string $priceList,
+        PriceListWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new PriceListVersionResource(
+                $writes->createDraftVersion(
+                    $this->actor($request),
+                    $priceList,
+                    $request->validated(),
+                ),
+            ),
+            'Price list draft version created.',
             201,
         );
     }
