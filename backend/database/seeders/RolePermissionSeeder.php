@@ -21,6 +21,7 @@ final class RolePermissionSeeder extends Seeder
         'vehicles.update',
         'vehicles.delete',
         'users.manage',
+        'pricing.view',
         'daily-reports.view',
         'daily-reports.create',
         'daily-reports.update',
@@ -40,6 +41,7 @@ final class RolePermissionSeeder extends Seeder
             'vehicles.update',
             'vehicles.delete',
             'users.manage',
+            'pricing.view',
         ],
         'admin' => [
             'vehicles.view',

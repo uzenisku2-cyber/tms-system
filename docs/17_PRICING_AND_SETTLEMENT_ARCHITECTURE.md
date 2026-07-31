@@ -692,6 +692,30 @@ Public aggregate binding uses `public_id`.
 
 Internal numeric identifiers must not be exposed unnecessarily.
 
+### 16.1 Sprint 005 Price-List Read API
+
+The first Sprint 005 API unit implements:
+
+~~~text
+GET /api/v1/price-lists
+GET /api/v1/price-lists/{priceList}
+GET /api/v1/price-lists/{priceList}/versions
+GET /api/v1/price-lists/{priceList}/versions/{version}
+~~~
+
+The unit follows these rules:
+
+- all routes require Sanctum authentication
+- all routes require a verified `X-Organization-ID` context
+- all routes require the organization-scoped `pricing.view` permission
+- a price list is visible only when the verified organization is its customer or provider
+- the related commercial relationship must be active and valid at request time
+- price-list aggregate lookup uses `public_id`
+- a version is resolved only through its already-scoped parent price list
+- nested version lookup uses `version_number`
+- API Resources do not expose database primary keys or foreign keys
+- price-list write operations and calculation endpoints remain deferred
+
 ## 17. Transaction and Concurrency Rules
 
 Controlled writes use database transactions.
