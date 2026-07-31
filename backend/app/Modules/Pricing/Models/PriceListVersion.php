@@ -40,6 +40,7 @@ class PriceListVersion extends Model
     protected $fillable = [
         'price_list_id',
         'version_number',
+        'lock_version',
         'status',
         'valid_from',
         'valid_until',
@@ -54,6 +55,7 @@ class PriceListVersion extends Model
     /** @var array<string, mixed> */
     protected $attributes = [
         'status' => self::STATUS_DRAFT,
+        'lock_version' => 1,
     ];
 
     /** @return BelongsTo<PriceList, $this> */
@@ -155,6 +157,7 @@ class PriceListVersion extends Model
     {
         return [
             'version_number' => 'integer',
+            'lock_version' => 'integer',
             'valid_from' => 'immutable_date',
             'valid_until' => 'immutable_date',
             'approved_at' => 'immutable_datetime',

@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.0
+# TMS Pricing and Settlement Architecture v1.1
 
 ## 1. Purpose
 
@@ -234,6 +234,7 @@ Planned columns:
 id
 price_list_id
 version_number
+lock_version
 status
 valid_from
 valid_until
@@ -260,6 +261,11 @@ Rules:
 - every version belongs to one price list
 - version numbers start at 1
 - version numbers are sequential
+- `version_number` identifies the business version and does not change during an in-place draft edit
+- `lock_version` starts at 1 and identifies the current mutable draft revision
+- draft update requests provide `expected_lock_version`
+- a stale expected lock version is rejected with HTTP `409`
+- every successful draft update increments `lock_version`
 - draft versions may be edited
 - approved versions are immutable
 - active versions are immutable
@@ -740,11 +746,56 @@ The unit follows these rules:
 - internal primary keys and foreign keys are not returned by the API Resource
 - the endpoint returns HTTP `201`
 - initial pricing items remain empty
-- version creation, version mutation, approval, activation and calculation writes remain deferred
+- subsequent version creation, approval, activation and calculation API writes remain deferred
+
+### 16.3 Sprint 007 Draft Version Write Foundation
+
+The Sprint 007 write unit implements:
+
+~~~text
+PUT /api/v1/price-lists/{priceList}/versions/{version}
+~~~
+
+The unit follows these rules:
+
+- the route requires Sanctum authentication
+- the route requires a verified `X-Organization-ID` context
+- the route requires the organization-scoped `pricing.manage` permission
+- aggregate lookup uses the price-list `public_id`
+- the version is resolved only through its owner-scoped parent by `version_number`
+- only the owner organization may mutate the draft
+- only a version in `draft` status may be mutated
+- the request provides `expected_lock_version`
+- the request provides draft effective-period metadata, an optional change reason and the complete pricing-item set
+- the complete item set contains each supported pricing code exactly once
+- item currency is inherited from the price list
+- calculation method, unit, quantity source, rounding and position are derived by the server
+- submitted item order does not control stored item order
+- the price list and selected version are locked inside one transaction
+- stale `expected_lock_version` values are rejected with HTTP `409`
+- non-draft mutation attempts are rejected with HTTP `409`
+- a successful mutation replaces all existing items atomically
+- a successful mutation increments `lock_version`
+- `version_number` and `price_lists.current_version` remain unchanged during the draft edit
+- internal database identifiers are not exposed by the API Resource
+- subsequent version creation, approval and activation remain deferred
 
 ## 17. Transaction and Concurrency Rules
 
 Controlled writes use database transactions.
+
+Draft price-list version mutation atomically:
+
+- locks the owner-scoped price list
+- locks the selected price-list version
+- verifies that the version is still a draft
+- compares `expected_lock_version` with the stored `lock_version`
+- updates draft effective-period metadata and change reason
+- removes the previous mutable draft item set
+- creates the complete replacement item set in deterministic code order
+- increments `lock_version`
+- preserves `version_number` and `price_lists.current_version`
+- rolls back metadata, lock version and items together when any operation fails
 
 Calculation creation atomically:
 
@@ -771,6 +822,10 @@ Version activation atomically:
 
 Optimistic concurrency is required where a current version can change between read and write.
 
+For mutable price-list drafts, `lock_version` is the optimistic concurrency token. It is separate from `version_number`, which identifies the business version.
+
+Clients read `lock_version`, send it back as `expected_lock_version`, and refresh the draft after an HTTP `409` conflict.
+
 Ambiguous pricing fails instead of selecting a rate silently.
 
 ## 18. Database Integrity
@@ -781,6 +836,7 @@ Database constraints should enforce:
 - required foreign keys
 - distinct customer and provider organizations
 - positive version numbers
+- positive draft lock versions
 - non-negative rates
 - non-negative quantities
 - non-negative amounts
@@ -811,6 +867,12 @@ Tests cover:
 - inactive relationship rejection
 - relationship service-date validity rejection
 - version creation
+- owner-scoped draft-version update
+- complete pricing-item replacement
+- deterministic pricing-item order
+- draft lock-version increment
+- stale expected lock-version rejection
+- non-draft mutation rejection
 - version approval
 - version activation
 - version immutability
@@ -851,6 +913,9 @@ Tests verify both application outcomes and database state.
 
 Deferred to later stages:
 
+- creation of subsequent price-list versions
+- price-list version approval
+- price-list version activation and replacement
 - employee compensation
 - external-driver compensation
 - self-employed-driver compensation
@@ -884,6 +949,9 @@ Sprint 004 foundation is complete when:
 - the Pricing module exists
 - direct-relationship price lists are organization-scoped
 - customer and provider direction is explicit
+- owner-scoped draft versions can replace their complete item set atomically
+- mutable draft revisions use a dedicated optimistic `lock_version`
+- stale and non-draft mutation attempts return controlled conflicts
 - price-list versions are immutable after approval
 - active-version overlap is prevented
 - standard pricing items are validated
