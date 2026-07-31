@@ -37,7 +37,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
 
         self::assertSame(
-            15,
+            16,
             DB::table('permissions')->count(),
         );
 
@@ -81,7 +81,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            15,
+            16,
             DB::table('permissions')
                 ->where('guard_name', 'web')
                 ->count(),
@@ -127,8 +127,49 @@ final class OrganizationRolePermissionSeederTest extends TestCase
                 ->count(),
         );
 
+        $pricingManagePermissionId = DB::table('permissions')
+            ->where('name', 'pricing.manage')
+            ->where('guard_name', 'web')
+            ->value('id');
+
+        self::assertIsInt($pricingManagePermissionId);
+
         self::assertSame(
-            24,
+            2,
+            DB::table('role_has_permissions')
+                ->join(
+                    'roles',
+                    'roles.id',
+                    '=',
+                    'role_has_permissions.role_id',
+                )
+                ->where(
+                    'role_has_permissions.permission_id',
+                    $pricingManagePermissionId,
+                )
+                ->where('roles.name', 'super-admin')
+                ->count(),
+        );
+
+        self::assertSame(
+            0,
+            DB::table('role_has_permissions')
+                ->join(
+                    'roles',
+                    'roles.id',
+                    '=',
+                    'role_has_permissions.role_id',
+                )
+                ->where(
+                    'role_has_permissions.permission_id',
+                    $pricingManagePermissionId,
+                )
+                ->where('roles.name', '!=', 'super-admin')
+                ->count(),
+        );
+
+        self::assertSame(
+            26,
             DB::table('role_has_permissions')->count(),
         );
 

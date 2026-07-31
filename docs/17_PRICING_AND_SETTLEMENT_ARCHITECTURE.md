@@ -714,7 +714,33 @@ The unit follows these rules:
 - a version is resolved only through its already-scoped parent price list
 - nested version lookup uses `version_number`
 - API Resources do not expose database primary keys or foreign keys
-- price-list write operations and calculation endpoints remain deferred
+- the remaining price-list write workflows and calculation endpoints remain deferred
+
+### 16.2 Sprint 006 Price-List Write Foundation
+
+The first Sprint 006 write unit implements:
+
+~~~text
+POST /api/v1/price-lists
+~~~
+
+The unit follows these rules:
+
+- the route requires Sanctum authentication
+- the route requires a verified `X-Organization-ID` context
+- the route requires the organization-scoped `pricing.manage` permission
+- the request uses `organization_relationship_id` because `OrganizationRelationship` currently has no public identifier
+- the relationship is resolved only when its source organization equals the verified organization
+- the source organization is stored as customer and owner
+- the target organization is stored as provider
+- relationship direction is explicit and cannot be silently reversed
+- the relationship and both participating organizations must be active at request time
+- creation atomically persists the draft price list and initial draft version number `1`
+- currency is normalized to an uppercase three-letter code
+- internal primary keys and foreign keys are not returned by the API Resource
+- the endpoint returns HTTP `201`
+- initial pricing items remain empty
+- version creation, version mutation, approval, activation and calculation writes remain deferred
 
 ## 17. Transaction and Concurrency Rules
 
