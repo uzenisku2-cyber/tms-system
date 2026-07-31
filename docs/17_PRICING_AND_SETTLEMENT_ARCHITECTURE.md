@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.2
+# TMS Pricing and Settlement Architecture v1.3
 
 ## 1. Purpose
 
@@ -812,6 +812,39 @@ The unit follows these rules:
 - internal database identifiers are not exposed by the API Resource
 - approval and activation remain deferred
 
+### 16.5 Sprint 009 Price-List Version Approval Foundation
+
+The Sprint 009 write unit implements:
+
+~~~text
+POST /api/v1/price-lists/{priceList}/versions/{version}/approve
+~~~
+
+The unit follows these rules:
+
+- the route requires Sanctum authentication
+- the route requires a verified `X-Organization-ID` context
+- the route requires the organization-scoped `pricing.manage` permission
+- aggregate lookup uses the price-list `public_id`
+- the version is resolved only through its owner-scoped parent by `version_number`
+- only the owner organization may approve a version
+- the request provides `expected_lock_version`
+- archived price lists cannot have versions approved
+- only the aggregate's current version may be approved
+- only a version in `draft` status may be approved
+- the price list and selected version are locked inside one database transaction
+- stale `expected_lock_version` values return HTTP `409`
+- the version must contain the complete canonical pricing-item set before approval
+- successful approval changes the version status to `approved`
+- successful approval records `approved_by_user_id` and `approved_at`
+- approval preserves `lock_version`, `version_number` and `price_lists.current_version`
+- approval preserves the price-list status, effective period, change reason and pricing items
+- approved versions remain immutable through the existing non-draft write rejection
+- the endpoint returns the approved version through `PriceListVersionResource`
+- internal database identifiers are not exposed by the API Resource
+- approval and its audit metadata are persisted atomically
+- activation and replacement remain deferred
+
 ## 17. Transaction and Concurrency Rules
 
 Controlled writes use database transactions.
@@ -957,7 +990,6 @@ Tests verify both application outcomes and database state.
 
 Deferred to later stages:
 
-- price-list version approval
 - price-list version activation and replacement
 - employee compensation
 - external-driver compensation

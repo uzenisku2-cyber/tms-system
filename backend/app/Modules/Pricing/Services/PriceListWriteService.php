@@ -501,6 +501,171 @@ final class PriceListWriteService
     /**
      * @param  array<string, mixed>  $input
      */
+    public function approveDraftVersion(
+        User $actor,
+        string $publicId,
+        int $versionNumber,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $actorId = (int) $actor->getKey();
+
+        if ($actorId < 1) {
+            throw new LogicException(
+                'The authenticated user has no valid identifier.',
+            );
+        }
+
+        if ($publicId === '') {
+            throw new LogicException(
+                'The price-list public identifier is required.',
+            );
+        }
+
+        if ($versionNumber < 1) {
+            throw new LogicException(
+                'The price-list version number must be positive.',
+            );
+        }
+
+        $expectedLockVersion = $this->positiveInteger(
+            $input,
+            'expected_lock_version',
+        );
+
+        return DB::transaction(
+            function () use (
+                $organizationId,
+                $actorId,
+                $publicId,
+                $versionNumber,
+                $expectedLockVersion,
+            ): PriceListVersion {
+                $priceList = PriceList::query()
+                    ->forOwnerOrganization($organizationId)
+                    ->where('public_id', $publicId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($priceList->isArchived()) {
+                    throw new ConflictHttpException(
+                        'Archived price lists cannot approve versions.',
+                    );
+                }
+
+                $version = $priceList->versions()
+                    ->where('version_number', $versionNumber)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $currentVersion = (int) $priceList->getAttribute(
+                    'current_version',
+                );
+
+                if ($currentVersion !== $versionNumber) {
+                    throw new ConflictHttpException(
+                        'Only the current price-list version may be approved.',
+                    );
+                }
+
+                if (! $version->isDraft()) {
+                    throw new ConflictHttpException(
+                        'Only draft price-list versions may be approved.',
+                    );
+                }
+
+                $currentLockVersion = (int) $version->getAttribute(
+                    'lock_version',
+                );
+
+                if ($currentLockVersion !== $expectedLockVersion) {
+                    throw new ConflictHttpException(
+                        'The price-list draft version has changed.',
+                    );
+                }
+
+                $this->assertApprovableItems(
+                    $priceList,
+                    $version,
+                );
+
+                $version->fill([
+                    'status' => PriceListVersion::STATUS_APPROVED,
+                    'approved_by_user_id' => $actorId,
+                    'approved_at' => now(),
+                    'activated_at' => null,
+                ]);
+
+                $version->saveOrFail();
+
+                return $version->fresh([
+                    'items',
+                ]) ?? throw new LogicException(
+                    'The approved price-list version could not be reloaded.',
+                );
+            },
+            3,
+        );
+    }
+
+    private function assertApprovableItems(
+        PriceList $priceList,
+        PriceListVersion $version,
+    ): void {
+        $items = $version->items()
+            ->lockForUpdate()
+            ->get();
+
+        $currency = $priceList->getAttribute('currency');
+
+        if (
+            ! is_string($currency)
+            || preg_match('/^[A-Z]{3}$/', $currency) !== 1
+            || $items->count() !== count(PriceListItem::CODES)
+        ) {
+            throw new ConflictHttpException(
+                'The complete canonical pricing-item set is required before approval.',
+            );
+        }
+
+        foreach (PriceListItem::CODES as $index => $code) {
+            $item = $items->get($index);
+            $unitRate = $item instanceof PriceListItem
+                ? $item->getAttribute('unit_rate')
+                : null;
+
+            if (
+                ! $item instanceof PriceListItem
+                || $item->getAttribute('code') !== $code
+                || $item->getAttribute('calculation_method') !==
+                    PriceListItem::CALCULATION_METHOD_QUANTITY_TIMES_RATE
+                || $item->getAttribute('unit') !== $this->unitForCode($code)
+                || $item->getAttribute('currency') !== $currency
+                || $item->getAttribute('quantity_source') !== $code
+                || (int) $item->getAttribute('rounding_scale') !== 2
+                || $item->getAttribute('rounding_method') !==
+                    PriceListItem::ROUNDING_METHOD_HALF_UP
+                || (int) $item->getAttribute('position') !== $index + 1
+                || (
+                    ! is_string($unitRate)
+                    && ! is_int($unitRate)
+                    && ! is_float($unitRate)
+                )
+                || ! is_numeric($unitRate)
+                || (float) $unitRate < 0
+            ) {
+                throw new ConflictHttpException(
+                    'The complete canonical pricing-item set is required before approval.',
+                );
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
     private function positiveInteger(
         array $input,
         string $key,
