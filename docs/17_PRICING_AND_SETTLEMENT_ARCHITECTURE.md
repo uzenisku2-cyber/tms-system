@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.1
+# TMS Pricing and Settlement Architecture v1.2
 
 ## 1. Purpose
 
@@ -778,11 +778,55 @@ The unit follows these rules:
 - a successful mutation increments `lock_version`
 - `version_number` and `price_lists.current_version` remain unchanged during the draft edit
 - internal database identifiers are not exposed by the API Resource
-- subsequent version creation, approval and activation remain deferred
+- approval and activation remain deferred
+
+### 16.4 Sprint 008 Price-List Version Creation Foundation
+
+The Sprint 008 write unit implements:
+
+~~~text
+POST /api/v1/price-lists/{priceList}/versions
+~~~
+
+The unit follows these rules:
+
+- the route requires Sanctum authentication
+- the route requires a verified `X-Organization-ID` context
+- the route requires the organization-scoped `pricing.manage` permission
+- aggregate lookup uses the price-list `public_id`
+- only the owner organization may create the next version
+- the request provides `expected_current_version`
+- archived price lists cannot receive new versions
+- the stored `current_version` must equal `expected_current_version`
+- the current version is resolved under the locked parent price list
+- a new version cannot be created while the current version is still a draft
+- the next business version number is `current_version + 1`
+- the new version starts in `draft` status with `lock_version` equal to `1`
+- the request may provide draft effective-period metadata and a change reason
+- no pricing item is copied or silently inherited from the preceding version
+- the new draft therefore starts with an empty pricing-item set
+- successful creation advances `price_lists.current_version`
+- stale current-version requests return HTTP `409`
+- an already existing current draft returns HTTP `409`
+- creation and current-version advancement occur in one database transaction
+- internal database identifiers are not exposed by the API Resource
+- approval and activation remain deferred
 
 ## 17. Transaction and Concurrency Rules
 
 Controlled writes use database transactions.
+
+Subsequent price-list version creation atomically:
+
+- locks the owner-scoped price list
+- rejects an archived price list
+- compares `expected_current_version` with the stored `current_version`
+- resolves and locks the current price-list version
+- rejects creation while the current version remains a draft
+- derives the next sequential business version number
+- creates one empty draft version with `lock_version` equal to `1`
+- advances `price_lists.current_version` to the new business version
+- rolls back version creation and aggregate advancement together when any operation fails
 
 Draft price-list version mutation atomically:
 
@@ -913,7 +957,6 @@ Tests verify both application outcomes and database state.
 
 Deferred to later stages:
 
-- creation of subsequent price-list versions
 - price-list version approval
 - price-list version activation and replacement
 - employee compensation
@@ -949,6 +992,7 @@ Sprint 004 foundation is complete when:
 - the Pricing module exists
 - direct-relationship price lists are organization-scoped
 - customer and provider direction is explicit
+- owner-scoped subsequent versions are created as empty sequential drafts under current-version concurrency control
 - owner-scoped draft versions can replace their complete item set atomically
 - mutable draft revisions use a dedicated optimistic `lock_version`
 - stale and non-draft mutation attempts return controlled conflicts
