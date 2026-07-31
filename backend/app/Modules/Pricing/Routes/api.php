@@ -27,6 +27,15 @@ Route::middleware([
             ->middleware('perm:pricing.manage')
             ->name('versions.store');
 
+        Route::post(
+            '/{priceList}/versions/{version}/approve',
+            [PriceListController::class, 'approveVersion'],
+        )
+            ->whereUuid('priceList')
+            ->whereNumber('version')
+            ->middleware('perm:pricing.manage')
+            ->name('versions.approve');
+
         Route::put(
             '/{priceList}/versions/{version}',
             [PriceListController::class, 'updateVersion'],
