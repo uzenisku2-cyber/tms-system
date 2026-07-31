@@ -29,6 +29,9 @@ final class PriceListVersionResource extends JsonResource
             'version_number' => (int) $version->getAttribute(
                 'version_number',
             ),
+            'lock_version' => (int) $version->getAttribute(
+                'lock_version',
+            ),
             'status' => (string) $version->getAttribute(
                 'status',
             ),

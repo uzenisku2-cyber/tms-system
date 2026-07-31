@@ -170,6 +170,11 @@ final class PricingModelFoundationTest extends TestCase
         $version->refresh();
         $item->refresh();
 
+        self::assertSame(
+            1,
+            $version->getAttribute('lock_version'),
+        );
+
         self::assertTrue($priceList->isDraft());
         self::assertFalse($priceList->isActive());
         self::assertFalse($priceList->isArchived());

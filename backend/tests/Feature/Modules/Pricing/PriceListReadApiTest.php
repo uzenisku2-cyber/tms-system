@@ -418,6 +418,10 @@ final class PriceListReadApiTest extends TestCase
             ->assertJsonPath(
                 'data.version_number',
                 1,
+            )
+            ->assertJsonPath(
+                'data.lock_version',
+                1,
             );
 
         $this->withOrganization(

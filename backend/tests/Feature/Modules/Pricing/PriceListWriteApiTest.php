@@ -262,6 +262,7 @@ final class PriceListWriteApiTest extends TestCase
         $this->assertDatabaseHas('price_list_versions', [
             'price_list_id' => $priceList->getKey(),
             'version_number' => 1,
+            'lock_version' => 1,
             'status' => PriceListVersion::STATUS_DRAFT,
             'valid_from' => '2026-08-01 00:00:00',
             'valid_until' => null,

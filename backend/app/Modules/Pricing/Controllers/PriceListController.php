@@ -8,12 +8,14 @@ use App\Core\Http\BaseController;
 use App\Models\User;
 use App\Modules\Pricing\Requests\PriceListIndexRequest;
 use App\Modules\Pricing\Requests\StorePriceListRequest;
+use App\Modules\Pricing\Requests\UpdatePriceListVersionRequest;
 use App\Modules\Pricing\Resources\PriceListResource;
 use App\Modules\Pricing\Resources\PriceListVersionResource;
 use App\Modules\Pricing\Services\PriceListQueryService;
 use App\Modules\Pricing\Services\PriceListWriteService;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 final class PriceListController extends BaseController
 {
@@ -30,6 +32,25 @@ final class PriceListController extends BaseController
             ),
             'Price list draft created.',
             201,
+        );
+    }
+
+    public function updateVersion(
+        UpdatePriceListVersionRequest $request,
+        string $priceList,
+        string $version,
+        PriceListWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new PriceListVersionResource(
+                $writes->updateDraftVersion(
+                    $this->actor($request),
+                    $priceList,
+                    (int) $version,
+                    $request->validated(),
+                ),
+            ),
+            'Price list draft version updated.',
         );
     }
 
@@ -92,7 +113,7 @@ final class PriceListController extends BaseController
     }
 
     private function actor(
-        StorePriceListRequest $request,
+        Request $request,
     ): User {
         $actor = $request->user();
 
