@@ -5,14 +5,34 @@ declare(strict_types=1);
 namespace App\Modules\Pricing\Controllers;
 
 use App\Core\Http\BaseController;
+use App\Models\User;
 use App\Modules\Pricing\Requests\PriceListIndexRequest;
+use App\Modules\Pricing\Requests\StorePriceListRequest;
 use App\Modules\Pricing\Resources\PriceListResource;
 use App\Modules\Pricing\Resources\PriceListVersionResource;
 use App\Modules\Pricing\Services\PriceListQueryService;
+use App\Modules\Pricing\Services\PriceListWriteService;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 
 final class PriceListController extends BaseController
 {
+    public function store(
+        StorePriceListRequest $request,
+        PriceListWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new PriceListResource(
+                $writes->createDraft(
+                    $this->actor($request),
+                    $request->validated(),
+                ),
+            ),
+            'Price list draft created.',
+            201,
+        );
+    }
+
     public function index(
         PriceListIndexRequest $request,
         PriceListQueryService $queries,
@@ -69,5 +89,17 @@ final class PriceListController extends BaseController
                 ),
             ),
         );
+    }
+
+    private function actor(
+        StorePriceListRequest $request,
+    ): User {
+        $actor = $request->user();
+
+        if (! $actor instanceof User) {
+            throw new AuthenticationException;
+        }
+
+        return $actor;
     }
 }

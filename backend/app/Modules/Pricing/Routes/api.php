@@ -12,6 +12,13 @@ Route::middleware([
     ->prefix('price-lists')
     ->name('price-lists.')
     ->group(function (): void {
+        Route::post(
+            '/',
+            [PriceListController::class, 'store'],
+        )
+            ->middleware('perm:pricing.manage')
+            ->name('store');
+
         Route::middleware('perm:pricing.view')
             ->group(function (): void {
                 Route::get(
