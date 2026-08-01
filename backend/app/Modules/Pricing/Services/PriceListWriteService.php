@@ -11,6 +11,7 @@ use App\Modules\Organizations\Models\OrganizationRelationship;
 use App\Modules\Pricing\Models\PriceList;
 use App\Modules\Pricing\Models\PriceListItem;
 use App\Modules\Pricing\Models\PriceListVersion;
+use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -738,16 +739,83 @@ final class PriceListWriteService
                     );
                 }
 
-                $activeVersion = $priceList->versions()
+                $activeVersions = $priceList->versions()
                     ->where('status', PriceListVersion::STATUS_ACTIVE)
                     ->where('version_number', '<>', $versionNumber)
+                    ->orderBy('version_number')
                     ->lockForUpdate()
-                    ->first();
+                    ->get();
+
+                if ($activeVersions->count() > 1) {
+                    throw new ConflictHttpException(
+                        'Multiple active price-list versions require manual repair.',
+                    );
+                }
+
+                $activeVersion = $activeVersions->first();
 
                 if ($activeVersion instanceof PriceListVersion) {
-                    throw new ConflictHttpException(
-                        'Price-list version replacement remains deferred.',
+                    $activeValidFrom = $activeVersion->getAttribute(
+                        'valid_from',
                     );
+
+                    $activeValidUntil = $activeVersion->getAttribute(
+                        'valid_until',
+                    );
+
+                    if (
+                        ! $activeValidFrom instanceof DateTimeInterface
+                        || (
+                            $activeValidUntil !== null
+                            && ! $activeValidUntil instanceof DateTimeInterface
+                        )
+                    ) {
+                        throw new ConflictHttpException(
+                            'The active price-list version has an invalid effective period.',
+                        );
+                    }
+
+                    $replacementStart = CarbonImmutable::instance(
+                        $validFrom,
+                    )->startOfDay();
+
+                    $activeStart = CarbonImmutable::instance(
+                        $activeValidFrom,
+                    )->startOfDay();
+
+                    $replacementBoundary =
+                        $replacementStart->subDay();
+
+                    if (
+                        $replacementBoundary->isBefore(
+                            $activeStart,
+                        )
+                    ) {
+                        throw new ConflictHttpException(
+                            'The replacement effective date must follow the active version start date.',
+                        );
+                    }
+
+                    if (
+                        $activeValidUntil === null
+                        || ! CarbonImmutable::instance(
+                            $activeValidUntil,
+                        )->startOfDay()->isBefore(
+                            $replacementStart,
+                        )
+                    ) {
+                        $activeVersion->setAttribute(
+                            'valid_until',
+                            $replacementBoundary,
+                        );
+                    }
+
+                    $activeVersion->setAttribute(
+                        'status',
+                        PriceListVersion::STATUS_REPLACED,
+                    );
+
+                    $activeVersion->saveOrFail();
                 }
 
                 $version->fill([

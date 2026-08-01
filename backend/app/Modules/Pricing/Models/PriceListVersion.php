@@ -111,7 +111,10 @@ class PriceListVersion extends Model
         DateTimeInterface $serviceDate,
     ): bool {
         if (
-            ! $this->isActive()
+            (
+                ! $this->isActive()
+                && ! $this->isReplaced()
+            )
             || $this->valid_from === null
         ) {
             return false;

@@ -277,6 +277,29 @@ final class PricingModelFoundationTest extends TestCase
 
         $version->setAttribute(
             'status',
+            PriceListVersion::STATUS_REPLACED,
+        );
+
+        self::assertTrue(
+            $version->isApplicableOn(
+                CarbonImmutable::parse('2026-07-10'),
+            ),
+        );
+
+        self::assertTrue(
+            $version->isApplicableOn(
+                CarbonImmutable::parse('2026-07-20'),
+            ),
+        );
+
+        self::assertFalse(
+            $version->isApplicableOn(
+                CarbonImmutable::parse('2026-07-21'),
+            ),
+        );
+
+        $version->setAttribute(
+            'status',
             PriceListVersion::STATUS_EXPIRED,
         );
 

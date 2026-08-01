@@ -216,11 +216,14 @@ final class FinancialCalculationPersistenceService
                     );
                 }
 
-                if (! $priceListVersion->isActive()) {
+                if (
+                    ! $priceListVersion->isActive()
+                    && ! $priceListVersion->isReplaced()
+                ) {
                     throw new DomainException(
                         (
-                            'Only an active price-list version '.
-                            'can create a financial calculation.'
+                            'Only an active or replaced price-list '.
+                            'version can create a financial calculation.'
                         ),
                     );
                 }

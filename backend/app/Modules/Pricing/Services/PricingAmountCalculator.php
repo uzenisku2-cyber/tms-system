@@ -56,9 +56,12 @@ final class PricingAmountCalculator
             'items',
         ]);
 
-        if (! $priceListVersion->isActive()) {
+        if (
+            ! $priceListVersion->isActive()
+            && ! $priceListVersion->isReplaced()
+        ) {
             throw new LogicException(
-                'Only an active price-list version can be calculated.',
+                'Only an active or replaced price-list version can be calculated.',
             );
         }
 
@@ -83,7 +86,7 @@ final class PricingAmountCalculator
 
         if ($priceListVersion->items->isEmpty()) {
             throw new LogicException(
-                'The active price-list version contains no pricing items.',
+                'The price-list version contains no pricing items.',
             );
         }
 

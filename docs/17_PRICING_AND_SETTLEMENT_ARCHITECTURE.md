@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.4
+# TMS Pricing and Settlement Architecture v1.5
 
 ## 1. Purpose
 
@@ -881,6 +881,42 @@ The unit follows these rules:
 - version activation and parent price-list status mutation are persisted atomically
 - automatic active-version replacement remains deferred to a separately defined workflow
 
+### 16.7 Sprint 011 Price-List Version Replacement Foundation
+
+The Sprint 011 write unit extends:
+
+~~~text
+POST /api/v1/price-lists/{priceList}/versions/{version}/activate
+~~~
+
+The unit follows these rules:
+
+- the existing activation route, request and controller contract remain unchanged
+- authentication, organization context, ownership and `pricing.manage` authorization remain required
+- the request continues to provide `expected_lock_version`
+- the selected version must remain the aggregate current version in `approved` status
+- the selected version must have complete approval metadata and a valid effective period
+- no existing active version keeps the Sprint 010 first-activation behavior
+- exactly one other active version starts the controlled replacement workflow
+- more than one other active version returns HTTP `409` and requires manual data repair
+- the replacement boundary is the selected version `valid_from`
+- the replacement boundary must be later than the previous active version `valid_from`
+- an overlapping or open previous period ends on the day before the replacement boundary
+- a previous `valid_until` that already precedes the replacement boundary is preserved
+- the previous active version changes to `replaced`
+- the previous version row, pricing items, approval metadata, `activated_at`, `version_number` and `lock_version` remain preserved
+- the selected approved version changes to `active`
+- the selected version records its own `activated_at`
+- the parent price list remains `active`
+- existing financial calculations are never rewritten
+- an `active` or `replaced` version may be used for an initial financial calculation only when its effective period contains the immutable daily-report `service_date`
+- effective-period boundaries remain inclusive
+- a replaced version therefore remains usable for historical service dates up to its stored `valid_until`
+- a replaced version is not usable for service dates belonging to the replacement version
+- replacement and selected-version activation are persisted inside one database transaction
+- no `replaced_by_version_id` relationship is introduced in this foundation unit
+- no database migration is required
+- internal database identifiers remain hidden by API Resources
 ## 17. Transaction and Concurrency Rules
 
 Controlled writes use database transactions.
@@ -917,21 +953,29 @@ Calculation creation atomically:
 - verifies report eligibility
 - verifies that the selected immutable daily-report version equals `daily_reports.current_version`
 - verifies relationship validity for `service_date` through `OrganizationRelationship::isActiveAt()`
-- verifies that the active price-list version includes `service_date` in its effective period
+- verifies that the selected active or replaced price-list version includes `service_date` in its effective period
 - builds the immutable snapshot
 - creates the calculation
 - creates calculation lines
 - stores totals
 - creates the initial event
 
-Version activation atomically:
+Version activation and replacement atomically:
 
-- verifies draft ownership
-- verifies approval
-- verifies effective period
-- rejects overlapping active versions
-- marks a previous active version as replaced when applicable
-- activates the selected version
+- locks the owner-scoped price list
+- locks the selected current approved version
+- verifies the optimistic `expected_lock_version`
+- verifies approval metadata and the selected effective period
+- locks all other active versions of the aggregate
+- rejects a damaged aggregate containing more than one other active version
+- treats no other active version as the first-activation workflow
+- requires a replacement start to follow the previous active version start
+- ends an overlapping previous period on the day before the replacement start
+- preserves an already earlier previous `valid_until` boundary
+- changes the previous active version status to `replaced`
+- preserves the previous row, items, approval metadata and activation timestamp
+- activates the selected version and keeps the parent price list active
+- rolls back both version transitions and the parent mutation together on failure
 
 Optimistic concurrency is required where a current version can change between read and write.
 
@@ -988,8 +1032,13 @@ Tests cover:
 - non-draft mutation rejection
 - version approval
 - version activation
+- version replacement
+- replaced-version historical applicability
+- historical financial calculation with a replaced version
 - version immutability
 - overlapping period rejection
+- invalid replacement-boundary rejection
+- multiple-active-version repair rejection
 - pricing-item validation
 - zero-rate acceptance
 - negative-rate rejection
@@ -1026,7 +1075,6 @@ Tests verify both application outcomes and database state.
 
 Deferred to later stages:
 
-- price-list version activation and replacement
 - employee compensation
 - external-driver compensation
 - self-employed-driver compensation

@@ -430,12 +430,12 @@ final class PriceListVersionActivationApiTest extends TestCase
         $this->assertApprovedPreserved($priceList, $version);
     }
 
-    public function test_existing_active_version_defers_replacement(): void
+    public function test_existing_active_version_is_replaced_atomically(): void
     {
         [$user, $customer] = $this->createContext();
 
         $provider = $this->createOrganization(
-            'Deferred replacement provider',
+            'Replacement provider',
             Organization::TYPE_SUBCONTRACTOR,
         );
 
@@ -446,6 +446,7 @@ final class PriceListVersionActivationApiTest extends TestCase
             PriceList::STATUS_ACTIVE,
             2,
             2,
+            2,
         );
 
         $activeVersion = $priceList->versions()->create([
@@ -453,7 +454,7 @@ final class PriceListVersionActivationApiTest extends TestCase
             'lock_version' => 1,
             'status' => PriceListVersion::STATUS_ACTIVE,
             'valid_from' => '2026-01-01',
-            'valid_until' => '2026-07-31',
+            'valid_until' => null,
             'change_reason' => 'Existing active version',
             'created_by_user_id' => $user->getKey(),
             'approved_by_user_id' => $user->getKey(),
@@ -461,6 +462,156 @@ final class PriceListVersionActivationApiTest extends TestCase
             'activated_at' => now()->subDay(),
         ]);
 
+        $this->seedCanonicalItems($version);
+        $this->seedCanonicalItems($activeVersion);
+        $this->grantManagePermission($user, $customer);
+
+        $approvedAt = $version->getAttribute('approved_at');
+
+        $previousActivatedAt = $activeVersion->getAttribute(
+            'activated_at',
+        );
+
+        Sanctum::actingAs($user);
+
+        $response = $this->withOrganization($customer)
+            ->postJson(
+                $this->activateUrl($priceList, $version),
+                $this->activatePayload(2),
+            );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'message',
+                'Price list version activated.',
+            )
+            ->assertJsonPath('data.version_number', 2)
+            ->assertJsonPath('data.lock_version', 2)
+            ->assertJsonPath(
+                'data.status',
+                PriceListVersion::STATUS_ACTIVE,
+            )
+            ->assertJsonPath('data.valid_from', '2026-08-01')
+            ->assertJsonPath('data.valid_until', '2026-12-31')
+            ->assertJsonCount(4, 'data.items');
+
+        $priceList->refresh();
+        $version->refresh();
+        $activeVersion->refresh();
+
+        self::assertSame(
+            PriceList::STATUS_ACTIVE,
+            $priceList->getAttribute('status'),
+        );
+
+        self::assertSame(
+            2,
+            $priceList->getAttribute('current_version'),
+        );
+
+        self::assertSame(
+            PriceListVersion::STATUS_ACTIVE,
+            $version->getAttribute('status'),
+        );
+
+        self::assertSame(
+            2,
+            $version->getAttribute('lock_version'),
+        );
+
+        self::assertEquals(
+            $approvedAt,
+            $version->getAttribute('approved_at'),
+        );
+
+        self::assertInstanceOf(
+            DateTimeInterface::class,
+            $version->getAttribute('activated_at'),
+        );
+
+        self::assertSame(
+            PriceListVersion::STATUS_REPLACED,
+            $activeVersion->getAttribute('status'),
+        );
+
+        $activeValidUntil = $activeVersion->getAttribute(
+            'valid_until',
+        );
+
+        self::assertInstanceOf(
+            DateTimeInterface::class,
+            $activeValidUntil,
+        );
+
+        self::assertSame(
+            '2026-07-31',
+            $activeValidUntil->format('Y-m-d'),
+        );
+
+        self::assertEquals(
+            $previousActivatedAt,
+            $activeVersion->getAttribute('activated_at'),
+        );
+
+        self::assertSame(
+            4,
+            $activeVersion->items()->count(),
+        );
+
+        self::assertSame(
+            4,
+            $version->items()->count(),
+        );
+
+        self::assertTrue(
+            $activeVersion->isApplicableOn(
+                new \DateTimeImmutable('2026-07-31'),
+            ),
+        );
+
+        self::assertFalse(
+            $activeVersion->isApplicableOn(
+                new \DateTimeImmutable('2026-08-01'),
+            ),
+        );
+    }
+
+    public function test_replacement_date_must_follow_active_start_atomically(): void
+    {
+        [$user, $customer] = $this->createContext();
+
+        $provider = $this->createOrganization(
+            'Invalid replacement boundary provider',
+            Organization::TYPE_SUBCONTRACTOR,
+        );
+
+        [$priceList, $version] = $this->createApprovedAggregate(
+            $user,
+            $customer,
+            $provider,
+            PriceList::STATUS_ACTIVE,
+            2,
+            2,
+            1,
+            '2026-01-01',
+            '2026-12-31',
+        );
+
+        $activeVersion = $priceList->versions()->create([
+            'version_number' => 1,
+            'lock_version' => 1,
+            'status' => PriceListVersion::STATUS_ACTIVE,
+            'valid_from' => '2026-01-01',
+            'valid_until' => null,
+            'change_reason' => 'Original active period',
+            'created_by_user_id' => $user->getKey(),
+            'approved_by_user_id' => $user->getKey(),
+            'approved_at' => now()->subDays(2),
+            'activated_at' => now()->subDay(),
+        ]);
+
+        $this->seedCanonicalItems($version);
         $this->grantManagePermission($user, $customer);
 
         Sanctum::actingAs($user);
@@ -473,7 +624,10 @@ final class PriceListVersionActivationApiTest extends TestCase
             ->assertStatus(409)
             ->assertJsonPath(
                 'message',
-                'Price-list version replacement remains deferred.',
+                (
+                    'The replacement effective date must follow '.
+                    'the active version start date.'
+                ),
             );
 
         $this->assertApprovedPreserved(
@@ -484,13 +638,109 @@ final class PriceListVersionActivationApiTest extends TestCase
             PriceList::STATUS_ACTIVE,
         );
 
+        $activeVersion->refresh();
+
         self::assertSame(
             PriceListVersion::STATUS_ACTIVE,
-            $activeVersion->refresh()->getAttribute('status'),
+            $activeVersion->getAttribute('status'),
         );
+
+        self::assertNull(
+            $activeVersion->getAttribute('valid_until'),
+        );
+
         self::assertInstanceOf(
             DateTimeInterface::class,
             $activeVersion->getAttribute('activated_at'),
+        );
+    }
+
+    public function test_multiple_active_versions_require_manual_repair_atomically(): void
+    {
+        [$user, $customer] = $this->createContext();
+
+        $provider = $this->createOrganization(
+            'Multiple active versions provider',
+            Organization::TYPE_SUBCONTRACTOR,
+        );
+
+        [$priceList, $version] = $this->createApprovedAggregate(
+            $user,
+            $customer,
+            $provider,
+            PriceList::STATUS_ACTIVE,
+            3,
+            3,
+        );
+
+        $firstActiveVersion = $priceList->versions()->create([
+            'version_number' => 1,
+            'lock_version' => 1,
+            'status' => PriceListVersion::STATUS_ACTIVE,
+            'valid_from' => '2026-01-01',
+            'valid_until' => '2026-03-31',
+            'change_reason' => 'First active version',
+            'created_by_user_id' => $user->getKey(),
+            'approved_by_user_id' => $user->getKey(),
+            'approved_at' => now()->subDays(4),
+            'activated_at' => now()->subDays(3),
+        ]);
+
+        $secondActiveVersion = $priceList->versions()->create([
+            'version_number' => 2,
+            'lock_version' => 1,
+            'status' => PriceListVersion::STATUS_ACTIVE,
+            'valid_from' => '2026-04-01',
+            'valid_until' => null,
+            'change_reason' => 'Second active version',
+            'created_by_user_id' => $user->getKey(),
+            'approved_by_user_id' => $user->getKey(),
+            'approved_at' => now()->subDays(2),
+            'activated_at' => now()->subDay(),
+        ]);
+
+        $this->seedCanonicalItems($version);
+        $this->grantManagePermission($user, $customer);
+
+        Sanctum::actingAs($user);
+
+        $this->withOrganization($customer)
+            ->postJson(
+                $this->activateUrl($priceList, $version),
+                $this->activatePayload(),
+            )
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                (
+                    'Multiple active price-list versions '.
+                    'require manual repair.'
+                ),
+            );
+
+        $this->assertApprovedPreserved(
+            $priceList,
+            $version,
+            1,
+            3,
+            PriceList::STATUS_ACTIVE,
+        );
+
+        $firstActiveVersion->refresh();
+        $secondActiveVersion->refresh();
+
+        self::assertSame(
+            PriceListVersion::STATUS_ACTIVE,
+            $firstActiveVersion->getAttribute('status'),
+        );
+
+        self::assertSame(
+            PriceListVersion::STATUS_ACTIVE,
+            $secondActiveVersion->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $secondActiveVersion->getAttribute('valid_until'),
         );
     }
 
