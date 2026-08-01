@@ -59,9 +59,10 @@ final class PricingAmountCalculator
         if (
             ! $priceListVersion->isActive()
             && ! $priceListVersion->isReplaced()
+            && ! $priceListVersion->isExpired()
         ) {
             throw new LogicException(
-                'Only an active or replaced price-list version can be calculated.',
+                'Only an active, replaced or expired price-list version can be calculated.',
             );
         }
 

@@ -366,6 +366,115 @@ final class FinancialCalculationPersistenceServiceTest extends TestCase
         );
     }
 
+    public function test_it_calculates_expired_version_for_historical_service_date(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $priceListVersion = $foundation['priceListVersion'];
+
+        $priceListVersion->setAttribute(
+            'status',
+            PriceListVersion::STATUS_EXPIRED,
+        );
+
+        $priceListVersion->setAttribute(
+            'valid_until',
+            '2026-07-31',
+        );
+
+        $priceListVersion->saveOrFail();
+        $priceListVersion->refresh();
+
+        self::assertTrue(
+            $priceListVersion->isExpired(),
+        );
+
+        self::assertTrue(
+            $priceListVersion->isApplicableOn(
+                CarbonImmutable::parse('2026-07-29'),
+            ),
+        );
+
+        self::assertFalse(
+            $priceListVersion->isApplicableOn(
+                CarbonImmutable::parse('2026-08-01'),
+            ),
+        );
+
+        $this->organizationContext()->set(
+            (int) $foundation['provider']->getKey(),
+        );
+
+        $calculation = $this->service()
+            ->createInitialCalculation(
+                dailyReportVersionId: (int) $foundation[
+                        'dailyReportVersion'
+                    ]->getKey(),
+
+                priceListVersionId: (int) $priceListVersion->getKey(),
+
+                calculatedByUserId: (int) $foundation['user']->getKey(),
+
+                calculatedAt: CarbonImmutable::parse(
+                    '2026-08-01 09:00:00',
+                    'Europe/Prague',
+                ),
+
+                reason: 'Historical expired pricing.',
+            );
+
+        $calculation->refresh();
+        $calculation->load(['lines', 'events']);
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertSame(
+            $priceListVersion->getKey(),
+            $calculation->getAttribute(
+                'price_list_version_id',
+            ),
+        );
+
+        self::assertSame(
+            '194.56',
+            $calculation->getAttribute('total_amount'),
+        );
+
+        self::assertCount(
+            4,
+            $calculation->lines,
+        );
+
+        self::assertCount(
+            1,
+            $calculation->events,
+        );
+
+        $this->assertDatabaseHas(
+            'financial_calculations',
+            [
+                'id' => $calculation->getKey(),
+                'price_list_version_id' => (
+                    $priceListVersion->getKey()
+                ),
+                'total_amount' => '194.56',
+            ],
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_lines',
+            4,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
     public function test_it_rejects_a_user_without_compensation_permission(): void
     {
         $foundation = $this->createFoundation(false);

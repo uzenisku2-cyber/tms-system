@@ -219,11 +219,12 @@ final class FinancialCalculationPersistenceService
                 if (
                     ! $priceListVersion->isActive()
                     && ! $priceListVersion->isReplaced()
+                    && ! $priceListVersion->isExpired()
                 ) {
                     throw new DomainException(
                         (
-                            'Only an active or replaced price-list '.
-                            'version can create a financial calculation.'
+                            'Only an active, replaced or expired '.
+                            'price-list version can create a financial calculation.'
                         ),
                     );
                 }

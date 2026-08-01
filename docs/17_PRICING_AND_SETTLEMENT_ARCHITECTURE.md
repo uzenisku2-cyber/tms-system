@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.5
+# TMS Pricing and Settlement Architecture v1.6
 
 ## 1. Purpose
 
@@ -917,6 +917,53 @@ The unit follows these rules:
 - no `replaced_by_version_id` relationship is introduced in this foundation unit
 - no database migration is required
 - internal database identifiers remain hidden by API Resources
+
+### 16.8 Sprint 012 Price-List Version Expiration Foundation
+
+The Sprint 012 write unit adds:
+
+~~~text
+POST /api/v1/price-lists/{priceList}/versions/{version}/expire
+~~~
+
+The request provides:
+
+~~~json
+{
+  "expected_lock_version": 3,
+  "valid_until": "2026-08-10"
+}
+~~~
+
+The unit follows these rules:
+
+- authentication, organization context, owner scope and `pricing.manage` authorization are required
+- the parent price list must remain in `active` status and must not be archived
+- the selected version must belong to the owner-scoped price-list aggregate
+- the selected version must be in `active` status
+- the selected version does not have to equal `price_lists.current_version`
+- `current_version` may therefore identify a newer draft or approved version while the preceding sole active version is expired
+- the request must provide the stored optimistic `expected_lock_version`
+- a stale lock version returns HTTP `409`
+- the aggregate must contain exactly one active version
+- any additional active version returns HTTP `409` and requires manual data repair
+- `valid_until` is the inclusive final applicability date
+- `valid_until` must not precede the selected version `valid_from`
+- `valid_until` must not be in the future
+- expiration must not extend an already shorter stored effective period
+- the selected version changes from `active` to `expired`
+- the parent price list remains `active`
+- `price_lists.current_version` remains unchanged
+- the selected version `version_number`, `lock_version`, approval metadata, `activated_at`, change reason and pricing items remain preserved
+- existing financial calculations are never rewritten
+- an expired version may be used for historical calculation only when the immutable daily-report `service_date` is inside its closed effective period
+- effective-period boundaries remain inclusive
+- replaced and expired versions without `valid_until` are not historically applicable
+- the endpoint returns the expired version through `PriceListVersionResource`
+- internal database identifiers remain hidden by API Resources
+- no database migration is required
+- a dedicated `expired_at` column remains deferred
+
 ## 17. Transaction and Concurrency Rules
 
 Controlled writes use database transactions.
@@ -953,7 +1000,7 @@ Calculation creation atomically:
 - verifies report eligibility
 - verifies that the selected immutable daily-report version equals `daily_reports.current_version`
 - verifies relationship validity for `service_date` through `OrganizationRelationship::isActiveAt()`
-- verifies that the selected active or replaced price-list version includes `service_date` in its effective period
+- verifies that the selected active, replaced or expired price-list version includes `service_date` in its effective period
 - builds the immutable snapshot
 - creates the calculation
 - creates calculation lines
@@ -976,6 +1023,26 @@ Version activation and replacement atomically:
 - preserves the previous row, items, approval metadata and activation timestamp
 - activates the selected version and keeps the parent price list active
 - rolls back both version transitions and the parent mutation together on failure
+
+Version expiration atomically:
+
+- locks the owner-scoped price list
+- rejects an archived or non-active parent price list
+- locks the selected price-list version
+- verifies that the selected version remains active
+- compares `expected_lock_version` with the stored `lock_version`
+- locks all other active versions of the aggregate
+- rejects an aggregate containing any additional active version
+- does not require the selected active version to equal `price_lists.current_version`
+- verifies activation metadata and the effective-period boundaries
+- rejects a final applicability date before `valid_from`
+- rejects a future final applicability date
+- rejects extension of an already shorter stored effective period
+- changes the selected version status to `expired`
+- stores the inclusive `valid_until` boundary
+- preserves the parent price-list status and `current_version`
+- preserves version identity, lock version, approval metadata, activation timestamp and pricing items
+- rolls back the complete expiration transition when any operation fails
 
 Optimistic concurrency is required where a current version can change between read and write.
 
@@ -1033,8 +1100,16 @@ Tests cover:
 - version approval
 - version activation
 - version replacement
+- version expiration
+- expiration of the sole active version when `current_version` points to a newer approved version
+- expiration optimistic-lock rejection
+- expiration effective-period validation
+- future expiration-date rejection
+- effective-period extension rejection
 - replaced-version historical applicability
+- expired-version historical applicability
 - historical financial calculation with a replaced version
+- historical financial calculation with an expired version
 - version immutability
 - overlapping period rejection
 - invalid replacement-boundary rejection
@@ -1112,8 +1187,11 @@ Sprint 004 foundation is complete when:
 - owner-scoped draft versions can replace their complete item set atomically
 - mutable draft revisions use a dedicated optimistic `lock_version`
 - stale and non-draft mutation attempts return controlled conflicts
-- price-list versions are immutable after approval
+- price-list versions are immutable after approval except for controlled lifecycle status and effective-period transitions
 - active-version overlap is prevented
+- the sole active version can be expired without requiring it to equal `price_lists.current_version`
+- expiration preserves the parent price-list `active` status and stored `current_version`
+- expired versions remain historically applicable only inside their closed inclusive effective period
 - standard pricing items are validated
 - approved or closed daily reports can be calculated
 - operational input is preserved as an immutable snapshot
