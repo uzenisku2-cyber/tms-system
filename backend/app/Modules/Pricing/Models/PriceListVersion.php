@@ -114,8 +114,16 @@ class PriceListVersion extends Model
             (
                 ! $this->isActive()
                 && ! $this->isReplaced()
+                && ! $this->isExpired()
             )
             || $this->valid_from === null
+            || (
+                (
+                    $this->isReplaced()
+                    || $this->isExpired()
+                )
+                && $this->valid_until === null
+            )
         ) {
             return false;
         }

@@ -842,6 +842,200 @@ final class PriceListWriteService
         );
     }
 
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function expireActiveVersion(
+        User $actor,
+        string $publicId,
+        int $versionNumber,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $actorId = (int) $actor->getKey();
+
+        if ($actorId < 1) {
+            throw new LogicException(
+                'The authenticated user has no valid identifier.',
+            );
+        }
+
+        if ($publicId === '') {
+            throw new LogicException(
+                'The price-list public identifier is required.',
+            );
+        }
+
+        if ($versionNumber < 1) {
+            throw new LogicException(
+                'The price-list version number must be positive.',
+            );
+        }
+
+        $expectedLockVersion = $this->positiveInteger(
+            $input,
+            'expected_lock_version',
+        );
+
+        $requestedValidUntil = CarbonImmutable::parse(
+            $this->requiredString(
+                $input,
+                'valid_until',
+            ),
+        )->startOfDay();
+
+        return DB::transaction(
+            function () use (
+                $organizationId,
+                $publicId,
+                $versionNumber,
+                $expectedLockVersion,
+                $requestedValidUntil,
+            ): PriceListVersion {
+                $priceList = PriceList::query()
+                    ->forOwnerOrganization($organizationId)
+                    ->where('public_id', $publicId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($priceList->isArchived()) {
+                    throw new ConflictHttpException(
+                        'Archived price lists cannot expire versions.',
+                    );
+                }
+
+                if (! $priceList->isActive()) {
+                    throw new ConflictHttpException(
+                        'Only active price lists may expire versions.',
+                    );
+                }
+
+                $version = $priceList->versions()
+                    ->where('version_number', $versionNumber)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if (! $version->isActive()) {
+                    throw new ConflictHttpException(
+                        'Only active price-list versions may be expired.',
+                    );
+                }
+
+                $currentLockVersion = (int) $version->getAttribute(
+                    'lock_version',
+                );
+
+                if ($currentLockVersion !== $expectedLockVersion) {
+                    throw new ConflictHttpException(
+                        'The price-list active version has changed.',
+                    );
+                }
+
+                $otherActiveVersions = $priceList->versions()
+                    ->where(
+                        'status',
+                        PriceListVersion::STATUS_ACTIVE,
+                    )
+                    ->where(
+                        'version_number',
+                        '<>',
+                        $versionNumber,
+                    )
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($otherActiveVersions->isNotEmpty()) {
+                    throw new ConflictHttpException(
+                        'The price-list aggregate contains multiple active versions and requires repair.',
+                    );
+                }
+
+                $validFrom = $version->getAttribute(
+                    'valid_from',
+                );
+
+                $storedValidUntil = $version->getAttribute(
+                    'valid_until',
+                );
+
+                $activatedAt = $version->getAttribute(
+                    'activated_at',
+                );
+
+                if (
+                    ! $validFrom instanceof DateTimeInterface
+                    || ! $activatedAt instanceof DateTimeInterface
+                    || (
+                        $storedValidUntil !== null
+                        && ! $storedValidUntil instanceof DateTimeInterface
+                    )
+                ) {
+                    throw new ConflictHttpException(
+                        'A valid active effective period is required before expiration.',
+                    );
+                }
+
+                $validFromDate = CarbonImmutable::instance(
+                    $validFrom,
+                )->startOfDay();
+
+                if ($requestedValidUntil->isBefore(
+                    $validFromDate,
+                )) {
+                    throw new ConflictHttpException(
+                        'The expiration date cannot precede the active version start date.',
+                    );
+                }
+
+                if ($requestedValidUntil->isAfter(
+                    CarbonImmutable::now()->startOfDay(),
+                )) {
+                    throw new ConflictHttpException(
+                        'The expiration date cannot be in the future.',
+                    );
+                }
+
+                if ($storedValidUntil instanceof DateTimeInterface) {
+                    $storedValidUntilDate = CarbonImmutable::instance(
+                        $storedValidUntil,
+                    )->startOfDay();
+
+                    if ($storedValidUntilDate->isBefore(
+                        $validFromDate,
+                    )) {
+                        throw new ConflictHttpException(
+                            'A valid active effective period is required before expiration.',
+                        );
+                    }
+
+                    if ($requestedValidUntil->isAfter(
+                        $storedValidUntilDate,
+                    )) {
+                        throw new ConflictHttpException(
+                            'The expiration date cannot extend the active version effective period.',
+                        );
+                    }
+                }
+
+                $version->fill([
+                    'status' => PriceListVersion::STATUS_EXPIRED,
+                    'valid_until' => $requestedValidUntil,
+                ]);
+
+                $version->saveOrFail();
+
+                return $version->fresh([
+                    'items',
+                ]) ?? throw new LogicException(
+                    'The expired price-list version could not be reloaded.',
+                );
+            },
+            3,
+        );
+    }
+
     private function assertApprovableItems(
         PriceList $priceList,
         PriceListVersion $version,

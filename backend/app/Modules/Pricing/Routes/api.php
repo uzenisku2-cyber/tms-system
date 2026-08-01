@@ -45,6 +45,15 @@ Route::middleware([
             ->middleware('perm:pricing.manage')
             ->name('versions.activate');
 
+        Route::post(
+            '/{priceList}/versions/{version}/expire',
+            [PriceListController::class, 'expireVersion'],
+        )
+            ->whereUuid('priceList')
+            ->whereNumber('version')
+            ->middleware('perm:pricing.manage')
+            ->name('versions.expire');
+
         Route::put(
             '/{priceList}/versions/{version}',
             [PriceListController::class, 'updateVersion'],
