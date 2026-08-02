@@ -23,6 +23,8 @@ final class RolePermissionSeeder extends Seeder
         'users.manage',
         'pricing.view',
         'pricing.manage',
+        'compensation.view',
+        'compensation.manage',
         'daily-reports.view',
         'daily-reports.create',
         'daily-reports.update',
@@ -44,6 +46,8 @@ final class RolePermissionSeeder extends Seeder
             'users.manage',
             'pricing.view',
             'pricing.manage',
+            'compensation.view',
+            'compensation.manage',
         ],
         'admin' => [
             'vehicles.view',
