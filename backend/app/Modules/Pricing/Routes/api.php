@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use Illuminate\Support\Facades\Route;
 
@@ -92,4 +93,32 @@ Route::middleware([
                     ->whereUuid('priceList')
                     ->name('show');
             });
+    });
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.view',
+])
+    ->prefix('financial-calculations')
+    ->name('financial-calculations.')
+    ->group(function (): void {
+        Route::get(
+            '/',
+            [FinancialCalculationController::class, 'index'],
+        )->name('index');
+
+        Route::get(
+            '/{financialCalculation}/events',
+            [FinancialCalculationController::class, 'events'],
+        )
+            ->whereUuid('financialCalculation')
+            ->name('events.index');
+
+        Route::get(
+            '/{financialCalculation}',
+            [FinancialCalculationController::class, 'show'],
+        )
+            ->whereUuid('financialCalculation')
+            ->name('show');
     });

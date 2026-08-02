@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.6
+# TMS Pricing and Settlement Architecture v1.7
 
 ## 1. Purpose
 
@@ -674,7 +674,7 @@ POST /price-lists/{priceList}/versions/{version}/approve
 POST /price-lists/{priceList}/versions/{version}/activate
 ~~~
 
-Planned calculation read endpoints:
+Implemented calculation read endpoints:
 
 ~~~text
 GET /financial-calculations
@@ -964,6 +964,111 @@ The unit follows these rules:
 - no database migration is required
 - a dedicated `expired_at` column remains deferred
 
+### 16.9 Sprint 013 Financial Calculation Read API
+
+Sprint 013 implements the organization-scoped financial-calculation read
+boundary.
+
+Implemented endpoints:
+
+~~~text
+GET /api/v1/financial-calculations
+GET /api/v1/financial-calculations/{financialCalculation}
+GET /api/v1/financial-calculations/{financialCalculation}/events
+~~~
+
+All routes require:
+
+- Sanctum authentication through `auth:sanctum`
+- verified active organization context through `organization`
+- the organization-scoped `compensation.view` permission
+
+Public route parameters use the calculation `public_id`. Direct unrestricted
+model binding is not used for financial-calculation lookup.
+
+Visibility is derived from the stored direct commercial relationship:
+
+- the active organization may be the source organization
+- the active organization may be the target organization
+- unrelated organizations receive `404`
+- provider ownership stored in `financial_calculations.organization_id` does
+  not prevent the customer party from reading the shared calculation
+- historical reads do not require the relationship to remain active
+- historical reads do not apply current relationship validity dates
+- both historical parties retain access while their membership and permission
+  requirements remain satisfied
+
+The index endpoint supports:
+
+- optional `status` filtering
+- normalized three-letter `currency` filtering
+- sorting by `calculated_at`, `status`, `currency`, `total_amount`, or
+  `created_at`
+- ascending or descending sorting
+- `per_page` values from `1` through `100`
+- default page size `25`
+- deterministic secondary ordering without exposing the internal row ID
+
+Default index ordering is newest `calculated_at` first.
+
+The detail response exposes:
+
+- calculation `public_id`
+- lifecycle status and currency
+- daily-report `public_id` and immutable report version
+- price-list `public_id` and applied version number
+- calculation version
+- subtotal and total amounts
+- superseded calculation `public_id` when applicable
+- lifecycle timestamps
+- calculation lines ordered by `position`
+
+Calculation-line resources expose pricing code, description, quantity, unit,
+unit rate, currency, line amount, source field, rounding contract, position,
+and creation timestamp.
+
+The events endpoint returns immutable events in deterministic chronological
+order. Event resources expose event type, source status, target status, reason,
+and creation timestamp.
+
+The API does not expose internal numeric identifiers, including:
+
+- organization IDs
+- relationship IDs
+- price-list database IDs
+- daily-report database IDs
+- user IDs
+- calculation-line IDs
+- event IDs
+
+Permission bootstrap registers:
+
+~~~text
+compensation.view
+compensation.manage
+~~~
+
+The default role-permission seeder assigns both permissions only to
+`super-admin`. Operational `admin`, `manager`, and `user` roles do not receive
+financial access automatically.
+
+Feature coverage verifies:
+
+- guest rejection
+- missing organization-context rejection
+- `compensation.view` enforcement
+- customer-party visibility
+- provider-party visibility
+- historical relationship visibility
+- unrelated-calculation isolation
+- filtering, sorting, and pagination
+- deterministic calculation-line ordering
+- deterministic event ordering
+- index validation
+- absence of internal database identifiers
+
+Calculation creation and lifecycle write endpoints remain deferred.
+
 ## 17. Transaction and Concurrency Rules
 
 Controlled writes use database transactions.
@@ -1140,6 +1245,16 @@ Tests cover:
 - database constraints
 - API validation
 - API Resources
+- financial-calculation read authentication
+- financial-calculation organization-context enforcement
+- financial-calculation permission enforcement
+- customer and provider relationship-party visibility
+- historical financial-calculation relationship visibility
+- unrelated financial-calculation isolation
+- financial-calculation filtering, ordering, and pagination
+- deterministic financial-calculation line ordering
+- deterministic financial-calculation event ordering
+- internal identifier response isolation
 - Larastan
 - Pint
 - full backend regression

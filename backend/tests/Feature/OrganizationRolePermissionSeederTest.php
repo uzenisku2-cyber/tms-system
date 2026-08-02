@@ -37,7 +37,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
 
         self::assertSame(
-            16,
+            18,
             DB::table('permissions')->count(),
         );
 
@@ -81,7 +81,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            16,
+            18,
             DB::table('permissions')
                 ->where('guard_name', 'web')
                 ->count(),
@@ -168,8 +168,76 @@ final class OrganizationRolePermissionSeederTest extends TestCase
                 ->count(),
         );
 
+        $compensationPermissions = [
+            'compensation.manage',
+            'compensation.view',
+        ];
+
+        $seededCompensationPermissions =
+            DB::table('permissions')
+                ->whereIn(
+                    'name',
+                    $compensationPermissions,
+                )
+                ->where('guard_name', 'web')
+                ->orderBy('name')
+                ->pluck('name')
+                ->all();
+
         self::assertSame(
-            26,
+            $compensationPermissions,
+            $seededCompensationPermissions,
+        );
+
+        $compensationPermissionIds =
+            DB::table('permissions')
+                ->whereIn(
+                    'name',
+                    $compensationPermissions,
+                )
+                ->where('guard_name', 'web')
+                ->pluck('id');
+
+        self::assertSame(
+            4,
+            DB::table('role_has_permissions')
+                ->join(
+                    'roles',
+                    'roles.id',
+                    '=',
+                    'role_has_permissions.role_id',
+                )
+                ->whereIn(
+                    'role_has_permissions.permission_id',
+                    $compensationPermissionIds,
+                )
+                ->where('roles.name', 'super-admin')
+                ->count(),
+        );
+
+        self::assertSame(
+            0,
+            DB::table('role_has_permissions')
+                ->join(
+                    'roles',
+                    'roles.id',
+                    '=',
+                    'role_has_permissions.role_id',
+                )
+                ->whereIn(
+                    'role_has_permissions.permission_id',
+                    $compensationPermissionIds,
+                )
+                ->where(
+                    'roles.name',
+                    '!=',
+                    'super-admin',
+                )
+                ->count(),
+        );
+
+        self::assertSame(
+            30,
             DB::table('role_has_permissions')->count(),
         );
 
