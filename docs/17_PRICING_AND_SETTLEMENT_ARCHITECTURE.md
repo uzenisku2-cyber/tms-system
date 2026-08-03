@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.7
+# TMS Pricing and Settlement Architecture v1.8
 
 ## 1. Purpose
 
@@ -137,6 +137,8 @@ PriceListVersionService
 PricingApplicabilityService
 FinancialCalculationService
 FinancialCalculationQueryService
+FinancialCalculationWriteService
+FinancialCalculationPersistenceService
 FinancialCalculationWorkflow
 FinancialCalculationSnapshotBuilder
 FinancialCalculationEventPayloadBuilder
@@ -682,10 +684,15 @@ GET /financial-calculations/{financialCalculation}
 GET /financial-calculations/{financialCalculation}/events
 ~~~
 
-Planned calculation write endpoints:
+Implemented initial calculation creation endpoint:
 
 ~~~text
 POST /financial-calculations
+~~~
+
+Planned calculation lifecycle write endpoints:
+
+~~~text
 POST /financial-calculations/{financialCalculation}/review
 POST /financial-calculations/{financialCalculation}/approve
 POST /financial-calculations/{financialCalculation}/close
@@ -1067,7 +1074,94 @@ Feature coverage verifies:
 - index validation
 - absence of internal database identifiers
 
-Calculation creation and lifecycle write endpoints remain deferred.
+Calculation lifecycle write endpoints remain deferred.
+
+### 16.10 Sprint 014 Financial Calculation Creation Foundation
+
+Sprint 014 implements the initial financial-calculation creation boundary.
+
+Implemented endpoint:
+
+~~~text
+POST /api/v1/financial-calculations
+~~~
+
+The route requires:
+
+- Sanctum authentication through `auth:sanctum`
+- a verified active organization context through `organization`
+- the organization-scoped `compensation.manage` permission
+
+The validated request contract is:
+
+~~~text
+daily_report_public_id  required UUID
+daily_report_version    required integer, minimum 1
+price_list_public_id    required UUID
+price_list_version      required integer, minimum 1
+reason                  optional nullable string, maximum 2000 characters
+~~~
+
+The public write adapter follows these resolution rules:
+
+- the selected price list is resolved by `public_id`
+- the price list must identify the verified organization as its provider
+- the selected price-list version is resolved through that scoped parent by
+  `version_number`
+- the customer organization is derived from the selected price list
+- the daily report is resolved by `public_id` inside that customer organization
+- the selected daily-report version is resolved through that report by
+  `version_number`
+- API clients do not submit internal database identifiers
+- resolved internal identifiers are passed to
+  `FinancialCalculationPersistenceService`
+
+`FinancialCalculationWriteService` acts only as the public-identifier adapter.
+`FinancialCalculationPersistenceService` remains the owner of calculation
+business invariants. The persistence boundary:
+
+- verifies the active organization and calculating-user membership
+- verifies `compensation.manage` inside the organization permission scope
+- locks and validates the selected daily-report version and source report
+- requires the selected report version to equal `daily_reports.current_version`
+- accepts only an `approved` or `closed` daily report
+- builds the immutable snapshot from the selected report version
+- validates the direct relationship at immutable `service_date`
+- validates price-list-version applicability at `service_date`
+- rejects an equivalent duplicate initial calculation
+- creates deterministic calculation lines and decimal totals
+- creates the initial immutable `calculated` event
+- persists the complete result inside one database transaction
+
+A successful request returns HTTP `201` through
+`FinancialCalculationResource`. The response exposes public aggregate
+identifiers and business version numbers while internal primary keys and
+foreign keys remain hidden.
+
+Resource and conflict failures follow the existing Pricing write contract:
+
+- a selected aggregate or business version unavailable inside the verified
+  organization scope returns HTTP `404`
+- a domain precondition conflict after successful scoped resolution returns
+  HTTP `409` with the domain message
+- rejected requests do not persist partial calculations, lines or events
+
+Feature coverage verifies:
+
+- guest rejection
+- missing organization-context rejection
+- `compensation.manage` enforcement
+- creation request validation
+- organization-scoped unavailable resources return HTTP `404`
+- duplicate initial calculation returns HTTP `409`
+- rejected creation attempts preserve atomic storage
+- atomic calculation, line and initial-event creation
+- deterministic calculated amounts
+- public response identifiers and business versions
+- absence of internal database identifiers
+
+The lifecycle write endpoints for review, approval, closing and cancellation
+remain deferred.
 
 ## 17. Transaction and Concurrency Rules
 
@@ -1245,6 +1339,12 @@ Tests cover:
 - database constraints
 - API validation
 - API Resources
+- financial-calculation creation authentication
+- financial-calculation creation organization-context enforcement
+- financial-calculation `compensation.manage` enforcement
+- financial-calculation creation request validation
+- atomic calculation, line and initial-event creation
+- financial-calculation creation response isolation
 - financial-calculation read authentication
 - financial-calculation organization-context enforcement
 - financial-calculation permission enforcement
@@ -1308,6 +1408,11 @@ Sprint 004 foundation is complete when:
 - expiration preserves the parent price-list `active` status and stored `current_version`
 - expired versions remain historically applicable only inside their closed inclusive effective period
 - standard pricing items are validated
+- initial financial calculations can be created through `POST /api/v1/financial-calculations`
+- creation accepts public daily-report and price-list identifiers with explicit business version numbers
+- successful creation returns HTTP `201`
+- unavailable scoped creation resources return HTTP `404`
+- conflicting creation preconditions return HTTP `409` without partial writes
 - approved or closed daily reports can be calculated
 - operational input is preserved as an immutable snapshot
 - calculation lines preserve quantity and rate
