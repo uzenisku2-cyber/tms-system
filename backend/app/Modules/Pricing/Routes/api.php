@@ -98,6 +98,20 @@ Route::middleware([
 Route::middleware([
     'auth:sanctum',
     'organization',
+    'perm:compensation.manage',
+])
+    ->prefix('financial-calculations')
+    ->name('financial-calculations.')
+    ->group(function (): void {
+        Route::post(
+            '/',
+            [FinancialCalculationController::class, 'store'],
+        )->name('store');
+    });
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
     'perm:compensation.view',
 ])
     ->prefix('financial-calculations')

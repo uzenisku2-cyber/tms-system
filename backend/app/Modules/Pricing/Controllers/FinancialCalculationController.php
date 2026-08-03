@@ -5,14 +5,35 @@ declare(strict_types=1);
 namespace App\Modules\Pricing\Controllers;
 
 use App\Core\Http\BaseController;
+use App\Models\User;
 use App\Modules\Pricing\Requests\FinancialCalculationIndexRequest;
+use App\Modules\Pricing\Requests\StoreFinancialCalculationRequest;
 use App\Modules\Pricing\Resources\FinancialCalculationEventResource;
 use App\Modules\Pricing\Resources\FinancialCalculationResource;
 use App\Modules\Pricing\Services\FinancialCalculationQueryService;
+use App\Modules\Pricing\Services\FinancialCalculationWriteService;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 final class FinancialCalculationController extends BaseController
 {
+    public function store(
+        StoreFinancialCalculationRequest $request,
+        FinancialCalculationWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new FinancialCalculationResource(
+                $writes->createInitial(
+                    $this->actor($request),
+                    $request->validated(),
+                ),
+            ),
+            'Financial calculation created.',
+            201,
+        );
+    }
+
     public function index(
         FinancialCalculationIndexRequest $request,
         FinancialCalculationQueryService $queries,
@@ -58,5 +79,19 @@ final class FinancialCalculationController extends BaseController
                 ),
             ),
         ]);
+    }
+
+    /**
+     * @throws AuthenticationException
+     */
+    private function actor(Request $request): User
+    {
+        $actor = $request->user();
+
+        if (! $actor instanceof User) {
+            throw new AuthenticationException;
+        }
+
+        return $actor;
     }
 }
