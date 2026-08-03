@@ -7,6 +7,7 @@ namespace App\Modules\Pricing\Controllers;
 use App\Core\Http\BaseController;
 use App\Models\User;
 use App\Modules\Pricing\Requests\FinancialCalculationIndexRequest;
+use App\Modules\Pricing\Requests\ReviewFinancialCalculationRequest;
 use App\Modules\Pricing\Requests\StoreFinancialCalculationRequest;
 use App\Modules\Pricing\Resources\FinancialCalculationEventResource;
 use App\Modules\Pricing\Resources\FinancialCalculationResource;
@@ -31,6 +32,23 @@ final class FinancialCalculationController extends BaseController
             ),
             'Financial calculation created.',
             201,
+        );
+    }
+
+    public function review(
+        ReviewFinancialCalculationRequest $request,
+        string $financialCalculation,
+        FinancialCalculationWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new FinancialCalculationResource(
+                $writes->startReview(
+                    $this->actor($request),
+                    $financialCalculation,
+                    $request->validated(),
+                ),
+            ),
+            'Financial calculation review started.',
         );
     }
 

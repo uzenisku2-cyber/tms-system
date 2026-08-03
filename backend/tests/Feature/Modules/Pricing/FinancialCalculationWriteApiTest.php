@@ -382,6 +382,521 @@ final class FinancialCalculationWriteApiTest extends TestCase
         );
     }
 
+    public function test_guest_cannot_start_financial_calculation_review(): void
+    {
+        $this->postJson(
+            self::STORE_URL.'/'.
+            Str::uuid().
+            '/review',
+            [
+                'reason' => 'Unauthorized review.',
+            ],
+        )->assertUnauthorized();
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            0,
+        );
+    }
+
+    public function test_organization_context_is_required_for_financial_calculation_review(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->flushHeaders();
+
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $this->postJson(
+            $this->reviewUrl($calculation),
+            [],
+        )->assertStatus(400);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
+    public function test_compensation_manage_permission_is_required_for_financial_calculation_review(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $unprivilegedUser = User::factory()->create([
+            'status' => User::STATUS_ACTIVE,
+        ]);
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $foundation['provider']->getKey(),
+            'user_id' => $unprivilegedUser->getKey(),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => now()->subDay(),
+            'valid_until' => null,
+        ]);
+
+        Sanctum::actingAs(
+            $unprivilegedUser,
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->reviewUrl($calculation),
+                [],
+            )
+            ->assertForbidden();
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
+    public function test_financial_calculation_review_payload_is_validated(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->reviewUrl($calculation),
+                [
+                    'reason' => str_repeat(
+                        'x',
+                        2001,
+                    ),
+                ],
+            )
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'reason',
+            ]);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
+    public function test_it_starts_financial_calculation_review_atomically(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $inputSnapshotBefore =
+            $calculation->getAttribute(
+                'input_snapshot',
+            );
+
+        self::assertIsArray(
+            $inputSnapshotBefore,
+        );
+
+        $subtotalBefore =
+            $calculation->getAttribute(
+                'subtotal_amount',
+            );
+
+        $totalBefore =
+            $calculation->getAttribute(
+                'total_amount',
+            );
+
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $response =
+            $this->withOrganization(
+                $foundation['provider'],
+            )
+                ->postJson(
+                    $this->reviewUrl(
+                        $calculation,
+                    ),
+                    [
+                        'reason' => (
+                            '  Manual financial '.
+                            'review started.  '
+                        ),
+                    ],
+                );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'message',
+                'Financial calculation review started.',
+            )
+            ->assertJsonPath(
+                'data.public_id',
+                (string) $calculation->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.status',
+                FinancialCalculation::STATUS_UNDER_REVIEW,
+            )
+            ->assertJsonPath(
+                'data.daily_report_public_id',
+                (string) $foundation['dailyReport']->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.daily_report_version',
+                4,
+            )
+            ->assertJsonPath(
+                'data.price_list_public_id',
+                (string) $foundation['priceList']->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.price_list_version',
+                1,
+            )
+            ->assertJsonCount(
+                4,
+                'data.lines',
+            )
+            ->assertJsonPath(
+                'data.lines.0.pricing_code',
+                PriceListItem::CODE_DELIVERED_PARCELS,
+            )
+            ->assertJsonPath(
+                'data.lines.3.pricing_code',
+                PriceListItem::CODE_ACTUAL_KM,
+            )
+            ->assertJsonPath(
+                'data.calculation_version',
+                1,
+            )
+            ->assertJsonPath(
+                'data.subtotal_amount',
+                '194.56',
+            )
+            ->assertJsonPath(
+                'data.total_amount',
+                '194.56',
+            )
+            ->assertJsonPath(
+                'data.approved_at',
+                null,
+            )
+            ->assertJsonPath(
+                'data.closed_at',
+                null,
+            );
+
+        $payload =
+            $response->json('data');
+
+        self::assertIsArray(
+            $payload,
+        );
+
+        $this->assertNoInternalDatabaseIdentifiers(
+            $payload,
+        );
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertSame(
+            $inputSnapshotBefore,
+            $calculation->getAttribute(
+                'input_snapshot',
+            ),
+        );
+
+        self::assertSame(
+            $subtotalBefore,
+            $calculation->getAttribute(
+                'subtotal_amount',
+            ),
+        );
+
+        self::assertSame(
+            $totalBefore,
+            $calculation->getAttribute(
+                'total_amount',
+            ),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute(
+                'approved_at',
+            ),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute(
+                'closed_at',
+            ),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_lines',
+            4,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+
+        $reviewEvent =
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_REVIEW_STARTED,
+                )
+                ->sole();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $reviewEvent->getAttribute(
+                'from_status',
+            ),
+        );
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $reviewEvent->getAttribute(
+                'to_status',
+            ),
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $reviewEvent->getAttribute(
+                'acted_by_user_id',
+            ),
+        );
+
+        self::assertSame(
+            'Manual financial review started.',
+            $reviewEvent->getAttribute(
+                'reason',
+            ),
+        );
+
+        $metadata =
+            $reviewEvent->getAttribute(
+                'metadata',
+            );
+
+        self::assertIsArray(
+            $metadata,
+        );
+
+        self::assertSame(
+            1,
+            $metadata['calculation_version']
+                ?? null,
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $metadata['reviewed_by_user_id']
+                ?? null,
+        );
+    }
+
+    public function test_financial_calculation_review_is_organization_scoped(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $otherOrganization =
+            $this->createOrganization(
+                Organization::TYPE_SUBCONTRACTOR,
+            );
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $otherOrganization->getKey(),
+            'user_id' => $foundation['user']->getKey(),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => now()->subDay(),
+            'valid_until' => null,
+        ]);
+
+        $this->grantManagePermission(
+            $foundation['user'],
+            $otherOrganization,
+        );
+
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $this->withOrganization(
+            $otherOrganization,
+        )
+            ->postJson(
+                $this->reviewUrl($calculation),
+                [
+                    'reason' => 'Cross-organization review.',
+                ],
+            )
+            ->assertNotFound();
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
+    public function test_repeated_financial_calculation_review_is_rejected_as_conflict_atomically(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->reviewUrl($calculation),
+                [
+                    'reason' => 'Initial review.',
+                ],
+            )
+            ->assertOk();
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->reviewUrl($calculation),
+                [
+                    'reason' => 'Repeated review.',
+                ],
+            )
+            ->assertStatus(409);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+
+        self::assertSame(
+            1,
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_REVIEW_STARTED,
+                )
+                ->count(),
+        );
+    }
+
     /**
      * @return array{
      *     customer: Organization,
@@ -657,6 +1172,64 @@ final class FinancialCalculationWriteApiTest extends TestCase
 
             $registrar->forgetCachedPermissions();
         }
+    }
+
+    /**
+     * @param array{
+     *     customer: Organization,
+     *     provider: Organization,
+     *     relationship: OrganizationRelationship,
+     *     user: User,
+     *     dailyReport: DailyReport,
+     *     dailyReportVersion: DailyReportVersion,
+     *     priceList: PriceList,
+     *     priceListVersion: PriceListVersion
+     * } $foundation
+     */
+    private function createCalculationThroughApi(
+        array $foundation,
+    ): FinancialCalculation {
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $response =
+            $this->withOrganization(
+                $foundation['provider'],
+            )
+                ->postJson(
+                    self::STORE_URL,
+                    $this->payload(
+                        $foundation,
+                        'Review API initial calculation.',
+                    ),
+                )
+                ->assertCreated();
+
+        $publicId =
+            $response->json(
+                'data.public_id',
+            );
+
+        self::assertIsString(
+            $publicId,
+        );
+
+        return FinancialCalculation::query()
+            ->where(
+                'public_id',
+                $publicId,
+            )
+            ->sole();
+    }
+
+    private function reviewUrl(
+        FinancialCalculation $calculation,
+    ): string {
+        return
+            self::STORE_URL.'/'.
+            (string) $calculation->getRouteKey().
+            '/review';
     }
 
     /**

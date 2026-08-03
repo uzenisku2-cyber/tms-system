@@ -690,10 +690,15 @@ Implemented initial calculation creation endpoint:
 POST /financial-calculations
 ~~~
 
-Planned calculation lifecycle write endpoints:
+Implemented calculation review endpoint:
 
 ~~~text
 POST /financial-calculations/{financialCalculation}/review
+~~~
+
+Planned remaining calculation lifecycle write endpoints:
+
+~~~text
 POST /financial-calculations/{financialCalculation}/approve
 POST /financial-calculations/{financialCalculation}/close
 POST /financial-calculations/{financialCalculation}/cancel
@@ -1430,3 +1435,27 @@ Sprint 004 foundation is complete when:
 - no existing DailyReports behavior is unintentionally changed
 - no existing Organizations behavior is unintentionally changed
 - no existing Identity behavior is unintentionally changed
+## Sprint 015 — Financial Calculation Review API Foundation
+
+Sprint 015 introduces the first public financial-calculation lifecycle write endpoint:
+
+~~~text
+POST /api/v1/financial-calculations/{financialCalculation}/review
+~~~
+
+The endpoint:
+
+- requires authentication
+- requires verified organization context
+- requires `compensation.manage`
+- resolves the aggregate through its `public_id`
+- exposes no internal numeric identifier
+- accepts an optional `reason` string with a maximum length of 2000 characters
+- returns HTTP `404` when the calculation is unavailable in the verified organization
+- returns HTTP `409` when the lifecycle transition is not allowed
+- transitions only from `calculated` to `under_review`
+- appends a `review_started` event in the same transaction
+- preserves the calculation amount, snapshot, lines and approval metadata
+- relies on row-level locking in the existing lifecycle service
+
+Approval, closure and cancellation API endpoints remain deferred to later validated implementation units.
