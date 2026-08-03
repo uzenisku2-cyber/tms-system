@@ -18,6 +18,7 @@ final class FinancialCalculationWriteService
     public function __construct(
         private readonly OrganizationContext $organizationContext,
         private readonly FinancialCalculationPersistenceService $persistence,
+        private readonly FinancialCalculationLifecycleService $lifecycle,
     ) {}
 
     /**
@@ -120,6 +121,61 @@ final class FinancialCalculationWriteService
                     'reason',
                 ),
             );
+        } catch (DomainException $exception) {
+            throw new ConflictHttpException(
+                $exception->getMessage(),
+                $exception,
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function startReview(
+        User $actor,
+        string $financialCalculationPublicId,
+        array $input,
+    ): FinancialCalculation {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $calculation = FinancialCalculation::query()
+            ->where(
+                'public_id',
+                $financialCalculationPublicId,
+            )
+            ->where(
+                'organization_id',
+                $organizationId,
+            )
+            ->firstOrFail();
+
+        try {
+            $reviewedCalculation =
+                $this->lifecycle->startReview(
+                    financialCalculationId: $this->positiveModelIdentifier(
+                        $calculation->getKey(),
+                        'Financial calculation identifier',
+                    ),
+                    reviewedByUserId: $this->positiveModelIdentifier(
+                        $actor->getKey(),
+                        'Reviewing user identifier',
+                    ),
+                    reviewedAt: now(),
+                    reason: $this->nullableString(
+                        $input,
+                        'reason',
+                    ),
+                );
+
+            return $reviewedCalculation->load([
+                'priceList:id,public_id',
+                'priceListVersion:id,version_number',
+                'dailyReport:id,public_id',
+                'supersedesCalculation:id,public_id',
+                'lines',
+            ]);
         } catch (DomainException $exception) {
             throw new ConflictHttpException(
                 $exception->getMessage(),
