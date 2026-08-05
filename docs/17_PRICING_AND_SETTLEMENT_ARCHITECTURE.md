@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.9
+# TMS Pricing and Settlement Architecture v1.10
 
 ## 1. Purpose
 
@@ -690,17 +690,17 @@ Implemented initial calculation creation endpoint:
 POST /financial-calculations
 ~~~
 
-Implemented calculation review and approval endpoints:
+Implemented calculation review, approval and closure endpoints:
 
 ~~~text
 POST /financial-calculations/{financialCalculation}/review
 POST /financial-calculations/{financialCalculation}/approve
+POST /financial-calculations/{financialCalculation}/close
 ~~~
 
-Planned remaining calculation lifecycle write endpoints:
+Planned remaining calculation lifecycle write endpoint:
 
 ~~~text
-POST /financial-calculations/{financialCalculation}/close
 POST /financial-calculations/{financialCalculation}/cancel
 ~~~
 
@@ -1458,7 +1458,7 @@ The endpoint:
 - preserves the calculation amount, snapshot, lines and approval metadata
 - relies on row-level locking in the existing lifecycle service
 
-Closure and cancellation API endpoints remain deferred to later validated implementation units.
+The cancellation API endpoint remains deferred to a later validated implementation unit.
 
 ## Sprint 016 — Financial Calculation Approval API Foundation
 
@@ -1498,4 +1498,48 @@ The approval API test foundation verifies:
 - approval-event status transition, actor, reason and metadata
 - absence of internal numeric identifiers in the API resource
 
-Closure and cancellation API endpoints remain deferred to later validated implementation units.
+The cancellation API endpoint remains deferred to a later validated implementation unit.
+
+## Sprint 017 — Financial Calculation Closure API Foundation
+
+Sprint 017 introduces the third public financial-calculation lifecycle write endpoint:
+
+~~~text
+POST /api/v1/financial-calculations/{financialCalculation}/close
+~~~
+
+The endpoint:
+
+- requires authentication
+- requires verified organization context
+- requires `compensation.manage`
+- resolves the aggregate through its organization-scoped `public_id`
+- exposes no internal numeric identifier
+- accepts an optional `reason` string with a maximum length of 2000 characters
+- returns HTTP `404` when the calculation is unavailable in the verified organization
+- returns HTTP `409` when the lifecycle transition is not allowed
+- returns HTTP `422` when request validation fails
+- transitions only from `approved` to `closed`
+- records `closed_at`
+- preserves `approved_by_user_id` and `approved_at`
+- appends an immutable `closed` event in the same transaction
+- records the closing actor in event metadata as `closed_by_user_id`
+- preserves the calculation snapshot, amounts and lines
+- relies on row-level locking in the existing lifecycle service
+- keeps `closed` as a terminal lifecycle state
+
+The closure API test foundation verifies:
+
+- unauthenticated access rejection
+- missing organization-context rejection
+- `compensation.manage` enforcement
+- optional-reason validation
+- successful atomic closure
+- preservation of approval metadata and immutable calculation data
+- organization-scoped lookup isolation
+- rejection of direct `under_review` to `closed` transition
+- rejection of repeated closure
+- closure-event status transition, actor, reason and metadata
+- absence of internal numeric identifiers in the API resource
+
+The cancellation API endpoint remains deferred to a later validated implementation unit.

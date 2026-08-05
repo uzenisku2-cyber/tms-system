@@ -1509,6 +1509,627 @@ final class FinancialCalculationWriteApiTest extends TestCase
         );
     }
 
+    public function test_financial_calculation_closure_requires_authentication(): void
+    {
+        $this->postJson(
+            self::STORE_URL.'/'.
+            (string) Str::uuid().
+            '/close',
+            [],
+        )->assertUnauthorized();
+
+        $this->assertNoFinancialRecords();
+    }
+
+    public function test_financial_calculation_closure_requires_organization_context(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $calculation,
+            'Review before organization-context closure validation.',
+            'Approval before organization-context closure validation.',
+        );
+
+        app(OrganizationContext::class)->clear();
+
+        $this->withHeader(
+            'X-Organization-ID',
+            '',
+        )
+            ->postJson(
+                $this->closureUrl($calculation),
+                [],
+            )
+            ->assertStatus(400);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+    }
+
+    public function test_financial_calculation_closure_requires_compensation_manage_permission(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $calculation,
+            'Review before closure permission validation.',
+            'Approval before closure permission validation.',
+        );
+
+        $unprivilegedUser = User::factory()->create([
+            'status' => User::STATUS_ACTIVE,
+        ]);
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $foundation['provider']->getKey(),
+            'user_id' => $unprivilegedUser->getKey(),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => now()->subDay(),
+            'valid_until' => null,
+        ]);
+
+        Sanctum::actingAs($unprivilegedUser);
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->closureUrl($calculation),
+                [
+                    'reason' => 'Unauthorized closure.',
+                ],
+            )
+            ->assertForbidden();
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+    }
+
+    public function test_financial_calculation_closure_payload_is_validated(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $calculation,
+            'Review before closure payload validation.',
+            'Approval before closure payload validation.',
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->closureUrl($calculation),
+                [
+                    'reason' => str_repeat(
+                        'x',
+                        2001,
+                    ),
+                ],
+            )
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'reason',
+            ]);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+    }
+
+    public function test_financial_calculation_closure_is_atomic(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $calculation,
+            'Review before successful closure.',
+            'Approval before successful closure.',
+        );
+
+        $calculation->refresh();
+
+        $inputSnapshotBefore =
+            $calculation->getAttribute(
+                'input_snapshot',
+            );
+
+        $subtotalBefore =
+            $calculation->getAttribute(
+                'subtotal_amount',
+            );
+
+        $totalBefore =
+            $calculation->getAttribute(
+                'total_amount',
+            );
+
+        $lineCountBefore =
+            $calculation->lines()->count();
+
+        $approvedByUserIdBefore =
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            );
+
+        $approvedAtBefore =
+            (string) $calculation->getAttribute(
+                'approved_at',
+            );
+
+        $response =
+            $this->withOrganization(
+                $foundation['provider'],
+            )
+                ->postJson(
+                    $this->closureUrl($calculation),
+                    [
+                        'reason' => (
+                            '  Financial calculation '.
+                            'closed manually.  '
+                        ),
+                    ],
+                );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'message',
+                'Financial calculation closed.',
+            )
+            ->assertJsonPath(
+                'data.public_id',
+                (string) $calculation->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.status',
+                FinancialCalculation::STATUS_CLOSED,
+            )
+            ->assertJsonPath(
+                'data.daily_report_public_id',
+                (string) $foundation['dailyReport']->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.daily_report_version',
+                4,
+            )
+            ->assertJsonPath(
+                'data.price_list_public_id',
+                (string) $foundation['priceList']->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.price_list_version',
+                1,
+            )
+            ->assertJsonPath(
+                'data.subtotal_amount',
+                '194.56',
+            )
+            ->assertJsonPath(
+                'data.total_amount',
+                '194.56',
+            )
+            ->assertJsonCount(
+                4,
+                'data.lines',
+            );
+
+        $responseApprovedAt =
+            $response->json(
+                'data.approved_at',
+            );
+
+        $responseClosedAt =
+            $response->json(
+                'data.closed_at',
+            );
+
+        self::assertIsString($responseApprovedAt);
+        self::assertNotSame('', $responseApprovedAt);
+        self::assertIsString($responseClosedAt);
+        self::assertNotSame('', $responseClosedAt);
+
+        $payload =
+            $response->json('data');
+
+        self::assertIsArray($payload);
+
+        $this->assertNoInternalDatabaseIdentifiers(
+            $payload,
+        );
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CLOSED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNotNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        self::assertSame(
+            $approvedByUserIdBefore,
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertSame(
+            $approvedAtBefore,
+            (string) $calculation->getAttribute(
+                'approved_at',
+            ),
+        );
+
+        self::assertSame(
+            $inputSnapshotBefore,
+            $calculation->getAttribute(
+                'input_snapshot',
+            ),
+        );
+
+        self::assertSame(
+            $subtotalBefore,
+            $calculation->getAttribute(
+                'subtotal_amount',
+            ),
+        );
+
+        self::assertSame(
+            $totalBefore,
+            $calculation->getAttribute(
+                'total_amount',
+            ),
+        );
+
+        self::assertSame(
+            $lineCountBefore,
+            $calculation->lines()->count(),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_lines',
+            4,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            4,
+        );
+
+        $closureEvent =
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_CLOSED,
+                )
+                ->sole();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $closureEvent->getAttribute(
+                'from_status',
+            ),
+        );
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CLOSED,
+            $closureEvent->getAttribute(
+                'to_status',
+            ),
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $closureEvent->getAttribute(
+                'acted_by_user_id',
+            ),
+        );
+
+        self::assertSame(
+            'Financial calculation closed manually.',
+            $closureEvent->getAttribute('reason'),
+        );
+
+        $metadata =
+            $closureEvent->getAttribute(
+                'metadata',
+            );
+
+        self::assertIsArray($metadata);
+
+        self::assertSame(
+            1,
+            $metadata['calculation_version']
+                ?? null,
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $metadata['closed_by_user_id']
+                ?? null,
+        );
+    }
+
+    public function test_financial_calculation_closure_is_organization_scoped(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $calculation,
+            'Review before closure organization-scope validation.',
+            'Approval before closure organization-scope validation.',
+        );
+
+        $otherOrganization =
+            $this->createOrganization(
+                Organization::TYPE_SUBCONTRACTOR,
+            );
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $otherOrganization->getKey(),
+            'user_id' => $foundation['user']->getKey(),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => now()->subDay(),
+            'valid_until' => null,
+        ]);
+
+        $this->grantManagePermission(
+            $foundation['user'],
+            $otherOrganization,
+        );
+
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $this->withOrganization(
+            $otherOrganization,
+        )
+            ->postJson(
+                $this->closureUrl($calculation),
+                [
+                    'reason' => 'Cross-organization closure.',
+                ],
+            )
+            ->assertNotFound();
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+    }
+
+    public function test_financial_calculation_closure_rejects_under_review_state(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            'Review before direct closure attempt.',
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->closureUrl($calculation),
+                [
+                    'reason' => 'Direct closure attempt.',
+                ],
+            )
+            ->assertStatus(409);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+
+        self::assertSame(
+            0,
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_CLOSED,
+                )
+                ->count(),
+        );
+    }
+
+    public function test_repeated_financial_calculation_closure_is_rejected(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $calculation,
+            'Review before repeated closure.',
+            'Approval before repeated closure.',
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->closureUrl($calculation),
+                [
+                    'reason' => 'Initial closure.',
+                ],
+            )
+            ->assertOk();
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            4,
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->closureUrl($calculation),
+                [
+                    'reason' => 'Repeated closure.',
+                ],
+            )
+            ->assertStatus(409);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CLOSED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNotNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            4,
+        );
+
+        self::assertSame(
+            1,
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_CLOSED,
+                )
+                ->count(),
+        );
+    }
+
     /**
      * @return array{
      *     customer: Organization,
@@ -1868,6 +2489,42 @@ final class FinancialCalculationWriteApiTest extends TestCase
             ->assertOk();
     }
 
+    /**
+     * @param array{
+     *     customer: Organization,
+     *     provider: Organization,
+     *     relationship: OrganizationRelationship,
+     *     user: User,
+     *     dailyReport: DailyReport,
+     *     dailyReportVersion: DailyReportVersion,
+     *     priceList: PriceList,
+     *     priceListVersion: PriceListVersion
+     * } $foundation
+     */
+    private function approveCalculationForClosure(
+        array $foundation,
+        FinancialCalculation $calculation,
+        string $reviewReason,
+        string $approvalReason,
+    ): void {
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            $reviewReason,
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->approvalUrl($calculation),
+                [
+                    'reason' => $approvalReason,
+                ],
+            )
+            ->assertOk();
+    }
+
     private function approvalUrl(
         FinancialCalculation $calculation,
     ): string {
@@ -1875,6 +2532,15 @@ final class FinancialCalculationWriteApiTest extends TestCase
             self::STORE_URL.'/'.
             (string) $calculation->getRouteKey().
             '/approve';
+    }
+
+    private function closureUrl(
+        FinancialCalculation $calculation,
+    ): string {
+        return
+            self::STORE_URL.'/'.
+            (string) $calculation->getRouteKey().
+            '/close';
     }
 
     private function reviewUrl(

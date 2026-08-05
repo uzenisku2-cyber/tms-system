@@ -242,6 +242,61 @@ final class FinancialCalculationWriteService
     /**
      * @param  array<string, mixed>  $input
      */
+    public function close(
+        User $actor,
+        string $financialCalculationPublicId,
+        array $input,
+    ): FinancialCalculation {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $calculation = FinancialCalculation::query()
+            ->where(
+                'public_id',
+                $financialCalculationPublicId,
+            )
+            ->where(
+                'organization_id',
+                $organizationId,
+            )
+            ->firstOrFail();
+
+        try {
+            $closedCalculation =
+                $this->lifecycle->close(
+                    financialCalculationId: $this->positiveModelIdentifier(
+                        $calculation->getKey(),
+                        'Financial calculation identifier',
+                    ),
+                    closedByUserId: $this->positiveModelIdentifier(
+                        $actor->getKey(),
+                        'Closing user identifier',
+                    ),
+                    closedAt: now(),
+                    reason: $this->nullableString(
+                        $input,
+                        'reason',
+                    ),
+                );
+
+            return $closedCalculation->load([
+                'priceList:id,public_id',
+                'priceListVersion:id,version_number',
+                'dailyReport:id,public_id',
+                'supersedesCalculation:id,public_id',
+                'lines',
+            ]);
+        } catch (DomainException $exception) {
+            throw new ConflictHttpException(
+                $exception->getMessage(),
+                $exception,
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
     private function requiredString(
         array $input,
         string $key,
