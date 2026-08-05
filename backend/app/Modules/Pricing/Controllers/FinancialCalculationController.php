@@ -7,6 +7,7 @@ namespace App\Modules\Pricing\Controllers;
 use App\Core\Http\BaseController;
 use App\Models\User;
 use App\Modules\Pricing\Requests\ApproveFinancialCalculationRequest;
+use App\Modules\Pricing\Requests\CloseFinancialCalculationRequest;
 use App\Modules\Pricing\Requests\FinancialCalculationIndexRequest;
 use App\Modules\Pricing\Requests\ReviewFinancialCalculationRequest;
 use App\Modules\Pricing\Requests\StoreFinancialCalculationRequest;
@@ -67,6 +68,23 @@ final class FinancialCalculationController extends BaseController
                 ),
             ),
             'Financial calculation approved.',
+        );
+    }
+
+    public function close(
+        CloseFinancialCalculationRequest $request,
+        string $financialCalculation,
+        FinancialCalculationWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new FinancialCalculationResource(
+                $writes->close(
+                    $this->actor($request),
+                    $financialCalculation,
+                    $request->validated(),
+                ),
+            ),
+            'Financial calculation closed.',
         );
     }
 

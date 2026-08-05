@@ -121,6 +121,13 @@ Route::middleware([
         )
             ->whereUuid('financialCalculation')
             ->name('approve');
+
+        Route::post(
+            '/{financialCalculation}/close',
+            [FinancialCalculationController::class, 'close'],
+        )
+            ->whereUuid('financialCalculation')
+            ->name('close');
     });
 
 Route::middleware([
