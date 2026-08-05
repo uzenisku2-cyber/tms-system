@@ -114,6 +114,13 @@ Route::middleware([
         )
             ->whereUuid('financialCalculation')
             ->name('review');
+
+        Route::post(
+            '/{financialCalculation}/approve',
+            [FinancialCalculationController::class, 'approve'],
+        )
+            ->whereUuid('financialCalculation')
+            ->name('approve');
     });
 
 Route::middleware([

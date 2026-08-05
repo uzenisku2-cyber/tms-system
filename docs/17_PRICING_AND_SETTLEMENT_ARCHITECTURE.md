@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.8
+# TMS Pricing and Settlement Architecture v1.9
 
 ## 1. Purpose
 
@@ -690,16 +690,16 @@ Implemented initial calculation creation endpoint:
 POST /financial-calculations
 ~~~
 
-Implemented calculation review endpoint:
+Implemented calculation review and approval endpoints:
 
 ~~~text
 POST /financial-calculations/{financialCalculation}/review
+POST /financial-calculations/{financialCalculation}/approve
 ~~~
 
 Planned remaining calculation lifecycle write endpoints:
 
 ~~~text
-POST /financial-calculations/{financialCalculation}/approve
 POST /financial-calculations/{financialCalculation}/close
 POST /financial-calculations/{financialCalculation}/cancel
 ~~~
@@ -1458,4 +1458,44 @@ The endpoint:
 - preserves the calculation amount, snapshot, lines and approval metadata
 - relies on row-level locking in the existing lifecycle service
 
-Approval, closure and cancellation API endpoints remain deferred to later validated implementation units.
+Closure and cancellation API endpoints remain deferred to later validated implementation units.
+
+## Sprint 016 — Financial Calculation Approval API Foundation
+
+Sprint 016 introduces the second public financial-calculation lifecycle write endpoint:
+
+~~~text
+POST /api/v1/financial-calculations/{financialCalculation}/approve
+~~~
+
+The endpoint:
+
+- requires authentication
+- requires verified organization context
+- requires `compensation.manage`
+- resolves the aggregate through its organization-scoped `public_id`
+- exposes no internal numeric identifier
+- accepts an optional `reason` string with a maximum length of 2000 characters
+- returns HTTP `404` when the calculation is unavailable in the verified organization
+- returns HTTP `409` when the lifecycle transition is not allowed
+- returns HTTP `422` when request validation fails
+- transitions only from `under_review` to `approved`
+- records `approved_by_user_id` and `approved_at`
+- appends an immutable `approved` event in the same transaction
+- preserves the calculation snapshot, amounts and lines
+- relies on row-level locking in the existing lifecycle service
+
+The approval API test foundation verifies:
+
+- unauthenticated access rejection
+- missing organization-context rejection
+- `compensation.manage` enforcement
+- optional-reason validation
+- successful atomic approval
+- organization-scoped lookup isolation
+- rejection of direct `calculated` to `approved` transition
+- rejection of repeated approval
+- approval-event status transition, actor, reason and metadata
+- absence of internal numeric identifiers in the API resource
+
+Closure and cancellation API endpoints remain deferred to later validated implementation units.

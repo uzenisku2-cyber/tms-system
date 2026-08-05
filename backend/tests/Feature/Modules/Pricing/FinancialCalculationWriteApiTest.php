@@ -897,6 +897,618 @@ final class FinancialCalculationWriteApiTest extends TestCase
         );
     }
 
+    public function test_financial_calculation_approval_requires_authentication(): void
+    {
+        $this->postJson(
+            self::STORE_URL.'/'.
+            (string) Str::uuid().
+            '/approve',
+            [],
+        )->assertUnauthorized();
+
+        $this->assertNoFinancialRecords();
+    }
+
+    public function test_financial_calculation_approval_requires_organization_context(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            'Review before organization-context validation.',
+        );
+
+        app(OrganizationContext::class)->clear();
+
+        $this->withHeader(
+            'X-Organization-ID',
+            '',
+        )
+            ->postJson(
+                $this->approvalUrl($calculation),
+                [],
+            )
+            ->assertStatus(400);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+    }
+
+    public function test_financial_calculation_approval_requires_compensation_manage_permission(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            'Review before permission validation.',
+        );
+
+        $unprivilegedUser = User::factory()->create([
+            'status' => User::STATUS_ACTIVE,
+        ]);
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $foundation['provider']->getKey(),
+            'user_id' => $unprivilegedUser->getKey(),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => now()->subDay(),
+            'valid_until' => null,
+        ]);
+
+        Sanctum::actingAs($unprivilegedUser);
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->approvalUrl($calculation),
+                [
+                    'reason' => 'Unauthorized approval.',
+                ],
+            )
+            ->assertForbidden();
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+    }
+
+    public function test_financial_calculation_approval_payload_is_validated(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            'Review before payload validation.',
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->approvalUrl($calculation),
+                [
+                    'reason' => str_repeat(
+                        'x',
+                        2001,
+                    ),
+                ],
+            )
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'reason',
+            ]);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+    }
+
+    public function test_financial_calculation_approval_is_atomic(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            'Ready for approval.',
+        );
+
+        $calculation->refresh();
+
+        $inputSnapshotBefore =
+            $calculation->getAttribute(
+                'input_snapshot',
+            );
+
+        $subtotalBefore =
+            $calculation->getAttribute(
+                'subtotal_amount',
+            );
+
+        $totalBefore =
+            $calculation->getAttribute(
+                'total_amount',
+            );
+
+        $lineCountBefore =
+            $calculation->lines()->count();
+
+        $response =
+            $this->withOrganization(
+                $foundation['provider'],
+            )
+                ->postJson(
+                    $this->approvalUrl($calculation),
+                    [
+                        'reason' => (
+                            '  Financial calculation '.
+                            'approved manually.  '
+                        ),
+                    ],
+                );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'message',
+                'Financial calculation approved.',
+            )
+            ->assertJsonPath(
+                'data.public_id',
+                (string) $calculation->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.status',
+                FinancialCalculation::STATUS_APPROVED,
+            )
+            ->assertJsonPath(
+                'data.daily_report_public_id',
+                (string) $foundation['dailyReport']->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.daily_report_version',
+                4,
+            )
+            ->assertJsonPath(
+                'data.price_list_public_id',
+                (string) $foundation['priceList']->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.price_list_version',
+                1,
+            )
+            ->assertJsonPath(
+                'data.subtotal_amount',
+                '194.56',
+            )
+            ->assertJsonPath(
+                'data.total_amount',
+                '194.56',
+            )
+            ->assertJsonCount(
+                4,
+                'data.lines',
+            )
+            ->assertJsonPath(
+                'data.closed_at',
+                null,
+            );
+
+        $approvedAt =
+            $response->json(
+                'data.approved_at',
+            );
+
+        self::assertIsString($approvedAt);
+        self::assertNotSame('', $approvedAt);
+
+        $payload =
+            $response->json('data');
+
+        self::assertIsArray($payload);
+
+        $this->assertNoInternalDatabaseIdentifiers(
+            $payload,
+        );
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertNotNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        self::assertSame(
+            $inputSnapshotBefore,
+            $calculation->getAttribute(
+                'input_snapshot',
+            ),
+        );
+
+        self::assertSame(
+            $subtotalBefore,
+            $calculation->getAttribute(
+                'subtotal_amount',
+            ),
+        );
+
+        self::assertSame(
+            $totalBefore,
+            $calculation->getAttribute(
+                'total_amount',
+            ),
+        );
+
+        self::assertSame(
+            $lineCountBefore,
+            $calculation->lines()->count(),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_lines',
+            4,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+
+        $approvalEvent =
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_APPROVED,
+                )
+                ->sole();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $approvalEvent->getAttribute(
+                'from_status',
+            ),
+        );
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $approvalEvent->getAttribute(
+                'to_status',
+            ),
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $approvalEvent->getAttribute(
+                'acted_by_user_id',
+            ),
+        );
+
+        self::assertSame(
+            'Financial calculation approved manually.',
+            $approvalEvent->getAttribute('reason'),
+        );
+
+        $metadata =
+            $approvalEvent->getAttribute(
+                'metadata',
+            );
+
+        self::assertIsArray($metadata);
+
+        self::assertSame(
+            1,
+            $metadata['calculation_version']
+                ?? null,
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $metadata['approved_by_user_id']
+                ?? null,
+        );
+    }
+
+    public function test_financial_calculation_approval_is_organization_scoped(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            'Review before organization-scope validation.',
+        );
+
+        $otherOrganization =
+            $this->createOrganization(
+                Organization::TYPE_SUBCONTRACTOR,
+            );
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $otherOrganization->getKey(),
+            'user_id' => $foundation['user']->getKey(),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => now()->subDay(),
+            'valid_until' => null,
+        ]);
+
+        $this->grantManagePermission(
+            $foundation['user'],
+            $otherOrganization,
+        );
+
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $this->withOrganization(
+            $otherOrganization,
+        )
+            ->postJson(
+                $this->approvalUrl($calculation),
+                [
+                    'reason' => 'Cross-organization approval.',
+                ],
+            )
+            ->assertNotFound();
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+    }
+
+    public function test_financial_calculation_approval_rejects_calculated_state(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->approvalUrl($calculation),
+                [
+                    'reason' => 'Direct approval attempt.',
+                ],
+            )
+            ->assertStatus(409);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+
+        self::assertSame(
+            0,
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_APPROVED,
+                )
+                ->count(),
+        );
+    }
+
+    public function test_repeated_financial_calculation_approval_is_rejected(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            'Review before repeated approval.',
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->approvalUrl($calculation),
+                [
+                    'reason' => 'Initial approval.',
+                ],
+            )
+            ->assertOk();
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->approvalUrl($calculation),
+                [
+                    'reason' => 'Repeated approval.',
+                ],
+            )
+            ->assertStatus(409);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertNotNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+
+        self::assertSame(
+            1,
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_APPROVED,
+                )
+                ->count(),
+        );
+    }
+
     /**
      * @return array{
      *     customer: Organization,
@@ -1221,6 +1833,48 @@ final class FinancialCalculationWriteApiTest extends TestCase
                 $publicId,
             )
             ->sole();
+    }
+
+    /**
+     * @param array{
+     *     customer: Organization,
+     *     provider: Organization,
+     *     relationship: OrganizationRelationship,
+     *     user: User,
+     *     dailyReport: DailyReport,
+     *     dailyReportVersion: DailyReportVersion,
+     *     priceList: PriceList,
+     *     priceListVersion: PriceListVersion
+     * } $foundation
+     */
+    private function startReviewForApproval(
+        array $foundation,
+        FinancialCalculation $calculation,
+        string $reason,
+    ): void {
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->reviewUrl($calculation),
+                [
+                    'reason' => $reason,
+                ],
+            )
+            ->assertOk();
+    }
+
+    private function approvalUrl(
+        FinancialCalculation $calculation,
+    ): string {
+        return
+            self::STORE_URL.'/'.
+            (string) $calculation->getRouteKey().
+            '/approve';
     }
 
     private function reviewUrl(
