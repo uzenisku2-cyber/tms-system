@@ -1,4 +1,4 @@
-# TMS Pricing and Settlement Architecture v1.10
+# TMS Pricing and Settlement Architecture v1.11
 
 ## 1. Purpose
 
@@ -690,17 +690,12 @@ Implemented initial calculation creation endpoint:
 POST /financial-calculations
 ~~~
 
-Implemented calculation review, approval and closure endpoints:
+Implemented calculation review, approval, closure and cancellation endpoints:
 
 ~~~text
 POST /financial-calculations/{financialCalculation}/review
 POST /financial-calculations/{financialCalculation}/approve
 POST /financial-calculations/{financialCalculation}/close
-~~~
-
-Planned remaining calculation lifecycle write endpoint:
-
-~~~text
 POST /financial-calculations/{financialCalculation}/cancel
 ~~~
 
@@ -1542,4 +1537,45 @@ The closure API test foundation verifies:
 - closure-event status transition, actor, reason and metadata
 - absence of internal numeric identifiers in the API resource
 
-The cancellation API endpoint remains deferred to a later validated implementation unit.
+## Sprint 018 — Financial Calculation Cancellation API Foundation
+
+Sprint 018 introduces the fourth public financial-calculation lifecycle write endpoint:
+
+~~~text
+POST /api/v1/financial-calculations/{financialCalculation}/cancel
+~~~
+
+The endpoint:
+
+- requires authentication
+- requires verified organization context
+- requires `compensation.manage`
+- resolves the aggregate through its organization-scoped `public_id`
+- exposes no internal numeric identifier
+- accepts an optional `reason` string with a maximum length of 2000 characters
+- returns HTTP `404` when the calculation is unavailable in the verified organization
+- returns HTTP `409` when the lifecycle transition is not allowed
+- returns HTTP `422` when request validation fails
+- transitions from `calculated` to `cancelled`
+- transitions from `under_review` to `cancelled`
+- allows cancellation only before approval
+- rejects cancellation from `approved`, `closed` and `cancelled`
+- appends an immutable `cancelled` event in the same transaction
+- records the cancellation actor in event metadata as `cancelled_by_user_id`
+- preserves the calculation snapshot, amounts and lines
+- does not create or alter approval or closure metadata
+- relies on row-level locking in the existing lifecycle service
+- keeps `cancelled` as a terminal lifecycle state
+- requires no database migration because the cancellation domain foundation already exists
+
+The cancellation API test foundation verifies:
+
+- unauthenticated access rejection
+- missing organization-context rejection
+- `compensation.manage` enforcement
+- optional-reason validation
+- atomic cancellation from `calculated`
+- atomic cancellation from `under_review`
+- organization-scoped lookup isolation
+- rejection of cancellation from `approved`
+- rejection of repeated cancellation

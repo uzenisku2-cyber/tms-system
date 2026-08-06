@@ -2489,6 +2489,610 @@ final class FinancialCalculationWriteApiTest extends TestCase
             ->assertOk();
     }
 
+    public function test_financial_calculation_cancellation_requires_authentication(): void
+    {
+        $this->postJson(
+            self::STORE_URL.'/'.
+            (string) Str::uuid().
+            '/cancel',
+            [],
+        )->assertUnauthorized();
+
+        $this->assertNoFinancialRecords();
+    }
+
+    public function test_financial_calculation_cancellation_requires_organization_context(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        app(OrganizationContext::class)->clear();
+
+        Sanctum::actingAs($foundation['user']);
+
+        $this->withHeader(
+            'X-Organization-ID',
+            '',
+        )
+            ->postJson(
+                $this->cancellationUrl($calculation),
+                [],
+            )
+            ->assertStatus(400);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
+    public function test_financial_calculation_cancellation_requires_compensation_manage_permission(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $unprivilegedUser = User::factory()->create([
+            'status' => User::STATUS_ACTIVE,
+        ]);
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $foundation['provider']->getKey(),
+            'user_id' => $unprivilegedUser->getKey(),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => now()->subDay(),
+            'valid_until' => null,
+        ]);
+
+        Sanctum::actingAs($unprivilegedUser);
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->cancellationUrl($calculation),
+                [
+                    'reason' => 'Unauthorized cancellation.',
+                ],
+            )
+            ->assertForbidden();
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
+    public function test_financial_calculation_cancellation_payload_is_validated(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->cancellationUrl($calculation),
+                [
+                    'reason' => str_repeat(
+                        'x',
+                        2001,
+                    ),
+                ],
+            )
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'reason',
+            ]);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
+    public function test_financial_calculation_cancellation_from_calculated_is_atomic(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $inputSnapshotBefore =
+            $calculation->getAttribute(
+                'input_snapshot',
+            );
+
+        $subtotalBefore =
+            $calculation->getAttribute(
+                'subtotal_amount',
+            );
+
+        $totalBefore =
+            $calculation->getAttribute(
+                'total_amount',
+            );
+
+        $response =
+            $this->withOrganization(
+                $foundation['provider'],
+            )
+                ->postJson(
+                    $this->cancellationUrl($calculation),
+                    [
+                        'reason' => (
+                            '  Cancelled before review.  '
+                        ),
+                    ],
+                );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'message',
+                'Financial calculation cancelled.',
+            )
+            ->assertJsonPath(
+                'data.public_id',
+                (string) $calculation->getAttribute(
+                    'public_id',
+                ),
+            )
+            ->assertJsonPath(
+                'data.status',
+                FinancialCalculation::STATUS_CANCELLED,
+            )
+            ->assertJsonPath(
+                'data.approved_at',
+                null,
+            )
+            ->assertJsonPath(
+                'data.closed_at',
+                null,
+            );
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CANCELLED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertSame(
+            $inputSnapshotBefore,
+            $calculation->getAttribute(
+                'input_snapshot',
+            ),
+        );
+
+        self::assertSame(
+            $subtotalBefore,
+            $calculation->getAttribute(
+                'subtotal_amount',
+            ),
+        );
+
+        self::assertSame(
+            $totalBefore,
+            $calculation->getAttribute(
+                'total_amount',
+            ),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+
+        $event =
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_CANCELLED,
+                )
+                ->sole();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $event->getAttribute('from_status'),
+        );
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CANCELLED,
+            $event->getAttribute('to_status'),
+        );
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $event->getAttribute(
+                'acted_by_user_id',
+            ),
+        );
+
+        self::assertSame(
+            'Cancelled before review.',
+            $event->getAttribute('reason'),
+        );
+
+        $metadata =
+            $event->getAttribute('metadata');
+
+        self::assertIsArray($metadata);
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $metadata['cancelled_by_user_id']
+                ?? null,
+        );
+    }
+
+    public function test_financial_calculation_cancellation_from_under_review_is_atomic(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $calculation,
+            'Review before cancellation.',
+        );
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->cancellationUrl($calculation),
+                [
+                    'reason' => (
+                        '  Cancelled during review.  '
+                    ),
+                ],
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'message',
+                'Financial calculation cancelled.',
+            )
+            ->assertJsonPath(
+                'data.status',
+                FinancialCalculation::STATUS_CANCELLED,
+            );
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CANCELLED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+
+        $event =
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_CANCELLED,
+                )
+                ->sole();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_UNDER_REVIEW,
+            $event->getAttribute('from_status'),
+        );
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CANCELLED,
+            $event->getAttribute('to_status'),
+        );
+
+        self::assertSame(
+            'Cancelled during review.',
+            $event->getAttribute('reason'),
+        );
+
+        $metadata =
+            $event->getAttribute('metadata');
+
+        self::assertIsArray($metadata);
+
+        self::assertSame(
+            $foundation['user']->getKey(),
+            $metadata['cancelled_by_user_id']
+                ?? null,
+        );
+    }
+
+    public function test_financial_calculation_cancellation_is_organization_scoped(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $otherOrganization =
+            $this->createOrganization(
+                Organization::TYPE_SUBCONTRACTOR,
+            );
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $otherOrganization->getKey(),
+            'user_id' => $foundation['user']->getKey(),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => now()->subDay(),
+            'valid_until' => null,
+        ]);
+
+        $this->grantManagePermission(
+            $foundation['user'],
+            $otherOrganization,
+        );
+
+        Sanctum::actingAs(
+            $foundation['user'],
+        );
+
+        $this->withOrganization(
+            $otherOrganization,
+        )
+            ->postJson(
+                $this->cancellationUrl($calculation),
+                [
+                    'reason' => (
+                        'Cross-organization cancellation.'
+                    ),
+                ],
+            )
+            ->assertNotFound();
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CALCULATED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            1,
+        );
+    }
+
+    public function test_financial_calculation_cancellation_rejects_approved_state(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $calculation,
+            'Review before cancellation rejection.',
+            'Approval before cancellation rejection.',
+        );
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->cancellationUrl($calculation),
+                [
+                    'reason' => (
+                        'Forbidden approved cancellation.'
+                    ),
+                ],
+            )
+            ->assertStatus(409);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_APPROVED,
+            $calculation->getAttribute('status'),
+        );
+
+        self::assertNotNull(
+            $calculation->getAttribute(
+                'approved_by_user_id',
+            ),
+        );
+
+        self::assertNotNull(
+            $calculation->getAttribute('approved_at'),
+        );
+
+        self::assertNull(
+            $calculation->getAttribute('closed_at'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            3,
+        );
+
+        self::assertSame(
+            0,
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_CANCELLED,
+                )
+                ->count(),
+        );
+    }
+
+    public function test_repeated_financial_calculation_cancellation_is_rejected(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->cancellationUrl($calculation),
+                [
+                    'reason' => 'Initial cancellation.',
+                ],
+            )
+            ->assertOk();
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->cancellationUrl($calculation),
+                [
+                    'reason' => 'Repeated cancellation.',
+                ],
+            )
+            ->assertStatus(409);
+
+        $calculation->refresh();
+
+        self::assertSame(
+            FinancialCalculation::STATUS_CANCELLED,
+            $calculation->getAttribute('status'),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            2,
+        );
+
+        self::assertSame(
+            1,
+            FinancialCalculationEvent::query()
+                ->where(
+                    'financial_calculation_id',
+                    $calculation->getKey(),
+                )
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_CANCELLED,
+                )
+                ->count(),
+        );
+    }
+
     /**
      * @param array{
      *     customer: Organization,
@@ -2532,6 +3136,15 @@ final class FinancialCalculationWriteApiTest extends TestCase
             self::STORE_URL.'/'.
             (string) $calculation->getRouteKey().
             '/approve';
+    }
+
+    private function cancellationUrl(
+        FinancialCalculation $calculation,
+    ): string {
+        return
+            self::STORE_URL.'/'.
+            (string) $calculation->getRouteKey().
+            '/cancel';
     }
 
     private function closureUrl(

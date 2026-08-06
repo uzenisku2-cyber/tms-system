@@ -297,6 +297,61 @@ final class FinancialCalculationWriteService
     /**
      * @param  array<string, mixed>  $input
      */
+    public function cancel(
+        User $actor,
+        string $financialCalculationPublicId,
+        array $input,
+    ): FinancialCalculation {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $calculation = FinancialCalculation::query()
+            ->where(
+                'public_id',
+                $financialCalculationPublicId,
+            )
+            ->where(
+                'organization_id',
+                $organizationId,
+            )
+            ->firstOrFail();
+
+        try {
+            $cancelledCalculation =
+                $this->lifecycle->cancel(
+                    financialCalculationId: $this->positiveModelIdentifier(
+                        $calculation->getKey(),
+                        'Financial calculation identifier',
+                    ),
+                    cancelledByUserId: $this->positiveModelIdentifier(
+                        $actor->getKey(),
+                        'Cancelling user identifier',
+                    ),
+                    cancelledAt: now(),
+                    reason: $this->nullableString(
+                        $input,
+                        'reason',
+                    ),
+                );
+
+            return $cancelledCalculation->load([
+                'priceList:id,public_id',
+                'priceListVersion:id,version_number',
+                'dailyReport:id,public_id',
+                'supersedesCalculation:id,public_id',
+                'lines',
+            ]);
+        } catch (DomainException $exception) {
+            throw new ConflictHttpException(
+                $exception->getMessage(),
+                $exception,
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
     private function requiredString(
         array $input,
         string $key,
