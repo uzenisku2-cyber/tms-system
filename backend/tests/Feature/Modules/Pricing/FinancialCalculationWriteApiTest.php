@@ -3257,4 +3257,782 @@ final class FinancialCalculationWriteApiTest extends TestCase
             }
         }
     }
+
+    public function test_recalculation_payload_is_validated(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        Sanctum::actingAs($foundation['user']);
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl(
+                    $calculation,
+                ),
+                [
+                    'daily_report_version' => 0,
+                    'reason' => '   ',
+                ],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'daily_report_version',
+                'reason',
+            ]);
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+    }
+
+    public function test_recalculation_requires_approved_source(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $calculation =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $nextVersion =
+            $this->createApprovedAmendedDailyReportVersion(
+                $foundation,
+            );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl(
+                    $calculation,
+                ),
+                [
+                    'daily_report_version' => $nextVersion,
+                    'reason' => 'Premature recalculation.',
+                ],
+            )
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'Only an approved financial calculation can be recalculated.',
+            );
+
+        $calculation->refresh();
+
+        self::assertTrue(
+            $calculation->isCalculated(),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+    }
+
+    public function test_it_recalculates_approved_financial_calculation_atomically(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $source =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $source,
+            'Review before controlled recalculation.',
+            'Approval before controlled recalculation.',
+        );
+
+        $source->refresh();
+
+        self::assertTrue($source->isApproved());
+
+        $sourceSnapshotBefore =
+            $source->getAttribute(
+                'input_snapshot',
+            );
+
+        $sourceTotalBefore =
+            (string) $source->getAttribute(
+                'total_amount',
+            );
+
+        $sourceApprovedAtBefore =
+            $source->getAttribute(
+                'approved_at',
+            );
+
+        $nextVersion =
+            $this->createApprovedAmendedDailyReportVersion(
+                $foundation,
+            );
+
+        $response =
+            $this->withOrganization(
+                $foundation['provider'],
+            )
+                ->postJson(
+                    $this->recalculationUrl(
+                        $source,
+                    ),
+                    [
+                        'daily_report_version' => $nextVersion,
+                        'reason' => (
+                            '  Approved report amendment '.
+                            'changed delivered parcels.  '
+                        ),
+                    ],
+                );
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath(
+                'message',
+                'Financial calculation recalculated.',
+            )
+            ->assertJsonPath(
+                'data.status',
+                FinancialCalculation::STATUS_CALCULATED,
+            )
+            ->assertJsonPath(
+                'data.daily_report_version',
+                $nextVersion,
+            )
+            ->assertJsonPath(
+                'data.calculation_version',
+                2,
+            )
+            ->assertJsonPath(
+                'data.supersedes_public_id',
+                (string) $source->getAttribute(
+                    'public_id',
+                ),
+            );
+
+        $recalculatedPublicId =
+            $response->json('data.public_id');
+
+        self::assertIsString(
+            $recalculatedPublicId,
+        );
+
+        $recalculated =
+            FinancialCalculation::query()
+                ->where(
+                    'public_id',
+                    $recalculatedPublicId,
+                )
+                ->sole();
+
+        $source->refresh();
+
+        self::assertTrue($source->isApproved());
+
+        self::assertSame(
+            $sourceSnapshotBefore,
+            $source->getAttribute(
+                'input_snapshot',
+            ),
+        );
+
+        self::assertSame(
+            $sourceTotalBefore,
+            (string) $source->getAttribute(
+                'total_amount',
+            ),
+        );
+
+        self::assertEquals(
+            $sourceApprovedAtBefore,
+            $source->getAttribute(
+                'approved_at',
+            ),
+        );
+
+        self::assertTrue(
+            $recalculated->isCalculated(),
+        );
+
+        self::assertSame(
+            2,
+            $recalculated->getAttribute(
+                'calculation_version',
+            ),
+        );
+
+        self::assertSame(
+            $source->getKey(),
+            $recalculated->getAttribute(
+                'supersedes_calculation_id',
+            ),
+        );
+
+        self::assertSame(
+            $nextVersion,
+            $recalculated->getAttribute(
+                'daily_report_version',
+            ),
+        );
+
+        self::assertSame(
+            4,
+            $recalculated->lines()->count(),
+        );
+
+        $event =
+            $recalculated->events()
+                ->where(
+                    'event_type',
+                    FinancialCalculationEvent::TYPE_RECALCULATED,
+                )
+                ->sole();
+
+        self::assertTrue(
+            $event->isRecalculationEvent(),
+        );
+
+        self::assertSame(
+            'Approved report amendment changed delivered parcels.',
+            $event->getAttribute('reason'),
+        );
+
+        $metadata =
+            $event->getAttribute('metadata');
+
+        self::assertIsArray($metadata);
+
+        self::assertSame(
+            (string) $source->getAttribute(
+                'public_id',
+            ),
+            $metadata['source_calculation_public_id']
+                ?? null,
+        );
+
+        self::assertSame(
+            1,
+            $metadata['source_calculation_version']
+                ?? null,
+        );
+
+        self::assertSame(
+            2,
+            $metadata['calculation_version']
+                ?? null,
+        );
+
+        self::assertSame(
+            4,
+            $metadata['source_daily_report_version']
+                ?? null,
+        );
+
+        self::assertSame(
+            $nextVersion,
+            $metadata['daily_report_version']
+                ?? null,
+        );
+
+        self::assertSame(
+            $sourceTotalBefore,
+            $metadata['previous_total_amount']
+                ?? null,
+        );
+
+        self::assertSame(
+            (string) $recalculated->getAttribute(
+                'total_amount',
+            ),
+            $metadata['total_amount']
+                ?? null,
+        );
+
+        self::assertIsString(
+            $metadata['financial_difference']
+                ?? null,
+        );
+
+        self::assertNotSame(
+            '0.00',
+            $metadata['financial_difference']
+                ?? null,
+        );
+
+        $changedInputs =
+            $metadata['changed_input_values']
+                ?? null;
+
+        self::assertIsArray($changedInputs);
+
+        self::assertArrayHasKey(
+            'delivered_parcels',
+            $changedInputs,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            2,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_lines',
+            8,
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculation_events',
+            4,
+        );
+    }
+
+    public function test_source_calculation_cannot_branch_into_multiple_recalculations(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $source =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $source,
+            'Review before branch protection.',
+            'Approval before branch protection.',
+        );
+
+        $nextVersion =
+            $this->createApprovedAmendedDailyReportVersion(
+                $foundation,
+            );
+
+        $payload = [
+            'daily_report_version' => $nextVersion,
+            'reason' => 'First controlled recalculation.',
+        ];
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl($source),
+                $payload,
+            )
+            ->assertCreated();
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl($source),
+                [
+                    'daily_report_version' => $nextVersion,
+                    'reason' => 'Competing recalculation.',
+                ],
+            )
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'The source financial calculation has already been superseded.',
+            );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            2,
+        );
+
+        self::assertSame(
+            1,
+            FinancialCalculation::query()
+                ->where(
+                    'supersedes_calculation_id',
+                    $source->getKey(),
+                )
+                ->count(),
+        );
+    }
+
+    public function test_recalculation_rejects_same_daily_report_version(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $source =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $source,
+            'Review before same-version recalculation attempt.',
+            'Approval before same-version recalculation attempt.',
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl($source),
+                [
+                    'daily_report_version' => 4,
+                    'reason' => 'Same report version must not be recalculated.',
+                ],
+            )
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'Recalculation requires a newer daily-report version than the source calculation.',
+            );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+    }
+
+    public function test_recalculation_rejects_under_review_source(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $source =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->startReviewForApproval(
+            $foundation,
+            $source,
+            'Review before rejected recalculation.',
+        );
+
+        $nextVersion =
+            $this->createApprovedAmendedDailyReportVersion(
+                $foundation,
+            );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl($source),
+                [
+                    'daily_report_version' => $nextVersion,
+                    'reason' => 'Under-review source must not be recalculated.',
+                ],
+            )
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'Only an approved financial calculation can be recalculated.',
+            );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+    }
+
+    public function test_recalculation_rejects_closed_source(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $source =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $source,
+            'Review before closure.',
+            'Approval before closure.',
+        );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->closureUrl($source),
+                [
+                    'reason' => 'Close before recalculation attempt.',
+                ],
+            )
+            ->assertOk();
+
+        $nextVersion =
+            $this->createApprovedAmendedDailyReportVersion(
+                $foundation,
+            );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl($source),
+                [
+                    'daily_report_version' => $nextVersion,
+                    'reason' => 'Closed source must remain final.',
+                ],
+            )
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'Only an approved financial calculation can be recalculated.',
+            );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+    }
+
+    public function test_recalculation_rejects_cancelled_source(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $source =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->cancellationUrl($source),
+                [
+                    'reason' => 'Cancel before recalculation attempt.',
+                ],
+            )
+            ->assertOk();
+
+        $nextVersion =
+            $this->createApprovedAmendedDailyReportVersion(
+                $foundation,
+            );
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl($source),
+                [
+                    'daily_report_version' => $nextVersion,
+                    'reason' => 'Cancelled source must remain final.',
+                ],
+            )
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'Only an approved financial calculation can be recalculated.',
+            );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+    }
+
+    public function test_recalculation_requires_authentication(): void
+    {
+        $this->postJson(
+            self::STORE_URL.'/'.
+            (string) Str::uuid().
+            '/recalculate',
+            [
+                'daily_report_version' => 5,
+                'reason' => 'Unauthorized recalculation.',
+            ],
+        )->assertUnauthorized();
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            0,
+        );
+    }
+
+    public function test_recalculation_requires_organization_context(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        Sanctum::actingAs($foundation['user']);
+
+        $this->postJson(
+            self::STORE_URL.'/'.
+            (string) Str::uuid().
+            '/recalculate',
+            [
+                'daily_report_version' => 5,
+                'reason' => 'Missing organization context.',
+            ],
+        )->assertStatus(400);
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            0,
+        );
+    }
+
+    public function test_recalculation_requires_compensation_manage_permission(): void
+    {
+        $foundation = $this->createFoundation(false);
+
+        Sanctum::actingAs($foundation['user']);
+
+        $this->withOrganization(
+            $foundation['provider'],
+        )
+            ->postJson(
+                self::STORE_URL.'/'.
+                (string) Str::uuid().
+                '/recalculate',
+                [
+                    'daily_report_version' => 5,
+                    'reason' => 'Missing compensation permission.',
+                ],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            0,
+        );
+    }
+
+    public function test_recalculation_is_organization_scoped(): void
+    {
+        $foundation = $this->createFoundation(true);
+
+        $source =
+            $this->createCalculationThroughApi(
+                $foundation,
+            );
+
+        $this->approveCalculationForClosure(
+            $foundation,
+            $source,
+            'Review before organization-scope test.',
+            'Approval before organization-scope test.',
+        );
+
+        $nextVersion =
+            $this->createApprovedAmendedDailyReportVersion(
+                $foundation,
+            );
+
+        $foreignFoundation =
+            $this->createFoundation(true);
+
+        Sanctum::actingAs(
+            $foreignFoundation['user'],
+        );
+
+        $this->withOrganization(
+            $foreignFoundation['provider'],
+        )
+            ->postJson(
+                $this->recalculationUrl($source),
+                [
+                    'daily_report_version' => $nextVersion,
+                    'reason' => 'Foreign organization attempt.',
+                ],
+            )
+            ->assertNotFound();
+
+        $source->refresh();
+
+        self::assertTrue(
+            $source->isApproved(),
+        );
+
+        self::assertSame(
+            0,
+            FinancialCalculation::query()
+                ->where(
+                    'supersedes_calculation_id',
+                    $source->getKey(),
+                )
+                ->count(),
+        );
+
+        $this->assertDatabaseCount(
+            'financial_calculations',
+            1,
+        );
+    }
+
+    private function recalculationUrl(
+        FinancialCalculation $calculation,
+    ): string {
+        return
+            self::STORE_URL.'/'.
+            (string) $calculation->getRouteKey().
+            '/recalculate';
+    }
+
+    /**
+     * @param array{
+     *     user: User,
+     *     dailyReport: DailyReport,
+     *     dailyReportVersion: DailyReportVersion
+     * } $foundation
+     */
+    private function createApprovedAmendedDailyReportVersion(
+        array $foundation,
+    ): int {
+        $sourceVersion =
+            $foundation['dailyReportVersion'];
+
+        $snapshot =
+            $sourceVersion->getAttribute(
+                'snapshot',
+            );
+
+        self::assertIsArray($snapshot);
+
+        $sourceVersionNumber =
+            (int) $sourceVersion->getAttribute(
+                'version_number',
+            );
+
+        $nextVersion =
+            $sourceVersionNumber + 1;
+
+        $snapshot['current_version'] =
+            $nextVersion;
+
+        $snapshot['delivered_parcels'] =
+            ((int) (
+                $snapshot['delivered_parcels']
+                ?? 0
+            )) + 1;
+
+        $amended =
+            $sourceVersion->replicate();
+
+        $amended->forceFill([
+            'version_number' => $nextVersion,
+            'snapshot' => $snapshot,
+        ]);
+
+        $amended->save();
+
+        $foundation['dailyReport']
+            ->forceFill([
+                'current_version' => $nextVersion,
+            ])
+            ->save();
+
+        return $nextVersion;
+    }
 }

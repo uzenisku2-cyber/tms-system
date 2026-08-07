@@ -109,6 +109,12 @@ Route::middleware([
         )->name('store');
 
         Route::post(
+            '/{financialCalculation}/recalculate',
+            [FinancialCalculationController::class, 'recalculate'],
+        )
+            ->whereUuid('financialCalculation')
+            ->name('recalculate');
+        Route::post(
             '/{financialCalculation}/review',
             [FinancialCalculationController::class, 'review'],
         )

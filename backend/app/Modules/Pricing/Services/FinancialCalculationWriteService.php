@@ -7,6 +7,7 @@ namespace App\Modules\Pricing\Services;
 use App\Core\Organizations\OrganizationContext;
 use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
+use App\Modules\DailyReports\Models\DailyReportVersion;
 use App\Modules\Pricing\Models\FinancialCalculation;
 use App\Modules\Pricing\Models\PriceList;
 use DomainException;
@@ -132,6 +133,87 @@ final class FinancialCalculationWriteService
     /**
      * @param  array<string, mixed>  $input
      */
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function recalculate(
+        User $actor,
+        string $financialCalculationPublicId,
+        array $input,
+    ): FinancialCalculation {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $calculation = FinancialCalculation::query()
+            ->where(
+                'public_id',
+                $financialCalculationPublicId,
+            )
+            ->where(
+                'organization_id',
+                $organizationId,
+            )
+            ->firstOrFail();
+
+        $dailyReportVersionNumber =
+            $this->requiredPositiveInteger(
+                $input,
+                'daily_report_version',
+            );
+
+        $dailyReportId = $this->positiveModelIdentifier(
+            $calculation->getAttribute('daily_report_id'),
+            'Daily-report identifier',
+        );
+
+        $dailyReportVersion = DailyReportVersion::query()
+            ->where(
+                'daily_report_id',
+                $dailyReportId,
+            )
+            ->where(
+                'version_number',
+                $dailyReportVersionNumber,
+            )
+            ->firstOrFail();
+
+        try {
+            $recalculated =
+                $this->persistence->recalculateApprovedCalculation(
+                    sourceFinancialCalculationId: $this->positiveModelIdentifier(
+                        $calculation->getKey(),
+                        'Source financial calculation identifier',
+                    ),
+                    dailyReportVersionId: $this->positiveModelIdentifier(
+                        $dailyReportVersion->getKey(),
+                        'Daily-report version identifier',
+                    ),
+                    calculatedByUserId: $this->positiveModelIdentifier(
+                        $actor->getKey(),
+                        'Calculating user identifier',
+                    ),
+                    calculatedAt: now(),
+                    reason: $this->requiredString(
+                        $input,
+                        'reason',
+                    ),
+                );
+
+            return $recalculated->load([
+                'priceList:id,public_id',
+                'priceListVersion:id,version_number',
+                'dailyReport:id,public_id',
+                'supersedesCalculation:id,public_id',
+                'lines',
+            ]);
+        } catch (DomainException $exception) {
+            throw new ConflictHttpException(
+                $exception->getMessage(),
+                $exception,
+            );
+        }
+    }
+
     public function startReview(
         User $actor,
         string $financialCalculationPublicId,

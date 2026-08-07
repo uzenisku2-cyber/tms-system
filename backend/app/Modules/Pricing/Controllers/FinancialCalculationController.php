@@ -10,6 +10,7 @@ use App\Modules\Pricing\Requests\ApproveFinancialCalculationRequest;
 use App\Modules\Pricing\Requests\CancelFinancialCalculationRequest;
 use App\Modules\Pricing\Requests\CloseFinancialCalculationRequest;
 use App\Modules\Pricing\Requests\FinancialCalculationIndexRequest;
+use App\Modules\Pricing\Requests\RecalculateFinancialCalculationRequest;
 use App\Modules\Pricing\Requests\ReviewFinancialCalculationRequest;
 use App\Modules\Pricing\Requests\StoreFinancialCalculationRequest;
 use App\Modules\Pricing\Resources\FinancialCalculationEventResource;
@@ -34,6 +35,24 @@ final class FinancialCalculationController extends BaseController
                 ),
             ),
             'Financial calculation created.',
+            201,
+        );
+    }
+
+    public function recalculate(
+        RecalculateFinancialCalculationRequest $request,
+        string $financialCalculation,
+        FinancialCalculationWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new FinancialCalculationResource(
+                $writes->recalculate(
+                    $this->actor($request),
+                    $financialCalculation,
+                    $request->validated(),
+                ),
+            ),
+            'Financial calculation recalculated.',
             201,
         );
     }
