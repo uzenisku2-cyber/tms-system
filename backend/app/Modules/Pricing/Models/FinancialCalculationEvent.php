@@ -15,6 +15,8 @@ class FinancialCalculationEvent extends Model
 
     public const TYPE_CALCULATED = 'calculated';
 
+    public const TYPE_RECALCULATED = 'recalculated';
+
     public const TYPE_REVIEW_STARTED = 'review_started';
 
     public const TYPE_APPROVED = 'approved';
@@ -26,6 +28,7 @@ class FinancialCalculationEvent extends Model
     /** @var list<string> */
     public const EVENT_TYPES = [
         self::TYPE_CALCULATED,
+        self::TYPE_RECALCULATED,
         self::TYPE_REVIEW_STARTED,
         self::TYPE_APPROVED,
         self::TYPE_CLOSED,
@@ -72,6 +75,15 @@ class FinancialCalculationEvent extends Model
             User::class,
             'acted_by_user_id',
         );
+    }
+
+    public function isRecalculationEvent(): bool
+    {
+        return $this->event_type === self::TYPE_RECALCULATED
+            && $this->from_status ===
+                FinancialCalculation::STATUS_APPROVED
+            && $this->to_status ===
+                FinancialCalculation::STATUS_CALCULATED;
     }
 
     public function isInitialCalculationEvent(): bool

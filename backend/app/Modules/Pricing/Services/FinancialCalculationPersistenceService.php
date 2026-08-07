@@ -580,6 +580,812 @@ final class FinancialCalculationPersistenceService
         );
     }
 
+    public function recalculateApprovedCalculation(
+        int $sourceFinancialCalculationId,
+        int $dailyReportVersionId,
+        int $calculatedByUserId,
+        DateTimeInterface $calculatedAt,
+        string $reason,
+    ): FinancialCalculation {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $this->assertPositiveIdentifier(
+            $sourceFinancialCalculationId,
+            'Source financial calculation identifier',
+        );
+
+        $this->assertPositiveIdentifier(
+            $dailyReportVersionId,
+            'Daily-report version identifier',
+        );
+
+        $this->assertPositiveIdentifier(
+            $calculatedByUserId,
+            'Calculating user identifier',
+        );
+
+        $calculatedMoment =
+            CarbonImmutable::instance($calculatedAt);
+
+        $normalizedReason =
+            $this->normalizeNullableText(
+                $reason,
+                'Recalculation reason',
+            );
+
+        if ($normalizedReason === null) {
+            throw new InvalidArgumentException(
+                'Recalculation reason is required.',
+            );
+        }
+
+        return DB::transaction(
+            function () use (
+                $organizationId,
+                $sourceFinancialCalculationId,
+                $dailyReportVersionId,
+                $calculatedByUserId,
+                $calculatedMoment,
+                $normalizedReason,
+            ): FinancialCalculation {
+                $this->assertActiveOrganization(
+                    $organizationId,
+                );
+
+                $this->assertActiveUserMembership(
+                    $calculatedByUserId,
+                    $organizationId,
+                );
+
+                $this->assertOrganizationPermission(
+                    $calculatedByUserId,
+                    $organizationId,
+                    'compensation.manage',
+                );
+
+                $sourceCalculation =
+                    FinancialCalculation::query()
+                        ->whereKey(
+                            $sourceFinancialCalculationId,
+                        )
+                        ->where(
+                            'organization_id',
+                            $organizationId,
+                        )
+                        ->lockForUpdate()
+                        ->first();
+
+                if (
+                    ! $sourceCalculation
+                        instanceof FinancialCalculation
+                ) {
+                    throw new DomainException(
+                        'The source financial calculation does not exist.',
+                    );
+                }
+
+                if (! $sourceCalculation->isApproved()) {
+                    throw new DomainException(
+                        'Only an approved financial calculation can be recalculated.',
+                    );
+                }
+
+                $alreadySuperseded =
+                    FinancialCalculation::query()
+                        ->where(
+                            'supersedes_calculation_id',
+                            $sourceFinancialCalculationId,
+                        )
+                        ->lockForUpdate()
+                        ->exists();
+
+                if ($alreadySuperseded) {
+                    throw new DomainException(
+                        'The source financial calculation has already been superseded.',
+                    );
+                }
+
+                $sourceCalculationVersion =
+                    $this->positiveInteger(
+                        $sourceCalculation->getAttribute(
+                            'calculation_version',
+                        ),
+                        'Source calculation version',
+                    );
+
+                $sourceDailyReportId =
+                    $this->positiveInteger(
+                        $sourceCalculation->getAttribute(
+                            'daily_report_id',
+                        ),
+                        'Source daily-report identifier',
+                    );
+
+                $sourceDailyReportVersion =
+                    $this->positiveInteger(
+                        $sourceCalculation->getAttribute(
+                            'daily_report_version',
+                        ),
+                        'Source daily-report version',
+                    );
+
+                $sourcePriceListId =
+                    $this->positiveInteger(
+                        $sourceCalculation->getAttribute(
+                            'price_list_id',
+                        ),
+                        'Source price-list identifier',
+                    );
+
+                $sourceRelationshipId =
+                    $this->positiveInteger(
+                        $sourceCalculation->getAttribute(
+                            'organization_relationship_id',
+                        ),
+                        'Source commercial relationship identifier',
+                    );
+
+                $sourceSnapshot =
+                    $sourceCalculation->getAttribute(
+                        'input_snapshot',
+                    );
+
+                if (! is_array($sourceSnapshot)) {
+                    throw new LogicException(
+                        'The source financial calculation does not contain a valid input snapshot.',
+                    );
+                }
+
+                $sourceSubtotal =
+                    $this->decimalAmount(
+                        $sourceCalculation->getAttribute(
+                            'subtotal_amount',
+                        ),
+                        'Source subtotal amount',
+                    );
+
+                $sourceTotal =
+                    $this->decimalAmount(
+                        $sourceCalculation->getAttribute(
+                            'total_amount',
+                        ),
+                        'Source total amount',
+                    );
+
+                $dailyReportVersion =
+                    DailyReportVersion::query()
+                        ->whereKey($dailyReportVersionId)
+                        ->lockForUpdate()
+                        ->first();
+
+                if (
+                    ! $dailyReportVersion
+                        instanceof DailyReportVersion
+                ) {
+                    throw new DomainException(
+                        'The amended daily-report version does not exist.',
+                    );
+                }
+
+                $dailyReportId =
+                    $this->positiveInteger(
+                        $dailyReportVersion->getAttribute(
+                            'daily_report_id',
+                        ),
+                        'Amended daily-report identifier',
+                    );
+
+                if (
+                    $dailyReportId !==
+                    $sourceDailyReportId
+                ) {
+                    throw new DomainException(
+                        'The amended daily-report version does not belong to the source calculation daily report.',
+                    );
+                }
+
+                $selectedDailyReportVersion =
+                    $this->positiveInteger(
+                        $dailyReportVersion->getAttribute(
+                            'version_number',
+                        ),
+                        'Amended daily-report version number',
+                    );
+
+                if (
+                    $selectedDailyReportVersion <=
+                    $sourceDailyReportVersion
+                ) {
+                    throw new DomainException(
+                        'Recalculation requires a newer daily-report version than the source calculation.',
+                    );
+                }
+
+                $dailyReport = DailyReport::query()
+                    ->whereKey($dailyReportId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $dailyReport instanceof DailyReport) {
+                    throw new DomainException(
+                        'The amended daily report does not exist.',
+                    );
+                }
+
+                $currentDailyReportVersion =
+                    $this->positiveInteger(
+                        $dailyReport->getAttribute(
+                            'current_version',
+                        ),
+                        'Current daily-report version number',
+                    );
+
+                if (
+                    $selectedDailyReportVersion !==
+                    $currentDailyReportVersion
+                ) {
+                    throw new DomainException(
+                        sprintf(
+                            (
+                                'Recalculation requires the current '.
+                                'daily-report version; selected version %d, '.
+                                'current version %d.'
+                            ),
+                            $selectedDailyReportVersion,
+                            $currentDailyReportVersion,
+                        ),
+                    );
+                }
+
+                $existingTargetCalculation =
+                    FinancialCalculation::query()
+                        ->where(
+                            'daily_report_id',
+                            $dailyReportId,
+                        )
+                        ->where(
+                            'daily_report_version',
+                            $selectedDailyReportVersion,
+                        )
+                        ->lockForUpdate()
+                        ->exists();
+
+                if ($existingTargetCalculation) {
+                    throw new DomainException(
+                        'The amended daily-report version has already been calculated.',
+                    );
+                }
+
+                $snapshot =
+                    $this->snapshotBuilder->build(
+                        $dailyReportVersion,
+                        $calculatedMoment,
+                    );
+
+                if (
+                    $snapshot['daily_report_id'] !==
+                    $dailyReportId
+                ) {
+                    throw new LogicException(
+                        'The amended immutable snapshot references a different daily report.',
+                    );
+                }
+
+                $serviceDate = $this->immutableDate(
+                    $snapshot['service_date'],
+                    'Daily-report service date',
+                );
+
+                $sourceOrganizationId =
+                    $this->positiveInteger(
+                        $snapshot['organization_id'],
+                        'Daily-report source organization identifier',
+                    );
+
+                $dailyReportOrganizationId =
+                    $this->positiveInteger(
+                        $dailyReport->getAttribute(
+                            'organization_id',
+                        ),
+                        'Daily-report organization identifier',
+                    );
+
+                if (
+                    $dailyReportOrganizationId !==
+                    $sourceOrganizationId
+                ) {
+                    throw new DomainException(
+                        'The amended daily-report organization does not match the immutable snapshot.',
+                    );
+                }
+
+                $priceList = PriceList::query()
+                    ->whereKey($sourcePriceListId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $priceList instanceof PriceList) {
+                    throw new DomainException(
+                        'The source price list does not exist.',
+                    );
+                }
+
+                $providerOrganizationId =
+                    $this->positiveInteger(
+                        $priceList->getAttribute(
+                            'provider_organization_id',
+                        ),
+                        'Provider organization identifier',
+                    );
+
+                if (
+                    $providerOrganizationId !==
+                    $organizationId
+                ) {
+                    throw new DomainException(
+                        'The verified organization is not the provider of the source price list.',
+                    );
+                }
+
+                $customerOrganizationId =
+                    $this->positiveInteger(
+                        $priceList->getAttribute(
+                            'customer_organization_id',
+                        ),
+                        'Customer organization identifier',
+                    );
+
+                if (
+                    $customerOrganizationId !==
+                    $sourceOrganizationId
+                ) {
+                    throw new DomainException(
+                        'The source price-list customer does not match the amended daily-report organization.',
+                    );
+                }
+
+                $ownerOrganizationId =
+                    $this->positiveInteger(
+                        $priceList->getAttribute(
+                            'owner_organization_id',
+                        ),
+                        'Price-list owner organization identifier',
+                    );
+
+                if (
+                    $ownerOrganizationId !==
+                    $customerOrganizationId
+                ) {
+                    throw new DomainException(
+                        'The pricing foundation requires the customer organization to own the price list.',
+                    );
+                }
+
+                $priceListRelationshipId =
+                    $this->positiveInteger(
+                        $priceList->getAttribute(
+                            'organization_relationship_id',
+                        ),
+                        'Price-list commercial relationship identifier',
+                    );
+
+                if (
+                    $priceListRelationshipId !==
+                    $sourceRelationshipId
+                ) {
+                    throw new DomainException(
+                        'The source calculation commercial relationship does not match its price list.',
+                    );
+                }
+
+                $relationship =
+                    OrganizationRelationship::query()
+                        ->whereKey(
+                            $sourceRelationshipId,
+                        )
+                        ->lockForUpdate()
+                        ->first();
+
+                if (
+                    ! $relationship
+                        instanceof OrganizationRelationship
+                ) {
+                    throw new DomainException(
+                        'The source commercial relationship does not exist.',
+                    );
+                }
+
+                if (
+                    ! $relationship->isActiveAt(
+                        Carbon::instance($serviceDate),
+                    )
+                ) {
+                    throw new DomainException(
+                        sprintf(
+                            (
+                                'The source commercial relationship is not '.
+                                'applicable on amended daily-report '.
+                                'service date [%s].'
+                            ),
+                            $serviceDate->format('Y-m-d'),
+                        ),
+                    );
+                }
+
+                $relationshipSourceId =
+                    $this->positiveInteger(
+                        $relationship->getAttribute(
+                            'source_organization_id',
+                        ),
+                        'Relationship source organization identifier',
+                    );
+
+                $relationshipTargetId =
+                    $this->positiveInteger(
+                        $relationship->getAttribute(
+                            'target_organization_id',
+                        ),
+                        'Relationship target organization identifier',
+                    );
+
+                if (
+                    $relationshipSourceId !==
+                    $customerOrganizationId
+                    || $relationshipTargetId !==
+                    $providerOrganizationId
+                ) {
+                    throw new DomainException(
+                        'The source commercial relationship direction does not match the price list.',
+                    );
+                }
+
+                $priceListVersions =
+                    PriceListVersion::query()
+                        ->where(
+                            'price_list_id',
+                            $sourcePriceListId,
+                        )
+                        ->lockForUpdate()
+                        ->get();
+
+                $applicablePriceListVersion = null;
+
+                foreach (
+                    $priceListVersions as $candidatePriceListVersion
+                ) {
+                    if (
+                        ! $candidatePriceListVersion
+                            instanceof PriceListVersion
+                    ) {
+                        continue;
+                    }
+
+                    if (
+                        ! $candidatePriceListVersion->isActive()
+                        && ! $candidatePriceListVersion->isReplaced()
+                        && ! $candidatePriceListVersion->isExpired()
+                    ) {
+                        continue;
+                    }
+
+                    if (
+                        ! $candidatePriceListVersion->isApplicableOn(
+                            $serviceDate,
+                        )
+                    ) {
+                        continue;
+                    }
+
+                    if (
+                        $applicablePriceListVersion
+                        instanceof PriceListVersion
+                    ) {
+                        throw new DomainException(
+                            sprintf(
+                                (
+                                    'Multiple applicable price-list versions '.
+                                    'exist for amended daily-report '.
+                                    'service date [%s].'
+                                ),
+                                $serviceDate->format('Y-m-d'),
+                            ),
+                        );
+                    }
+
+                    $applicablePriceListVersion =
+                        $candidatePriceListVersion;
+                }
+
+                if (
+                    ! $applicablePriceListVersion
+                        instanceof PriceListVersion
+                ) {
+                    throw new DomainException(
+                        sprintf(
+                            (
+                                'No applicable price-list version exists '.
+                                'for amended daily-report service date [%s].'
+                            ),
+                            $serviceDate->format('Y-m-d'),
+                        ),
+                    );
+                }
+
+                $priceListVersionId =
+                    $this->positiveInteger(
+                        $applicablePriceListVersion->getKey(),
+                        'Applicable price-list version identifier',
+                    );
+
+                $priceListVersionNumber =
+                    $this->positiveInteger(
+                        $applicablePriceListVersion->getAttribute(
+                            'version_number',
+                        ),
+                        'Applicable price-list version number',
+                    );
+
+                $pricingItems =
+                    $applicablePriceListVersion->items()
+                        ->lockForUpdate()
+                        ->get();
+
+                $applicablePriceListVersion->setRelation(
+                    'priceList',
+                    $priceList,
+                );
+
+                $applicablePriceListVersion->setRelation(
+                    'items',
+                    $pricingItems,
+                );
+
+                $result =
+                    $this->amountCalculator->calculate(
+                        $applicablePriceListVersion,
+                        $snapshot,
+                    );
+
+                $sourceCurrency =
+                    (string) $sourceCalculation->getAttribute(
+                        'currency',
+                    );
+
+                if ($result->currency !== $sourceCurrency) {
+                    throw new DomainException(
+                        'Recalculation currency must match the source calculation currency.',
+                    );
+                }
+
+                $newCalculationVersion =
+                    $sourceCalculationVersion + 1;
+
+                $calculation =
+                    FinancialCalculation::query()->create([
+                        'organization_id' => $organizationId,
+                        'organization_relationship_id' => $sourceRelationshipId,
+                        'price_list_id' => $sourcePriceListId,
+                        'price_list_version_id' => $priceListVersionId,
+                        'daily_report_id' => $dailyReportId,
+                        'daily_report_version' => $selectedDailyReportVersion,
+                        'calculation_version' => $newCalculationVersion,
+                        'status' => FinancialCalculation::STATUS_CALCULATED,
+                        'currency' => $result->currency,
+                        'input_snapshot' => $result->inputSnapshot,
+                        'subtotal_amount' => $result->subtotalAmount,
+                        'total_amount' => $result->totalAmount,
+                        'calculated_by_user_id' => $calculatedByUserId,
+                        'calculated_at' => $calculatedMoment,
+                        'approved_by_user_id' => null,
+                        'approved_at' => null,
+                        'closed_at' => null,
+                        'supersedes_calculation_id' => $sourceFinancialCalculationId,
+                    ]);
+
+                foreach ($result->lines as $line) {
+                    $calculation->lines()->create([
+                        'price_list_item_id' => $line->priceListItemId,
+                        'pricing_code' => $line->pricingCode,
+                        'description' => $line->description,
+                        'quantity' => $line->quantity,
+                        'unit' => $line->unit,
+                        'unit_rate' => $line->unitRate,
+                        'currency' => $line->currency,
+                        'line_amount' => $line->lineAmount,
+                        'source_field' => $line->sourceField,
+                        'rounding_scale' => $line->roundingScale,
+                        'rounding_method' => $line->roundingMethod,
+                        'position' => $line->position,
+                        'created_at' => $calculatedMoment,
+                    ]);
+                }
+
+                $changedInputValues =
+                    $this->financialInputChanges(
+                        $sourceSnapshot,
+                        $result->inputSnapshot,
+                    );
+
+                $financialDifference =
+                    $this->subtractDecimalAmounts(
+                        $result->totalAmount,
+                        $sourceTotal,
+                    );
+
+                $subtotalDifference =
+                    $this->subtractDecimalAmounts(
+                        $result->subtotalAmount,
+                        $sourceSubtotal,
+                    );
+
+                $calculation->events()->create([
+                    'organization_id' => $organizationId,
+                    'event_type' => FinancialCalculationEvent::TYPE_RECALCULATED,
+                    'from_status' => FinancialCalculation::STATUS_APPROVED,
+                    'to_status' => FinancialCalculation::STATUS_CALCULATED,
+                    'acted_by_user_id' => $calculatedByUserId,
+                    'reason' => $normalizedReason,
+                    'metadata' => [
+                        'source_calculation_public_id' => (string) $sourceCalculation
+                            ->getAttribute('public_id'),
+                        'source_calculation_version' => $sourceCalculationVersion,
+                        'calculation_version' => $newCalculationVersion,
+                        'source_daily_report_version' => $sourceDailyReportVersion,
+                        'daily_report_version' => $selectedDailyReportVersion,
+                        'price_list_version' => $priceListVersionNumber,
+                        'changed_input_values' => $changedInputValues,
+                        'previous_subtotal_amount' => $sourceSubtotal,
+                        'subtotal_amount' => $result->subtotalAmount,
+                        'subtotal_difference' => $subtotalDifference,
+                        'previous_total_amount' => $sourceTotal,
+                        'total_amount' => $result->totalAmount,
+                        'financial_difference' => $financialDifference,
+                        'line_count' => count($result->lines),
+                        'currency' => $result->currency,
+                    ],
+                    'created_at' => $calculatedMoment,
+                ]);
+
+                $calculation->load([
+                    'lines',
+                    'events',
+                    'priceList',
+                    'priceListVersion',
+                    'dailyReport',
+                    'supersedesCalculation',
+                ]);
+
+                return $calculation;
+            },
+            3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $before
+     * @param  array<string, mixed>  $after
+     * @return array<string, array{before: mixed, after: mixed}>
+     */
+    private function financialInputChanges(
+        array $before,
+        array $after,
+    ): array {
+        $fields = [
+            'delivered_parcels',
+            'redirected_parcels',
+            'undelivered_parcels',
+            'planned_km',
+            'actual_km',
+            'actual_km_source',
+        ];
+
+        $changes = [];
+
+        foreach ($fields as $field) {
+            $beforeValue = $before[$field] ?? null;
+            $afterValue = $after[$field] ?? null;
+
+            if ($beforeValue === $afterValue) {
+                continue;
+            }
+
+            $changes[$field] = [
+                'before' => $beforeValue,
+                'after' => $afterValue,
+            ];
+        }
+
+        return $changes;
+    }
+
+    private function decimalAmount(
+        mixed $value,
+        string $label,
+    ): string {
+        if (
+            ! is_string($value)
+            && ! is_int($value)
+        ) {
+            throw new LogicException(
+                $label.' is not available.',
+            );
+        }
+
+        $normalized = (string) $value;
+
+        if (
+            preg_match(
+                '/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,2})?$/D',
+                $normalized,
+            ) !== 1
+        ) {
+            throw new LogicException(
+                $label.' is not a valid decimal amount.',
+            );
+        }
+
+        if (! str_contains($normalized, '.')) {
+            return $normalized.'.00';
+        }
+
+        [$whole, $fraction] =
+            explode('.', $normalized, 2);
+
+        return $whole.'.'.str_pad(
+            $fraction,
+            2,
+            '0',
+        );
+    }
+
+    private function subtractDecimalAmounts(
+        string $amount,
+        string $baseline,
+    ): string {
+        $amountMinor =
+            $this->decimalAmountToMinorUnits(
+                $amount,
+            );
+
+        $baselineMinor =
+            $this->decimalAmountToMinorUnits(
+                $baseline,
+            );
+
+        $difference =
+            $amountMinor - $baselineMinor;
+
+        $sign = $difference < 0
+            ? '-'
+            : '';
+
+        $absolute = abs($difference);
+
+        return sprintf(
+            '%s%d.%02d',
+            $sign,
+            intdiv($absolute, 100),
+            $absolute % 100,
+        );
+    }
+
+    private function decimalAmountToMinorUnits(
+        string $amount,
+    ): int {
+        $normalized =
+            $this->decimalAmount(
+                $amount,
+                'Financial amount',
+            );
+
+        [$whole, $fraction] =
+            explode('.', $normalized, 2);
+
+        return ((int) $whole * 100)
+            + (int) $fraction;
+    }
+
     private function assertPositiveIdentifier(
         int $identifier,
         string $label,

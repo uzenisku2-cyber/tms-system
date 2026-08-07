@@ -1579,3 +1579,201 @@ The cancellation API test foundation verifies:
 - organization-scoped lookup isolation
 - rejection of cancellation from `approved`
 - rejection of repeated cancellation
+## Sprint 019 - Financial Calculation Controlled Recalculation API Foundation
+
+Sprint 019 introduces the controlled financial-calculation recalculation write endpoint:
+
+~~~text
+POST /api/v1/financial-calculations/{financialCalculation}/recalculate
+~~~
+
+The endpoint is part of the `financial-calculations` manage boundary and therefore:
+
+- requires authentication
+- requires verified organization context
+- requires `compensation.manage`
+- resolves the source calculation only inside the verified provider organization
+- returns `404` when the source calculation is outside that organization scope
+
+The request contract is intentionally narrow:
+
+~~~text
+daily_report_version  required integer >= 1
+reason                required non-empty string, max 2000 characters
+~~~
+
+The recalculation reason is trimmed before persistence and is always stored in the recalculation audit event.
+
+### Standard source eligibility
+
+Standard Sprint 019 recalculation starts only from an `approved` financial calculation.
+
+The following source states are rejected:
+
+- `calculated`
+- `under_review`
+- `closed`
+- `cancelled`
+
+A closed calculation remains final. Recalculation of invoiced or paid financial results remains outside this foundation and must later use a controlled adjustment, credit, debit, correction-settlement, or equivalent accounting path.
+
+The approved source calculation is immutable during recalculation. Its status, stored snapshot, amounts, approval fields, lines and events are not overwritten.
+
+### Amended daily-report version
+
+The requested daily-report version must:
+
+- belong to the same `daily_report_id` as the source calculation
+- be newer than the source calculation's `daily_report_version`
+- equal the report's current version
+- satisfy the immutable snapshot builder contract
+- therefore represent an approved or closed daily-report snapshot
+- not already have a financial calculation
+
+A stale, equivalent, unrelated, or already calculated report version is rejected with a controlled conflict.
+
+### Historical price-list resolution
+
+The client does not choose a replacement price-list version during recalculation.
+
+The calculation preserves the source `price_list_id` and resolves the unique price-list version applicable to the amended report `service_date`.
+
+Eligible historical lifecycle states are:
+
+- `active`
+- `replaced`
+- `expired`
+
+The selected price-list version must be applicable on the service date under its stored effective-period rules.
+
+The price-list customer, provider, owner and commercial relationship must remain consistent with the source calculation and amended daily-report organization. The commercial relationship must also be active on the service date.
+
+If no applicable price-list version exists, or more than one applicable version is found, recalculation is rejected.
+
+### New calculation version and supersession
+
+A successful recalculation creates a new financial calculation and never updates the approved source row.
+
+The new row:
+
+- starts in `calculated`
+- uses the amended daily-report version
+- uses the historically applicable price-list version
+- recalculates all financial lines through `PricingAmountCalculator`
+- preserves the source currency
+- sets `calculation_version` to source version plus one
+- sets `supersedes_calculation_id` to the approved source calculation
+
+The source calculation remains `approved`.
+
+Only one direct successor may reference a given source calculation. Sprint 019 enforces this rule twice:
+
+- application-level source locking and already-superseded rejection
+- database-level unique index `fin_calcs_supersedes_unique` on nullable `supersedes_calculation_id`
+
+PostgreSQL permits multiple `NULL` values in this unique index, so independent initial calculations are not affected.
+
+This creates a linear controlled supersession chain and prevents branching from one approved source.
+
+### Recalculation audit event
+
+A successful recalculation records a `recalculated` financial-calculation event on the new calculation.
+
+The event transition is:
+
+~~~text
+approved -> calculated
+~~~
+
+This transition is an audit description of the controlled recalculation operation. It does not mutate the source calculation from `approved` back to `calculated`.
+
+The PostgreSQL financial-calculation event constraints explicitly permit the `recalculated` event type and this transition.
+
+The event stores:
+
+- acting user
+- required reason
+- source calculation `public_id`
+- source calculation version
+- new calculation version
+- source and amended daily-report versions
+- selected price-list version
+- changed financial input values
+- previous and recalculated subtotal amounts
+- subtotal difference
+- previous and recalculated total amounts
+- financial difference
+- line count
+- currency
+
+Internal numeric source identifiers are not required in the public audit metadata.
+
+Changed financial inputs are compared from immutable calculation snapshots for the financially relevant report fields.
+
+Financial differences are calculated with decimal-safe minor-unit arithmetic rather than floating-point arithmetic.
+
+### Lifecycle after recalculation
+
+The new recalculated row re-enters the normal financial-calculation lifecycle in `calculated`.
+
+Its subsequent supported lifecycle remains:
+
+~~~text
+calculated
+    |
+    v
+under_review
+    |
+    v
+approved
+    |
+    v
+closed
+~~~
+
+Cancellation remains available only from `calculated` and `under_review`.
+
+The original approved source remains immutable and auditable throughout the successor lifecycle.
+
+### Security and integrity verification
+
+Sprint 019 recalculation coverage verifies:
+
+- unauthenticated access rejection
+- missing organization-context rejection
+- `compensation.manage` enforcement
+- organization-scoped source lookup
+- required payload validation
+- approved-source requirement
+- rejection of `under_review`, `closed` and `cancelled` sources
+- rejection of the same daily-report version
+- atomic successful recalculation
+- preservation of the approved source
+- calculation-version increment
+- supersession reference
+- recalculated lines and amounts
+- changed financial-input audit metadata
+- financial-difference audit metadata
+- prevention of multiple successors from one source
+- PostgreSQL unique supersession integrity
+- targeted PHPStan coverage of changed PHP files
+- full backend regression coverage
+
+Repository-wide PHPStan baseline debt outside the Pricing changes is tracked separately and is not introduced by Sprint 019.
+
+### Deferred scope
+
+Sprint 019 does not implement:
+
+- automatic discovery or scheduling of affected calculations after every daily-report amendment
+- batch recalculation
+- user-selected arbitrary price-list replacement
+- recalculation of `closed` calculations
+- invoiced recalculation
+- paid-result mutation
+- credit or debit documents
+- correction settlements
+- accounting adjustments
+- frontend recalculation administration
+
+Those flows require separately controlled financial or settlement foundations and must not overwrite approved historical results.
