@@ -37,7 +37,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
 
         self::assertSame(
-            18,
+            19,
             DB::table('permissions')->count(),
         );
 
@@ -81,7 +81,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            18,
+            19,
             DB::table('permissions')
                 ->where('guard_name', 'web')
                 ->count(),
@@ -118,7 +118,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
             ->pluck('id');
 
         self::assertSame(
-            0,
+            18,
             DB::table('role_has_permissions')
                 ->whereIn(
                     'permission_id',
@@ -237,7 +237,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            30,
+            50,
             DB::table('role_has_permissions')->count(),
         );
 

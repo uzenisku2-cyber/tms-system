@@ -27,8 +27,10 @@ final class DailyReportController extends BaseController
         DailyReportIndexRequest $request,
         DailyReportQueryService $queries,
     ): JsonResponse {
+        $filters = $request->validated();
+
         $reports = $queries->paginate(
-            $request->validated(),
+            $filters,
         );
 
         return $this->success([
@@ -41,6 +43,9 @@ final class DailyReportController extends BaseController
                 'per_page' => $reports->perPage(),
                 'total' => $reports->total(),
             ],
+            'navigation' => $queries->navigation(
+                $filters,
+            ),
         ]);
     }
 

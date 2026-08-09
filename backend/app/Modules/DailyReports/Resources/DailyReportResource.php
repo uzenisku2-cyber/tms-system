@@ -25,7 +25,19 @@ final class DailyReportResource extends JsonResource
         }
 
         $dailyReport = $this->resource;
+        $performedByDriver =
+            $dailyReport->relationLoaded(
+                'performedByDriver',
+            )
+                ? $dailyReport->getRelation(
+                    'performedByDriver',
+                )
+                : null;
         $calculations = new DailyReportCalculations;
+
+        $loadedParcels = $this->nullableInteger(
+            $dailyReport->getAttribute('loaded_parcels'),
+        );
 
         $deliveredParcels = $this->nullableInteger(
             $dailyReport->getAttribute('delivered_parcels'),
@@ -52,6 +64,10 @@ final class DailyReportResource extends JsonResource
             && $redirectedParcels !== null
             && $undeliveredParcels !== null;
 
+        $hasCompleteParcelBalance =
+            $loadedParcels !== null
+            && $hasCompleteParcelCounts;
+
         $hasCompleteKilometres =
             $plannedKm !== null
             && $actualKm !== null;
@@ -69,6 +85,22 @@ final class DailyReportResource extends JsonResource
             'performed_by_driver_id' => (int) $dailyReport->getAttribute(
                 'performed_by_driver_id',
             ),
+            'performed_by_driver_external_id' =>
+                $performedByDriver?->getAttribute(
+                    'external_driver_id',
+                ),
+            'performed_by_driver_name' =>
+                $performedByDriver === null
+                    ? null
+                    : trim(
+                        (string) $performedByDriver->getAttribute(
+                            'last_name',
+                        )
+                        .' '.
+                        (string) $performedByDriver->getAttribute(
+                            'first_name',
+                        ),
+                    ),
             'vehicle_id' => $this->nullableInteger(
                 $dailyReport->getAttribute('vehicle_id'),
             ),
@@ -82,6 +114,16 @@ final class DailyReportResource extends JsonResource
                 $dailyReport->getAttribute('service_date'),
                 'Y-m-d',
             ),
+            'daily_report_form_configuration_id' =>
+                $this->nullableInteger(
+                    $dailyReport->getAttribute(
+                        'daily_report_form_configuration_id',
+                    ),
+                ),
+            'custom_field_values' =>
+                $dailyReport->getAttribute(
+                    'custom_field_values',
+                ) ?? [],
             'status' => (string) $dailyReport->getAttribute(
                 'status',
             ),
@@ -97,6 +139,17 @@ final class DailyReportResource extends JsonResource
                 ),
                 DATE_ATOM,
             ),
+            'departure_time' => $this->nullableTime(
+                $dailyReport->getAttribute(
+                    'departure_time',
+                ),
+            ),
+            'arrival_time' => $this->nullableTime(
+                $dailyReport->getAttribute(
+                    'arrival_time',
+                ),
+            ),
+            'loaded_parcels' => $loadedParcels,
             'delivered_parcels' => $deliveredParcels,
             'redirected_parcels' => $redirectedParcels,
             'undelivered_parcels' => $undeliveredParcels,
@@ -108,6 +161,9 @@ final class DailyReportResource extends JsonResource
             ),
             'actual_km_source' => $dailyReport->getAttribute(
                 'actual_km_source',
+            ),
+            'surcharge_amount' => $this->nullableDecimal(
+                $dailyReport->getAttribute('surcharge_amount'),
             ),
             'operational_notes' => $dailyReport->getAttribute(
                 'operational_notes',
@@ -145,6 +201,15 @@ final class DailyReportResource extends JsonResource
                             $undeliveredParcels,
                         )
                         : null,
+                'not_delivered_parcels' =>
+                    $hasCompleteParcelBalance
+                        ? $calculations->notDeliveredParcels(
+                            $loadedParcels,
+                            $deliveredParcels,
+                            $redirectedParcels,
+                            $undeliveredParcels,
+                        )
+                        : null,
                 'difference_km' => $hasCompleteKilometres
                         ? $calculations->differenceKm(
                             $plannedKm,
@@ -173,6 +238,34 @@ final class DailyReportResource extends JsonResource
                 DATE_ATOM,
             ),
         ];
+    }
+
+    private function nullableTime(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            throw new LogicException(
+                'Daily report time resource value is invalid.',
+            );
+        }
+
+        $normalized = trim($value);
+
+        if (
+            preg_match(
+                '/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/',
+                $normalized,
+            ) !== 1
+        ) {
+            throw new LogicException(
+                'Daily report time resource value is invalid.',
+            );
+        }
+
+        return substr($normalized, 0, 5);
     }
 
     private function nullableInteger(mixed $value): ?int

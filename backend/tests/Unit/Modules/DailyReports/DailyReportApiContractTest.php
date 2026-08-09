@@ -88,6 +88,7 @@ final class DailyReportApiContractTest extends TestCase
         self::assertSame(
             [
                 'total_processed_parcels' => 106,
+                'not_delivered_parcels' => null,
                 'difference_km' => 12.5,
                 'deviation_percentage' => 12.5,
                 'requires_kilometre_attention' => true,
@@ -120,6 +121,7 @@ final class DailyReportApiContractTest extends TestCase
         self::assertSame(
             [
                 'total_processed_parcels' => 106,
+                'not_delivered_parcels' => null,
                 'difference_km' => 0.0,
                 'deviation_percentage' => null,
                 'requires_kilometre_attention' => true,

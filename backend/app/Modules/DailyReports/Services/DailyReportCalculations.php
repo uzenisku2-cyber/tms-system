@@ -149,4 +149,29 @@ final class DailyReportCalculations
             PHP_ROUND_HALF_UP,
         );
     }
+
+    public function notDeliveredParcels(
+        int $loadedParcels,
+        int $deliveredParcels,
+        int $redirectedParcels,
+        int $customerRejectedParcels,
+    ): int {
+        foreach ([
+            $loadedParcels,
+            $deliveredParcels,
+            $redirectedParcels,
+            $customerRejectedParcels,
+        ] as $value) {
+            if ($value < 0) {
+                throw new InvalidArgumentException(
+                    'Parcel counts cannot be negative.',
+                );
+            }
+        }
+
+        return $loadedParcels
+            - $deliveredParcels
+            - $redirectedParcels
+            - $customerRejectedParcels;
+    }
 }

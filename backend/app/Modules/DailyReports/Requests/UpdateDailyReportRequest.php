@@ -25,6 +25,11 @@ final class UpdateDailyReportRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            DailyReportRequestRules::validateParcelBalance(
+                $this->all(),
+                $validator,
+            );
+
             foreach (
                 DailyReportRequestRules::MUTABLE_FIELDS as $field
             ) {

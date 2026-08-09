@@ -20,6 +20,7 @@ final class DailyReportWriteService
     public function __construct(
         private readonly OrganizationContext $organizationContext,
         private readonly DailyReportPersistenceService $persistence,
+        private readonly DailyReportEffectiveFormService $effectiveForm,
         private readonly PermissionRegistrar $permissionRegistrar,
     ) {}
 
@@ -65,6 +66,15 @@ final class DailyReportWriteService
             $input,
             'reason',
         );
+
+        $attributes = $this->effectiveForm
+            ->prepareAttributesForCreate(
+                organizationId:
+                    $this->organizationContext->requireId(),
+                serviceDate: $serviceDate,
+                input: $input,
+                baseAttributes: $attributes,
+            );
 
         if ($this->driverUserId($driver) === $actorId) {
             $this->assertPermission(

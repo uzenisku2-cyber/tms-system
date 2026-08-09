@@ -49,6 +49,14 @@ class Organization extends Model
         'name',
         'type',
         'status',
+        'registration_number',
+        'vat_number',
+        'street',
+        'city',
+        'postal_code',
+        'country_code',
+        'contact_email',
+        'contact_phone',
     ];
 
     /** @var array<string, mixed> */

@@ -17,16 +17,22 @@ final class DailyReportSnapshotBuilder
         'route_number',
         'route_number_normalized',
         'service_date',
+        'daily_report_form_configuration_id',
+        'custom_field_values',
         'status',
         'entry_method',
         'entered_on_behalf',
         'completion_confirmed_at',
+        'departure_time',
+        'arrival_time',
+        'loaded_parcels',
         'delivered_parcels',
         'redirected_parcels',
         'undelivered_parcels',
         'planned_km',
         'actual_km',
         'actual_km_source',
+        'surcharge_amount',
         'operational_notes',
         'current_version',
         'submitted_at',
@@ -45,8 +51,29 @@ final class DailyReportSnapshotBuilder
     {
         $snapshot = [];
 
+        $backwardCompatibleDefaults = [
+            'daily_report_form_configuration_id' => null,
+            'custom_field_values' => [],
+            'departure_time' => null,
+            'arrival_time' => null,
+            'loaded_parcels' => null,
+            'surcharge_amount' => '0.00',
+        ];
+
         foreach (self::SNAPSHOT_FIELDS as $field) {
             if (! array_key_exists($field, $attributes)) {
+                if (
+                    array_key_exists(
+                        $field,
+                        $backwardCompatibleDefaults,
+                    )
+                ) {
+                    $snapshot[$field] =
+                        $backwardCompatibleDefaults[$field];
+
+                    continue;
+                }
+
                 throw new InvalidArgumentException(
                     sprintf(
                         'Daily report snapshot field "%s" is missing.',

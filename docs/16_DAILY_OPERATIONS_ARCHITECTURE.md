@@ -693,3 +693,44 @@ The Sprint 003 foundation is complete when:
 - approved reports cannot be ordinarily edited
 - all module tests and repository CI checks pass
 - no existing Trip or Identity behavior is unintentionally changed
+### Operational performance policy
+
+Operational tolerances are configurable and are intentionally separate from
+financial price-list rules.
+
+The initial policy metrics are:
+
+- maximum redirected-to-pickup-point percentage
+- maximum kilometre deviation percentage
+- optional minimum delivered-to-address percentage
+- optional maximum customer-rejected percentage
+- optional maximum derived not-delivered percentage
+
+The system fallback is 15.00% for redirected parcels and 10.00% for kilometre
+deviation. Optional metrics are disabled until explicitly configured.
+
+A verified organization may define organization defaults. A route-number
+override may replace individual non-null thresholds for that recurring route;
+all other values inherit from the organization defaults.
+
+Route-number normalization uses the same `RouteNumberNormalizer` as daily
+reports.
+
+Operational thresholds are a mutable monitoring lens. They do not modify
+historical daily-report facts, daily-report versions or financial snapshots.
+Changing a tolerance may therefore change how historical rows are highlighted,
+but it must never rewrite the historical route data itself.
+
+Configuration writes use the existing organization-scoped
+`daily-reports.review` permission. Read access uses `daily-reports.view`.
+
+The API foundation is:
+
+- `GET /api/v1/daily-reports/performance-policies`
+- `GET /api/v1/daily-reports/performance-policies/effective?route_number=...`
+- `PUT /api/v1/daily-reports/performance-policies/organization`
+- `PUT /api/v1/daily-reports/performance-policies/routes/{routeNumber}`
+- `DELETE /api/v1/daily-reports/performance-policies/routes/{routeNumber}`
+
+Financial percentage-based surcharges remain deferred to the Pricing module
+and must use separate versioned price-list rules.
