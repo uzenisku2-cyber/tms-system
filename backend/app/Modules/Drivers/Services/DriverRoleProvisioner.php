@@ -41,6 +41,7 @@ final class DriverRoleProvisioner
                 );
             }
 
+            /** @var Role $role */
             $role = Role::findOrCreate(
                 self::ROLE_NAME,
                 'web',

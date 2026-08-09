@@ -69,13 +69,13 @@ final class DriverOrganizationAssignment extends Model
     ): bool {
         $date = $moment->toDateString();
 
-        if ($this->valid_from->toDateString() > $date) {
+        if (Carbon::parse($this->valid_from)->toDateString() > $date) {
             return false;
         }
 
         if (
             $this->valid_until !== null
-            && $this->valid_until->toDateString() < $date
+            && Carbon::parse($this->valid_until)->toDateString() < $date
         ) {
             return false;
         }

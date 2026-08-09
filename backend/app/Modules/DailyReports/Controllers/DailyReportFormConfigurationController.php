@@ -183,7 +183,7 @@ final class DailyReportFormConfigurationController
                 );
 
                 if ($open !== null) {
-                    $openFrom = $open->valid_from->toDateString();
+                    $openFrom = CarbonImmutable::parse($open->valid_from)->toDateString();
 
                     if ($openFrom >= $validFrom) {
                         throw ValidationException::withMessages([
@@ -307,7 +307,7 @@ final class DailyReportFormConfigurationController
 
         if (
             $validUntil
-            < $target->valid_from->toDateString()
+            < CarbonImmutable::parse($target->valid_from)->toDateString()
         ) {
             throw ValidationException::withMessages([
                 'valid_until' => [
@@ -386,10 +386,15 @@ final class DailyReportFormConfigurationController
         $today = CarbonImmutable::today()
             ->toDateString();
 
-        $validFrom = $configuration->valid_from
-            ->toDateString();
+        $validFrom = CarbonImmutable::parse(
+            $configuration->valid_from,
+        )->toDateString();
 
-        $validUntil = $configuration->valid_until?->toDateString();
+        $validUntil = $configuration->valid_until === null
+            ? null
+            : CarbonImmutable::parse(
+                $configuration->valid_until,
+            )->toDateString();
 
         $status = 'active';
 

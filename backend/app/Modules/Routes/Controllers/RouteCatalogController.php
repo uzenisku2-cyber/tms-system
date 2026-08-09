@@ -4,7 +4,9 @@ namespace App\Modules\Routes\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Routes\Models\Route;
+use App\Modules\Routes\Models\RouteVersion;
 use App\Modules\Routes\Services\RouteCatalogService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -86,6 +88,7 @@ class RouteCatalogController extends Controller
     ): RedirectResponse {
         $this->authorizeManage($request);
 
+        /** @var RouteVersion $current */
         $current = $route->currentVersion()->firstOrFail();
 
         $validated = $request->validate([
@@ -95,7 +98,7 @@ class RouteCatalogController extends Controller
             'valid_from' => [
                 'required',
                 'date',
-                'after:'.$current->valid_from->toDateString(),
+                'after:'.CarbonImmutable::parse($current->valid_from)->toDateString(),
             ],
             'change_note' => ['nullable', 'string', 'max:2000'],
         ]);

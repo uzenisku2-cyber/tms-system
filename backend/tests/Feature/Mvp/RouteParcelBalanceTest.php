@@ -10,7 +10,6 @@ use App\Modules\DailyReports\Requests\StoreDailyReportRequest;
 use App\Modules\DailyReports\Requests\UpdateDailyReportRequest;
 use App\Modules\DailyReports\Resources\DailyReportResource;
 use App\Modules\DailyReports\Services\DailyReportCalculations;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Validator as LaravelValidator;
@@ -161,7 +160,7 @@ final class RouteParcelBalanceTest extends TestCase
      * @param  array<string, mixed>  $input
      */
     private function validator(
-        FormRequest $request,
+        RecordDailyReportCorrectionRequest|StoreDailyReportRequest|UpdateDailyReportRequest $request,
         array $input,
     ): LaravelValidator {
         $request->replace($input);

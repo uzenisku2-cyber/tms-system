@@ -120,7 +120,6 @@ final class DriverOrganizationAssignmentController
 
         $validFrom = (string) $validated['valid_from'];
         $validUntil = isset($validated['valid_until'])
-            && $validated['valid_until'] !== null
             && $validated['valid_until'] !== ''
                 ? (string) $validated['valid_until']
                 : null;
@@ -215,7 +214,7 @@ final class DriverOrganizationAssignmentController
         }
 
         $validUntil = (string) $validated['valid_until'];
-        $validFrom = $target->valid_from->toDateString();
+        $validFrom = CarbonImmutable::parse($target->valid_from)->toDateString();
 
         if ($validUntil < $validFrom) {
             throw ValidationException::withMessages([
@@ -466,10 +465,15 @@ final class DriverOrganizationAssignmentController
         $today = CarbonImmutable::today()
             ->toDateString();
 
-        $validFrom = $assignment->valid_from
-            ->toDateString();
+        $validFrom = CarbonImmutable::parse(
+            $assignment->valid_from,
+        )->toDateString();
 
-        $validUntil = $assignment->valid_until?->toDateString();
+        $validUntil = $assignment->valid_until === null
+            ? null
+            : CarbonImmutable::parse(
+                $assignment->valid_until,
+            )->toDateString();
 
         $status = 'active';
 

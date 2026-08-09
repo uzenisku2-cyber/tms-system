@@ -36,6 +36,7 @@ class RouteCatalogService
         return DB::transaction(function () use ($route, $attributes): RouteVersion {
             $newValidFrom = CarbonImmutable::parse($attributes['valid_from'])->startOfDay();
 
+            /** @var RouteVersion|null $currentVersion */
             $currentVersion = $route->versions()
                 ->whereNull('valid_to')
                 ->lockForUpdate()
@@ -54,7 +55,8 @@ class RouteCatalogService
                 ]);
             }
 
-            return $route->versions()->create([
+            /** @var RouteVersion $version */
+            $version = $route->versions()->create([
                 'route_number' => $attributes['route_number'],
                 'route_name' => $attributes['route_name'],
                 'area' => $attributes['area'] ?? null,
@@ -63,6 +65,8 @@ class RouteCatalogService
                 'change_type' => $attributes['change_type'] ?? 'updated',
                 'change_note' => $attributes['change_note'] ?? null,
             ]);
+
+            return $version;
         });
     }
 

@@ -98,10 +98,6 @@ final class DailyReportEffectiveFormService
             $input['custom_field_values']
                 ?? [];
 
-        if ($customInput === null) {
-            $customInput = [];
-        }
-
         if (! is_array($customInput)) {
             throw ValidationException::withMessages([
                 'custom_field_values' => [

@@ -64,7 +64,7 @@ final class ExternalDriverIdentifierFoundationTest extends TestCase
                 'Duplicate external driver identifier was accepted.',
             );
         } catch (QueryException) {
-            self::assertTrue(true);
+            // Expected: the unique constraint rejects the duplicate identifier.
         }
     }
 
