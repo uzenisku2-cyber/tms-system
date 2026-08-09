@@ -25,6 +25,11 @@ final class StoreDailyReportRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            DailyReportRequestRules::validateParcelBalance(
+                $this->all(),
+                $validator,
+            );
+
             $actualKmProvided =
                 $this->input('actual_km') !== null;
 

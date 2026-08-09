@@ -26,6 +26,18 @@ final class DailyReportIndexRequest extends FormRequest
                 'string',
                 Rule::in(DailyReport::STATUSES),
             ],
+            'status_group' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    'written',
+                    'waiting',
+                    'correction',
+                    'corrected',
+                    'approved',
+                    'closed',
+                ]),
+            ],
             'performed_by_driver_id' => [
                 'nullable',
                 'integer',

@@ -6,6 +6,7 @@ namespace App\Modules\DailyReports\Requests;
 
 use App\Modules\DailyReports\Models\DailyReport;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 final class DailyReportRequestRules
 {
@@ -14,13 +15,18 @@ final class DailyReportRequestRules
         'route_number',
         'service_date',
         'completion_confirmed_at',
+        'departure_time',
+        'arrival_time',
+        'loaded_parcels',
         'delivered_parcels',
         'redirected_parcels',
         'undelivered_parcels',
         'planned_km',
         'actual_km',
         'actual_km_source',
+        'surcharge_amount',
         'operational_notes',
+        'custom_field_values',
     ];
 
     /**
@@ -53,6 +59,19 @@ final class DailyReportRequestRules
                 'nullable',
                 'date',
             ],
+            'departure_time' => [
+                'nullable',
+                'date_format:H:i',
+            ],
+            'arrival_time' => [
+                'nullable',
+                'date_format:H:i',
+            ],
+            'loaded_parcels' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
             'delivered_parcels' => [
                 'nullable',
                 'integer',
@@ -83,9 +102,18 @@ final class DailyReportRequestRules
                 'string',
                 Rule::in(DailyReport::ACTUAL_KM_SOURCES),
             ],
+            'surcharge_amount' => [
+                'nullable',
+                'numeric',
+                'between:0,99999999.99',
+            ],
             'operational_notes' => [
                 'nullable',
                 'string',
+            ],
+            'custom_field_values' => [
+                'nullable',
+                'array',
             ],
             'reason' => self::reason(),
         ];
@@ -112,6 +140,22 @@ final class DailyReportRequestRules
                 'nullable',
                 'date',
             ],
+            'departure_time' => [
+                'sometimes',
+                'nullable',
+                'date_format:H:i',
+            ],
+            'arrival_time' => [
+                'sometimes',
+                'nullable',
+                'date_format:H:i',
+            ],
+            'loaded_parcels' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                'min:0',
+            ],
             'delivered_parcels' => [
                 'sometimes',
                 'nullable',
@@ -147,6 +191,12 @@ final class DailyReportRequestRules
                 'nullable',
                 'string',
                 Rule::in(DailyReport::ACTUAL_KM_SOURCES),
+            ],
+            'surcharge_amount' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'between:0,99999999.99',
             ],
             'operational_notes' => [
                 'sometimes',
@@ -190,5 +240,49 @@ final class DailyReportRequestRules
             'string',
             'max:4000',
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public static function validateParcelBalance(
+        array $input,
+        Validator $validator,
+    ): void {
+        $keys = [
+            'loaded_parcels',
+            'delivered_parcels',
+            'redirected_parcels',
+            'undelivered_parcels',
+        ];
+
+        foreach ($keys as $key) {
+            if (
+                ! array_key_exists($key, $input)
+                || $input[$key] === null
+                || $input[$key] === ''
+                || ! is_numeric($input[$key])
+            ) {
+                return;
+            }
+        }
+
+        $notDelivered =
+            (int) $input['loaded_parcels']
+            - (int) $input['delivered_parcels']
+            - (int) $input['redirected_parcels']
+            - (int) $input['undelivered_parcels'];
+
+        if ($notDelivered >= 0) {
+            return;
+        }
+
+        $validator->errors()->add(
+            'parcel_balance',
+            sprintf(
+                'Chyba v zápisu: doručeno na adresu + výdejní místo + odmítnuto zákazníkem převyšuje počet naložených zásilek o %d ks.',
+                abs($notDelivered),
+            ),
+        );
     }
 }

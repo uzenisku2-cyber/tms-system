@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\DailyReports\Controllers\DailyReportController;
+use App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware([
@@ -107,4 +108,70 @@ Route::middleware([
             ->middleware('perm:daily-reports.close')
             ->whereUuid('dailyReport')
             ->name('close');
+    });
+/*
+|--------------------------------------------------------------------------
+| S020-04E3D3 OPERATIONAL PERFORMANCE POLICY ROUTES
+|--------------------------------------------------------------------------
+|
+| Operational tolerance configuration is intentionally separate from
+| financial price-list rules. Read access follows daily-reports.view.
+| Configuration writes require daily-reports.review.
+|
+*/
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+])
+    ->prefix('daily-reports/performance-policies')
+    ->name('daily-reports.performance-policies.')
+    ->group(function (): void {
+        Route::middleware(
+            'perm:daily-reports.view',
+        )->group(function (): void {
+            Route::get(
+                '/',
+                [
+                    DailyReportPerformancePolicyController::class,
+                    'index',
+                ],
+            )->name('index');
+
+            Route::get(
+                '/effective',
+                [
+                    DailyReportPerformancePolicyController::class,
+                    'effective',
+                ],
+            )->name('effective');
+        });
+
+        Route::middleware(
+            'perm:daily-reports.review',
+        )->group(function (): void {
+            Route::put(
+                '/organization',
+                [
+                    DailyReportPerformancePolicyController::class,
+                    'updateOrganization',
+                ],
+            )->name('organization.update');
+
+            Route::put(
+                '/routes/{routeNumber}',
+                [
+                    DailyReportPerformancePolicyController::class,
+                    'updateRoute',
+                ],
+            )->name('route.update');
+
+            Route::delete(
+                '/routes/{routeNumber}',
+                [
+                    DailyReportPerformancePolicyController::class,
+                    'deleteRoute',
+                ],
+            )->name('route.delete');
+        });
     });

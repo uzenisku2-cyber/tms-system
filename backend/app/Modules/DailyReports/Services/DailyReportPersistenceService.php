@@ -24,13 +24,19 @@ final class DailyReportPersistenceService
 {
     /** @var list<string> */
     private const ALLOWED_DRAFT_ATTRIBUTES = [
+        'daily_report_form_configuration_id',
+        'custom_field_values',
         'completion_confirmed_at',
+        'departure_time',
+        'arrival_time',
+        'loaded_parcels',
         'delivered_parcels',
         'redirected_parcels',
         'undelivered_parcels',
         'planned_km',
         'actual_km',
         'actual_km_source',
+        'surcharge_amount',
         'operational_notes',
     ];
 
@@ -39,12 +45,16 @@ final class DailyReportPersistenceService
         'route_number',
         'service_date',
         'completion_confirmed_at',
+        'departure_time',
+        'arrival_time',
+        'loaded_parcels',
         'delivered_parcels',
         'redirected_parcels',
         'undelivered_parcels',
         'planned_km',
         'actual_km',
         'actual_km_source',
+        'surcharge_amount',
         'operational_notes',
     ];
 
@@ -54,6 +64,7 @@ final class DailyReportPersistenceService
         private readonly DailyReportSnapshotBuilder $snapshotBuilder,
         private readonly DailyReportEventPayloadBuilder $eventPayloadBuilder,
         private readonly DailyReportWorkflow $workflow,
+        private readonly DailyReportEffectiveFormService $effectiveForm,
         private readonly PermissionRegistrar $permissionRegistrar,
     ) {}
 
@@ -104,6 +115,29 @@ final class DailyReportPersistenceService
     /**
      * @param  array<string, mixed>  $attributes
      */
+    public function createAuthorizedImportDraft(
+        int $performedByDriverId,
+        int $importedByUserId,
+        string $routeNumber,
+        DateTimeInterface|string $serviceDate,
+        array $attributes = [],
+        ?string $reason = null,
+    ): DailyReport {
+        return $this->createDraftForActor(
+            performedByDriverId: $performedByDriverId,
+            enteredByUserId: $importedByUserId,
+            routeNumber: $routeNumber,
+            serviceDate: $serviceDate,
+            attributes: $attributes,
+            reason: $reason,
+            enteredOnBehalf: false,
+            entryMethod: DailyReport::ENTRY_METHOD_AUTHORIZED_IMPORT,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     private function createDraftForActor(
         int $performedByDriverId,
         int $enteredByUserId,
@@ -112,10 +146,11 @@ final class DailyReportPersistenceService
         array $attributes,
         ?string $reason,
         bool $enteredOnBehalf,
+        ?string $entryMethod = null,
     ): DailyReport {
         $organizationId = $this->organizationContext->requireId();
 
-        $entryMethod = $enteredOnBehalf
+        $entryMethod ??= $enteredOnBehalf
             ? DailyReport::ENTRY_METHOD_DELEGATED
             : DailyReport::ENTRY_METHOD_DRIVER;
 
@@ -150,9 +185,59 @@ final class DailyReportPersistenceService
             $serviceDate,
         );
 
+        $formConfigurationId =
+            $attributes['daily_report_form_configuration_id']
+                ?? null;
+
+        if ($formConfigurationId !== null) {
+            if (
+                ! is_int($formConfigurationId)
+                && ! (
+                    is_string($formConfigurationId)
+                    && ctype_digit($formConfigurationId)
+                )
+            ) {
+                throw new InvalidArgumentException(
+                    'Daily-report form configuration identifier must be a positive integer or null.',
+                );
+            }
+
+            $formConfigurationId = (int) $formConfigurationId;
+
+            $this->assertPositiveIdentifier(
+                $formConfigurationId,
+                'Daily-report form configuration identifier',
+            );
+        }
+
+        $customFieldValues =
+            $attributes['custom_field_values']
+                ?? [];
+
+        if (! is_array($customFieldValues)) {
+            throw new InvalidArgumentException(
+                'Custom daily-report field values must be an array.',
+            );
+        }
+
         $completionConfirmedAt = $this->normalizeNullableDateTime(
             $attributes['completion_confirmed_at'] ?? null,
             'Completion confirmation',
+        );
+
+        $departureTime = $this->normalizeNullableTime(
+            $attributes['departure_time'] ?? null,
+            'Departure time',
+        );
+
+        $arrivalTime = $this->normalizeNullableTime(
+            $attributes['arrival_time'] ?? null,
+            'Arrival time',
+        );
+
+        $loadedParcels = $this->normalizeNullableParcelCount(
+            $attributes['loaded_parcels'] ?? null,
+            'Loaded parcels',
         );
 
         $deliveredParcels = $this->normalizeNullableParcelCount(
@@ -193,9 +278,18 @@ final class DailyReportPersistenceService
             );
         }
 
+        $surchargeAmount = $this->normalizeSurchargeAmount(
+            $attributes['surcharge_amount'] ?? null,
+        );
+
         $operationalNotes = $this->normalizeNullableText(
             $attributes['operational_notes'] ?? null,
             'Operational notes',
+        );
+
+        $this->assertSurchargeNoteConsistency(
+            $surchargeAmount,
+            $operationalNotes,
         );
 
         $normalizedReason = $this->normalizeNullableText(
@@ -210,13 +304,19 @@ final class DailyReportPersistenceService
                 $enteredByUserId,
                 $normalizedRoute,
                 $normalizedServiceDate,
+                $formConfigurationId,
+                $customFieldValues,
                 $completionConfirmedAt,
+                $departureTime,
+                $arrivalTime,
+                $loadedParcels,
                 $deliveredParcels,
                 $redirectedParcels,
                 $undeliveredParcels,
                 $plannedKm,
                 $actualKm,
                 $actualKmSource,
+                $surchargeAmount,
                 $operationalNotes,
                 $normalizedReason,
                 $entryMethod,
@@ -241,34 +341,59 @@ final class DailyReportPersistenceService
 
                 $driverUserId = (int) $driver->getAttribute('user_id');
 
-                if (
-                    ! $enteredOnBehalf &&
-                    $driverUserId !== $enteredByUserId
-                ) {
-                    throw new DomainException(
-                        'Direct draft entry must use the driver user account.',
-                    );
-                }
-
-                if (
-                    $enteredOnBehalf &&
-                    $driverUserId === $enteredByUserId
-                ) {
-                    throw new DomainException(
-                        'Delegated draft entry must use a user other than the driver user account.',
-                    );
-                }
-
                 $this->assertActiveUserMembership(
                     $enteredByUserId,
                     $organizationId,
                 );
 
-                if ($enteredOnBehalf) {
+                if (
+                    $entryMethod ===
+                    DailyReport::ENTRY_METHOD_DRIVER
+                ) {
+                    if (
+                        $enteredOnBehalf ||
+                        $driverUserId !== $enteredByUserId
+                    ) {
+                        throw new DomainException(
+                            'Direct draft entry must use the driver user account.',
+                        );
+                    }
+                } elseif (
+                    $entryMethod ===
+                    DailyReport::ENTRY_METHOD_DELEGATED
+                ) {
+                    if (
+                        ! $enteredOnBehalf ||
+                        $driverUserId === $enteredByUserId
+                    ) {
+                        throw new DomainException(
+                            'Delegated draft entry must use a user other than the driver user account.',
+                        );
+                    }
+
                     $this->assertOrganizationPermission(
                         $enteredByUserId,
                         $organizationId,
                         'daily-reports.enter-for-driver',
+                    );
+                } elseif (
+                    $entryMethod ===
+                    DailyReport::ENTRY_METHOD_AUTHORIZED_IMPORT
+                ) {
+                    if ($enteredOnBehalf) {
+                        throw new LogicException(
+                            'Authorized import cannot be marked as delegated entry.',
+                        );
+                    }
+
+                    $this->assertOrganizationPermission(
+                        $enteredByUserId,
+                        $organizationId,
+                        'daily-reports.enter-for-driver',
+                    );
+                } else {
+                    throw new LogicException(
+                        'Unsupported daily report entry method.',
                     );
                 }
 
@@ -286,13 +411,19 @@ final class DailyReportPersistenceService
                     'status' => DailyReport::STATUS_DRAFT,
                     'entry_method' => $entryMethod,
                     'entered_on_behalf' => $enteredOnBehalf,
+                    'daily_report_form_configuration_id' => $formConfigurationId,
+                    'custom_field_values' => $customFieldValues,
                     'completion_confirmed_at' => $completionConfirmedAt,
+                    'departure_time' => $departureTime,
+                    'arrival_time' => $arrivalTime,
+                    'loaded_parcels' => $loadedParcels,
                     'delivered_parcels' => $deliveredParcels,
                     'redirected_parcels' => $redirectedParcels,
                     'undelivered_parcels' => $undeliveredParcels,
                     'planned_km' => $plannedKm,
                     'actual_km' => $actualKm,
                     'actual_km_source' => $actualKmSource,
+                    'surcharge_amount' => $surchargeAmount,
                     'operational_notes' => $operationalNotes,
                     'current_version' => 1,
                     'submitted_at' => null,
@@ -697,6 +828,7 @@ final class DailyReportPersistenceService
                     organizationId: $organizationId,
                     directFailureMessage: 'Direct draft submission must use the driver user account.',
                     delegatedFailureMessage: 'Delegated draft submission must use the original delegated entry actor.',
+                    allowAuthorizedImport: true,
                 );
 
                 $this->assertCompleteForSubmission($dailyReport);
@@ -1988,6 +2120,19 @@ final class DailyReportPersistenceService
         }
 
         foreach ([
+            'departure_time' => 'Departure time',
+            'arrival_time' => 'Arrival time',
+        ] as $field => $label) {
+            if (array_key_exists($field, $attributes)) {
+                $normalized[$field] = $this->normalizeNullableTime(
+                    $attributes[$field],
+                    $label,
+                );
+            }
+        }
+
+        foreach ([
+            'loaded_parcels' => 'Loaded parcels',
             'delivered_parcels' => 'Delivered parcels',
             'redirected_parcels' => 'Redirected parcels',
             'undelivered_parcels' => 'Undelivered parcels',
@@ -2063,6 +2208,18 @@ final class DailyReportPersistenceService
 
         if (
             array_key_exists(
+                'surcharge_amount',
+                $attributes,
+            )
+        ) {
+            $normalized['surcharge_amount'] =
+                $this->normalizeSurchargeAmount(
+                    $attributes['surcharge_amount'],
+                );
+        }
+
+        if (
+            array_key_exists(
                 'operational_notes',
                 $attributes,
             )
@@ -2074,12 +2231,38 @@ final class DailyReportPersistenceService
                 );
         }
 
+        $candidateSurcharge = array_key_exists(
+            'surcharge_amount',
+            $normalized,
+        )
+            ? $normalized['surcharge_amount']
+            : $dailyReport->getAttribute('surcharge_amount');
+
+        $candidateNotes = array_key_exists(
+            'operational_notes',
+            $normalized,
+        )
+            ? $normalized['operational_notes']
+            : $dailyReport->getAttribute('operational_notes');
+
+        $this->assertSurchargeNoteConsistency(
+            $candidateSurcharge,
+            $candidateNotes,
+        );
+
         return $normalized;
     }
 
     private function assertCompleteForSubmission(
         DailyReport $dailyReport,
     ): void {
+        if ($this->effectiveForm->hasBoundConfiguration($dailyReport)) {
+            $this->effectiveForm
+                ->assertCompleteForSubmission($dailyReport);
+
+            return;
+        }
+
         $requiredAttributes = [
             'completion_confirmed_at',
             'delivered_parcels',
@@ -2216,6 +2399,7 @@ final class DailyReportPersistenceService
         int $organizationId,
         string $directFailureMessage,
         string $delegatedFailureMessage,
+        bool $allowAuthorizedImport = false,
     ): void {
         $entryMethod = $dailyReport->getAttribute('entry_method');
         $enteredOnBehalf = $dailyReport->getAttribute(
@@ -2259,6 +2443,32 @@ final class DailyReportPersistenceService
                 $originalEntryUserId !== $enteredByUserId
             ) {
                 throw new DomainException($delegatedFailureMessage);
+            }
+
+            $this->assertOrganizationPermission(
+                $enteredByUserId,
+                $organizationId,
+                'daily-reports.enter-for-driver',
+            );
+
+            return;
+        }
+
+        if (
+            $entryMethod ===
+                DailyReport::ENTRY_METHOD_AUTHORIZED_IMPORT &&
+            $enteredOnBehalf === false
+        ) {
+            if (! $allowAuthorizedImport) {
+                throw new DomainException(
+                    'Authorized import daily reports are immutable through ordinary draft editing.',
+                );
+            }
+
+            if ($originalEntryUserId !== $enteredByUserId) {
+                throw new DomainException(
+                    'Authorized import draft submission must use the original import actor.',
+                );
             }
 
             $this->assertOrganizationPermission(
@@ -2514,6 +2724,105 @@ final class DailyReportPersistenceService
         }
 
         return $value;
+    }
+
+    private function normalizeNullableTime(
+        mixed $value,
+        string $field,
+    ): ?string {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            throw new InvalidArgumentException(
+                sprintf('%s must be a time value.', $field),
+            );
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (
+            preg_match(
+                '/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/',
+                $value,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    '%s must use HH:MM or HH:MM:SS format.',
+                    $field,
+                ),
+            );
+        }
+
+        return strlen($value) === 5
+            ? $value.':00'
+            : $value;
+    }
+
+    private function normalizeSurchargeAmount(
+        mixed $value,
+    ): string {
+        if (
+            $value === null
+            || (is_string($value) && trim($value) === '')
+        ) {
+            return '0.00';
+        }
+
+        if (! is_numeric($value)) {
+            throw new InvalidArgumentException(
+                'Surcharge amount must be numeric.',
+            );
+        }
+
+        $amount = (float) $value;
+
+        if (
+            ! is_finite($amount)
+            || $amount < 0
+            || $amount > 99999999.99
+        ) {
+            throw new InvalidArgumentException(
+                'Surcharge amount must be between 0 and 99999999.99.',
+            );
+        }
+
+        return number_format(
+            round($amount, 2),
+            2,
+            '.',
+            '',
+        );
+    }
+
+    private function assertSurchargeNoteConsistency(
+        mixed $surchargeAmount,
+        mixed $operationalNotes,
+    ): void {
+        if (! is_numeric($surchargeAmount)) {
+            throw new LogicException(
+                'Daily report surcharge amount is not numeric.',
+            );
+        }
+
+        if ((float) $surchargeAmount <= 0.0) {
+            return;
+        }
+
+        if (
+            ! is_string($operationalNotes)
+            || trim($operationalNotes) === ''
+        ) {
+            throw new InvalidArgumentException(
+                'Operational notes are required when surcharge amount is greater than zero.',
+            );
+        }
     }
 
     private function normalizeNullableText(

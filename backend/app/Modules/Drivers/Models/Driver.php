@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property string $first_name
  * @property string $last_name
+ * @property string|null $external_driver_id
  * @property string|null $phone
  * @property string|null $email
  * @property string $license_number
@@ -39,11 +40,36 @@ class Driver extends Model
         self::STATUS_INACTIVE,
     ];
 
+    /**
+     * Czech driving-licence categories used by the pilot UI and API.
+     *
+     * @var list<string>
+     */
+    public const LICENSE_CATEGORIES = [
+        'AM',
+        'A1',
+        'A2',
+        'A',
+        'B1',
+        'B',
+        'C1',
+        'C',
+        'D1',
+        'D',
+        'B+E',
+        'C1+E',
+        'C+E',
+        'D1+E',
+        'D+E',
+        'T',
+    ];
+
     /** @var list<string> */
     protected $fillable = [
         'user_id',
         'first_name',
         'last_name',
+        'external_driver_id',
         'phone',
         'email',
         'license_number',
@@ -67,6 +93,15 @@ class Driver extends Model
     public function trips(): HasMany
     {
         return $this->hasMany(Trip::class, 'driver_id');
+    }
+
+    /** @return HasMany<DriverOrganizationAssignment, $this> */
+    public function organizationAssignments(): HasMany
+    {
+        return $this->hasMany(
+            DriverOrganizationAssignment::class,
+            'driver_id',
+        );
     }
 
     public function isActive(): bool
