@@ -69,8 +69,7 @@ final class DailyReportWriteService
 
         $attributes = $this->effectiveForm
             ->prepareAttributesForCreate(
-                organizationId:
-                    $this->organizationContext->requireId(),
+                organizationId: $this->organizationContext->requireId(),
                 serviceDate: $serviceDate,
                 input: $input,
                 baseAttributes: $attributes,

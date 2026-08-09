@@ -260,16 +260,11 @@ final class DailyReportPerformancePolicyServiceTest extends TestCase
         ?string $notDeliveredMaximum = null,
     ): array {
         return [
-            'redirected_max_percent' =>
-                $redirected,
-            'kilometre_deviation_max_percent' =>
-                $kilometres,
-            'delivered_address_min_percent' =>
-                $deliveredMinimum,
-            'rejected_max_percent' =>
-                $rejectedMaximum,
-            'not_delivered_max_percent' =>
-                $notDeliveredMaximum,
+            'redirected_max_percent' => $redirected,
+            'kilometre_deviation_max_percent' => $kilometres,
+            'delivered_address_min_percent' => $deliveredMinimum,
+            'rejected_max_percent' => $rejectedMaximum,
+            'not_delivered_max_percent' => $notDeliveredMaximum,
         ];
     }
 }

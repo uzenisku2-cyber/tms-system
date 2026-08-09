@@ -5,6 +5,13 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\GpsController;
 use App\Http\Controllers\VehicleController as RealtimeVehicleController;
 use App\Http\Controllers\VehiclePositionController;
+use App\Http\Middleware\ResolveOrganizationContext;
+use App\Modules\DailyReports\Controllers\DailyReportFormConfigurationController;
+use App\Modules\Drivers\Controllers\DriverOrganizationAssignmentController;
+use App\Modules\Drivers\Controllers\OwnDriverAdminController;
+use App\Modules\Organizations\Controllers\CarrierAdminController;
+use App\Modules\Organizations\Controllers\OrganizationProfileController;
+use App\Modules\Routes\Controllers\RouteCatalogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -77,7 +84,7 @@ Route::middleware([
         Route::get(
             '/',
             [
-                \App\Modules\Organizations\Controllers\CarrierAdminController::class,
+                CarrierAdminController::class,
                 'index',
             ],
         )->name('carriers.index');
@@ -85,7 +92,7 @@ Route::middleware([
         Route::post(
             '/',
             [
-                \App\Modules\Organizations\Controllers\CarrierAdminController::class,
+                CarrierAdminController::class,
                 'store',
             ],
         )->name('carriers.store');
@@ -102,7 +109,7 @@ Route::middleware([
         Route::get(
             '/',
             [
-                \App\Modules\Organizations\Controllers\OrganizationProfileController::class,
+                OrganizationProfileController::class,
                 'show',
             ],
         )->name('organization-profile.show');
@@ -110,7 +117,7 @@ Route::middleware([
         Route::patch(
             '/',
             [
-                \App\Modules\Organizations\Controllers\OrganizationProfileController::class,
+                OrganizationProfileController::class,
                 'update',
             ],
         )->name('organization-profile.update');
@@ -127,7 +134,7 @@ Route::middleware([
         Route::get(
             '/',
             [
-                \App\Modules\Drivers\Controllers\OwnDriverAdminController::class,
+                OwnDriverAdminController::class,
                 'index',
             ],
         )->name('own-drivers.index');
@@ -135,7 +142,7 @@ Route::middleware([
         Route::post(
             '/',
             [
-                \App\Modules\Drivers\Controllers\OwnDriverAdminController::class,
+                OwnDriverAdminController::class,
                 'store',
             ],
         )->name('own-drivers.store');
@@ -150,7 +157,7 @@ Route::middleware([
     ->patch(
         'v1/carriers/{carrier}',
         [
-            \App\Modules\Organizations\Controllers\CarrierAdminController::class,
+            CarrierAdminController::class,
             'update',
         ],
     )
@@ -166,7 +173,7 @@ Route::middleware([
     ->patch(
         'v1/own-drivers/{driver}',
         [
-            \App\Modules\Drivers\Controllers\OwnDriverAdminController::class,
+            OwnDriverAdminController::class,
             'update',
         ],
     )
@@ -182,7 +189,7 @@ Route::middleware([
     ->get(
         'v1/own-drivers/account-lookup',
         [
-            \App\Modules\Drivers\Controllers\OwnDriverAdminController::class,
+            OwnDriverAdminController::class,
             'accountLookup',
         ],
     )
@@ -199,7 +206,7 @@ Route::middleware([
         Route::get(
             '/',
             [
-                \App\Modules\Drivers\Controllers\DriverOrganizationAssignmentController::class,
+                DriverOrganizationAssignmentController::class,
                 'index',
             ],
         )
@@ -209,7 +216,7 @@ Route::middleware([
         Route::post(
             '/',
             [
-                \App\Modules\Drivers\Controllers\DriverOrganizationAssignmentController::class,
+                DriverOrganizationAssignmentController::class,
                 'store',
             ],
         )
@@ -219,7 +226,7 @@ Route::middleware([
         Route::patch(
             '/{assignment}/end',
             [
-                \App\Modules\Drivers\Controllers\DriverOrganizationAssignmentController::class,
+                DriverOrganizationAssignmentController::class,
                 'end',
             ],
         )
@@ -239,7 +246,7 @@ Route::middleware([
         Route::get(
             '/effective',
             [
-                \App\Modules\DailyReports\Controllers\DailyReportFormConfigurationController::class,
+                DailyReportFormConfigurationController::class,
                 'effective',
             ],
         )->name('daily-report-form.effective');
@@ -255,7 +262,7 @@ Route::middleware([
         Route::get(
             '/',
             [
-                \App\Modules\DailyReports\Controllers\DailyReportFormConfigurationController::class,
+                DailyReportFormConfigurationController::class,
                 'index',
             ],
         )->name('daily-report-form-configurations.index');
@@ -263,7 +270,7 @@ Route::middleware([
         Route::post(
             '/',
             [
-                \App\Modules\DailyReports\Controllers\DailyReportFormConfigurationController::class,
+                DailyReportFormConfigurationController::class,
                 'store',
             ],
         )->name('daily-report-form-configurations.store');
@@ -271,7 +278,7 @@ Route::middleware([
         Route::patch(
             '/{configuration}/end',
             [
-                \App\Modules\DailyReports\Controllers\DailyReportFormConfigurationController::class,
+                DailyReportFormConfigurationController::class,
                 'end',
             ],
         )
@@ -280,29 +287,29 @@ Route::middleware([
     });
 
 // S020-04F3A4E2 ROUTE CATALOG API
-\Illuminate\Support\Facades\Route::prefix('v1/settings/catalogs/routes')
+Route::prefix('v1/settings/catalogs/routes')
     ->middleware([
         'auth:sanctum',
-        \App\Http\Middleware\ResolveOrganizationContext::class,
+        ResolveOrganizationContext::class,
     ])
     ->group(function (): void {
-        \Illuminate\Support\Facades\Route::get(
+        Route::get(
             '/',
-            [\App\Modules\Routes\Controllers\RouteCatalogController::class, 'apiIndex'],
+            [RouteCatalogController::class, 'apiIndex'],
         )->name('api.v1.settings.catalogs.routes.index');
 
-        \Illuminate\Support\Facades\Route::post(
+        Route::post(
             '/',
-            [\App\Modules\Routes\Controllers\RouteCatalogController::class, 'store'],
+            [RouteCatalogController::class, 'store'],
         )->name('api.v1.settings.catalogs.routes.store');
 
-        \Illuminate\Support\Facades\Route::patch(
+        Route::patch(
             '/{route}',
-            [\App\Modules\Routes\Controllers\RouteCatalogController::class, 'update'],
+            [RouteCatalogController::class, 'update'],
         )->name('api.v1.settings.catalogs.routes.update');
 
-        \Illuminate\Support\Facades\Route::patch(
+        Route::patch(
             '/{route}/active',
-            [\App\Modules\Routes\Controllers\RouteCatalogController::class, 'setActive'],
+            [RouteCatalogController::class, 'setActive'],
         )->name('api.v1.settings.catalogs.routes.active');
     });

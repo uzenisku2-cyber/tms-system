@@ -87,7 +87,7 @@ final class DailyReportPerformancePolicyController extends BaseController
         $actor = $request->user();
 
         if (! $actor instanceof User) {
-            throw new AuthenticationException();
+            throw new AuthenticationException;
         }
 
         return $actor;

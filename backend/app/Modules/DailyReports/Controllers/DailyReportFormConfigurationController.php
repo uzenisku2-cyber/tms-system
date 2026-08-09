@@ -410,8 +410,7 @@ final class DailyReportFormConfigurationController
 
         usort(
             $fields,
-            static fn (array $left, array $right): int =>
-                ((int) ($left['order'] ?? 0))
+            static fn (array $left, array $right): int => ((int) ($left['order'] ?? 0))
                 <=>
                 ((int) ($right['order'] ?? 0)),
         );

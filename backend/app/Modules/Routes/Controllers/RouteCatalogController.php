@@ -5,6 +5,7 @@ namespace App\Modules\Routes\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Routes\Models\Route;
 use App\Modules\Routes\Services\RouteCatalogService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -31,7 +32,7 @@ class RouteCatalogController extends Controller
         ]);
     }
 
-    public function apiIndex(Request $request): \Illuminate\Http\JsonResponse
+    public function apiIndex(Request $request): JsonResponse
     {
         $routes = Route::query()
             ->with([

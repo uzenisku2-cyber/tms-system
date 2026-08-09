@@ -33,13 +33,10 @@ final class DailyReportPerformancePolicy extends Model
     {
         return [
             'redirected_max_percent' => 'decimal:2',
-            'kilometre_deviation_max_percent' =>
-                'decimal:2',
-            'delivered_address_min_percent' =>
-                'decimal:2',
+            'kilometre_deviation_max_percent' => 'decimal:2',
+            'delivered_address_min_percent' => 'decimal:2',
             'rejected_max_percent' => 'decimal:2',
-            'not_delivered_max_percent' =>
-                'decimal:2',
+            'not_delivered_max_percent' => 'decimal:2',
             'updated_by_user_id' => 'integer',
         ];
     }

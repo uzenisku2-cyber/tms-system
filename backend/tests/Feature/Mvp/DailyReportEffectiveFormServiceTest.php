@@ -44,8 +44,7 @@ final class DailyReportEffectiveFormServiceTest extends TestCase
 
         $input = $this->completeInput();
         $input['custom_field_values'] = [
-            'custom_0123456789abcdef0123456789abcdef' =>
-                '15,5',
+            'custom_0123456789abcdef0123456789abcdef' => '15,5',
         ];
 
         $attributes = app(
@@ -66,8 +65,7 @@ final class DailyReportEffectiveFormServiceTest extends TestCase
 
         self::assertSame(
             [
-                'custom_0123456789abcdef0123456789abcdef' =>
-                    '15.50',
+                'custom_0123456789abcdef0123456789abcdef' => '15.50',
             ],
             $attributes['custom_field_values'],
         );
@@ -115,8 +113,7 @@ final class DailyReportEffectiveFormServiceTest extends TestCase
         $report = new DailyReport;
 
         $report->forceFill([
-            'daily_report_form_configuration_id' =>
-                (int) $configuration->getKey(),
+            'daily_report_form_configuration_id' => (int) $configuration->getKey(),
             'custom_field_values' => [],
             'service_date' => '2025-06-15',
             'route_number' => 'R-100',
@@ -156,8 +153,7 @@ final class DailyReportEffectiveFormServiceTest extends TestCase
         $report = new DailyReport;
 
         $report->forceFill([
-            'daily_report_form_configuration_id' =>
-                (int) $configuration->getKey(),
+            'daily_report_form_configuration_id' => (int) $configuration->getKey(),
             'custom_field_values' => [],
             'service_date' => '2025-06-15',
             'route_number' => 'R-101',
@@ -214,14 +210,12 @@ final class DailyReportEffectiveFormServiceTest extends TestCase
     ): DailyReportFormConfiguration {
         return DailyReportFormConfiguration::query()
             ->create([
-                'organization_id' =>
-                    (int) $organization->getKey(),
+                'organization_id' => (int) $organization->getKey(),
                 'version' => 1,
                 'valid_from' => $validFrom,
                 'valid_until' => null,
                 'fields' => $fields,
-                'created_by_user_id' =>
-                    (int) $user->getKey(),
+                'created_by_user_id' => (int) $user->getKey(),
                 'ended_by_user_id' => null,
             ]);
     }

@@ -25,16 +25,11 @@ final class UpdateDailyReportPerformancePolicyRequest extends FormRequest
         ];
 
         return [
-            'redirected_max_percent' =>
-                $percentage,
-            'kilometre_deviation_max_percent' =>
-                $percentage,
-            'delivered_address_min_percent' =>
-                $percentage,
-            'rejected_max_percent' =>
-                $percentage,
-            'not_delivered_max_percent' =>
-                $percentage,
+            'redirected_max_percent' => $percentage,
+            'kilometre_deviation_max_percent' => $percentage,
+            'delivered_address_min_percent' => $percentage,
+            'rejected_max_percent' => $percentage,
+            'not_delivered_max_percent' => $percentage,
         ];
     }
 }

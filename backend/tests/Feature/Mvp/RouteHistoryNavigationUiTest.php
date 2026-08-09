@@ -15,10 +15,8 @@ final class RouteHistoryNavigationUiTest extends TestCase
         $valid = Validator::make(
             [
                 'status_group' => 'waiting',
-                'service_date_from' =>
-                    '2025-06-01',
-                'service_date_to' =>
-                    '2025-06-30',
+                'service_date_from' => '2025-06-01',
+                'service_date_to' => '2025-06-30',
             ],
             (new DailyReportIndexRequest)->rules(),
         );

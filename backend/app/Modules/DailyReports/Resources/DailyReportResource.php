@@ -85,12 +85,10 @@ final class DailyReportResource extends JsonResource
             'performed_by_driver_id' => (int) $dailyReport->getAttribute(
                 'performed_by_driver_id',
             ),
-            'performed_by_driver_external_id' =>
-                $performedByDriver?->getAttribute(
-                    'external_driver_id',
-                ),
-            'performed_by_driver_name' =>
-                $performedByDriver === null
+            'performed_by_driver_external_id' => $performedByDriver?->getAttribute(
+                'external_driver_id',
+            ),
+            'performed_by_driver_name' => $performedByDriver === null
                     ? null
                     : trim(
                         (string) $performedByDriver->getAttribute(
@@ -114,16 +112,14 @@ final class DailyReportResource extends JsonResource
                 $dailyReport->getAttribute('service_date'),
                 'Y-m-d',
             ),
-            'daily_report_form_configuration_id' =>
-                $this->nullableInteger(
-                    $dailyReport->getAttribute(
-                        'daily_report_form_configuration_id',
-                    ),
-                ),
-            'custom_field_values' =>
+            'daily_report_form_configuration_id' => $this->nullableInteger(
                 $dailyReport->getAttribute(
-                    'custom_field_values',
-                ) ?? [],
+                    'daily_report_form_configuration_id',
+                ),
+            ),
+            'custom_field_values' => $dailyReport->getAttribute(
+                'custom_field_values',
+            ) ?? [],
             'status' => (string) $dailyReport->getAttribute(
                 'status',
             ),
@@ -201,8 +197,7 @@ final class DailyReportResource extends JsonResource
                             $undeliveredParcels,
                         )
                         : null,
-                'not_delivered_parcels' =>
-                    $hasCompleteParcelBalance
+                'not_delivered_parcels' => $hasCompleteParcelBalance
                         ? $calculations->notDeliveredParcels(
                             $loadedParcels,
                             $deliveredParcels,

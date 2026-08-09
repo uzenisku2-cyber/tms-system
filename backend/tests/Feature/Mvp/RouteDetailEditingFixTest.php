@@ -39,8 +39,7 @@ final class RouteDetailEditingFixTest extends TestCase
             'undelivered_parcels' => 0,
             'planned_km' => '235.00',
             'actual_km' => '231.00',
-            'actual_km_source' =>
-                DailyReport::ACTUAL_KM_SOURCE_MANUAL,
+            'actual_km_source' => DailyReport::ACTUAL_KM_SOURCE_MANUAL,
             'surcharge_amount' => '0.00',
             'operational_notes' => null,
             'current_version' => 1,
@@ -72,32 +71,19 @@ final class RouteDetailEditingFixTest extends TestCase
 
         $validator = Validator::make(
             [
-                'expected_version' =>
-                    $data['current_version'],
-                'route_number' =>
-                    $data['route_number'],
-                'departure_time' =>
-                    $data['departure_time'],
-                'arrival_time' =>
-                    $data['arrival_time'],
-                'loaded_parcels' =>
-                    $data['loaded_parcels'],
-                'delivered_parcels' =>
-                    $data['delivered_parcels'],
-                'redirected_parcels' =>
-                    $data['redirected_parcels'],
-                'undelivered_parcels' =>
-                    $data['undelivered_parcels'],
-                'planned_km' =>
-                    $data['planned_km'],
-                'actual_km' =>
-                    $data['actual_km'],
-                'actual_km_source' =>
-                    $data['actual_km_source'],
-                'surcharge_amount' =>
-                    $data['surcharge_amount'],
-                'operational_notes' =>
-                    $data['operational_notes'],
+                'expected_version' => $data['current_version'],
+                'route_number' => $data['route_number'],
+                'departure_time' => $data['departure_time'],
+                'arrival_time' => $data['arrival_time'],
+                'loaded_parcels' => $data['loaded_parcels'],
+                'delivered_parcels' => $data['delivered_parcels'],
+                'redirected_parcels' => $data['redirected_parcels'],
+                'undelivered_parcels' => $data['undelivered_parcels'],
+                'planned_km' => $data['planned_km'],
+                'actual_km' => $data['actual_km'],
+                'actual_km_source' => $data['actual_km_source'],
+                'surcharge_amount' => $data['surcharge_amount'],
+                'operational_notes' => $data['operational_notes'],
             ],
             DailyReportRequestRules::mutation(),
         );

@@ -91,29 +91,25 @@ final class DailyReportPerformancePolicyService
 
         return [
             'system_defaults' => self::SYSTEM_DEFAULTS,
-            'organization_defaults' =>
-                $organizationPolicy === null
+            'organization_defaults' => $organizationPolicy === null
                     ? null
                     : $this->serializePolicy(
                         $organizationPolicy,
                     ),
-            'effective_organization_defaults' =>
-                $this->effectiveOrganizationThresholds(
-                    $organizationPolicy,
-                ),
-            'route_overrides' =>
-                $routePolicies
-                    ->map(
-                        fn (
-                            DailyReportPerformancePolicy $policy,
-                        ): array => $this->serializePolicy(
-                            $policy,
-                        ),
-                    )
-                    ->values()
-                    ->all(),
-            'metric_definitions' =>
-                self::METRIC_DEFINITIONS,
+            'effective_organization_defaults' => $this->effectiveOrganizationThresholds(
+                $organizationPolicy,
+            ),
+            'route_overrides' => $routePolicies
+                ->map(
+                    fn (
+                        DailyReportPerformancePolicy $policy,
+                    ): array => $this->serializePolicy(
+                        $policy,
+                    ),
+                )
+                ->values()
+                ->all(),
+            'metric_definitions' => self::METRIC_DEFINITIONS,
         ];
     }
 
@@ -173,8 +169,7 @@ final class DailyReportPerformancePolicyService
         $sources = [];
 
         foreach (
-            array_keys(self::METRIC_DEFINITIONS)
-            as $field
+            array_keys(self::METRIC_DEFINITIONS) as $field
         ) {
             $routeValue =
                 $routePolicy?->getAttribute($field);
@@ -200,10 +195,8 @@ final class DailyReportPerformancePolicyService
         }
 
         return [
-            'route_number' =>
-                $normalized['route_number'],
-            'route_number_normalized' =>
-                $normalized[
+            'route_number' => $normalized['route_number'],
+            'route_number_normalized' => $normalized[
                     'route_number_normalized'
                 ],
             'thresholds' => $thresholds,
@@ -229,18 +222,14 @@ final class DailyReportPerformancePolicyService
             DailyReportPerformancePolicy::query()
                 ->updateOrCreate(
                     [
-                        'organization_id' =>
-                            $organizationId,
-                        'scope_key' =>
-                            DailyReportPerformancePolicy::ORGANIZATION_SCOPE,
+                        'organization_id' => $organizationId,
+                        'scope_key' => DailyReportPerformancePolicy::ORGANIZATION_SCOPE,
                     ],
                     array_merge(
                         [
                             'route_number' => null,
-                            'route_number_normalized' =>
-                                null,
-                            'updated_by_user_id' =>
-                                (int) $actor->getKey(),
+                            'route_number_normalized' => null,
+                            'updated_by_user_id' => (int) $actor->getKey(),
                         ],
                         $thresholds,
                     ),
@@ -305,22 +294,18 @@ final class DailyReportPerformancePolicyService
         DailyReportPerformancePolicy::query()
             ->updateOrCreate(
                 [
-                    'organization_id' =>
-                        $organizationId,
+                    'organization_id' => $organizationId,
                     'scope_key' => $scopeKey,
                 ],
                 array_merge(
                     [
-                        'route_number' =>
-                            $normalized[
+                        'route_number' => $normalized[
                                 'route_number'
                             ],
-                        'route_number_normalized' =>
-                            $normalized[
+                        'route_number_normalized' => $normalized[
                                 'route_number_normalized'
                             ],
-                        'updated_by_user_id' =>
-                            (int) $actor->getKey(),
+                        'updated_by_user_id' => (int) $actor->getKey(),
                     ],
                     $thresholds,
                 ),
@@ -380,8 +365,7 @@ final class DailyReportPerformancePolicyService
         $normalized = [];
 
         foreach (
-            array_keys(self::METRIC_DEFINITIONS)
-            as $field
+            array_keys(self::METRIC_DEFINITIONS) as $field
         ) {
             if (! array_key_exists($field, $input)) {
                 throw new InvalidArgumentException(
@@ -444,8 +428,7 @@ final class DailyReportPerformancePolicyService
         $thresholds = [];
 
         foreach (
-            array_keys(self::METRIC_DEFINITIONS)
-            as $field
+            array_keys(self::METRIC_DEFINITIONS) as $field
         ) {
             $thresholds[$field] =
                 $this->formatStoredThreshold(
@@ -465,8 +448,7 @@ final class DailyReportPerformancePolicyService
         $thresholds = [];
 
         foreach (
-            array_keys(self::METRIC_DEFINITIONS)
-            as $field
+            array_keys(self::METRIC_DEFINITIONS) as $field
         ) {
             $thresholds[$field] =
                 $this->formatStoredThreshold(
@@ -475,28 +457,23 @@ final class DailyReportPerformancePolicyService
         }
 
         return [
-            'scope' =>
-                $policy->getAttribute(
-                    'scope_key',
-                ) ===
+            'scope' => $policy->getAttribute(
+                'scope_key',
+            ) ===
                 DailyReportPerformancePolicy::ORGANIZATION_SCOPE
                     ? 'organization'
                     : 'route',
-            'route_number' =>
-                $policy->getAttribute(
-                    'route_number',
-                ),
-            'route_number_normalized' =>
-                $policy->getAttribute(
-                    'route_number_normalized',
-                ),
+            'route_number' => $policy->getAttribute(
+                'route_number',
+            ),
+            'route_number_normalized' => $policy->getAttribute(
+                'route_number_normalized',
+            ),
             'thresholds' => $thresholds,
-            'updated_by_user_id' =>
-                $policy->getAttribute(
-                    'updated_by_user_id',
-                ),
-            'updated_at' =>
-                $policy->updated_at?->toAtomString(),
+            'updated_by_user_id' => $policy->getAttribute(
+                'updated_by_user_id',
+            ),
+            'updated_at' => $policy->updated_at?->toAtomString(),
         ];
     }
 

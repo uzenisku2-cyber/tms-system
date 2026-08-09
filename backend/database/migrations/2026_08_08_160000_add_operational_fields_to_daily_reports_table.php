@@ -65,17 +65,17 @@ SQL);
             && Schema::hasTable('daily_reports')
         ) {
             DB::statement(
-                'ALTER TABLE daily_reports ' .
+                'ALTER TABLE daily_reports '.
                 'DROP CONSTRAINT IF EXISTS daily_reports_surcharge_note_check',
             );
 
             DB::statement(
-                'ALTER TABLE daily_reports ' .
+                'ALTER TABLE daily_reports '.
                 'DROP CONSTRAINT IF EXISTS daily_reports_surcharge_amount_check',
             );
 
             DB::statement(
-                'ALTER TABLE daily_reports ' .
+                'ALTER TABLE daily_reports '.
                 'DROP CONSTRAINT IF EXISTS daily_reports_loaded_parcels_check',
             );
         }

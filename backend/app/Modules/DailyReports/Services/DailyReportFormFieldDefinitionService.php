@@ -120,8 +120,7 @@ final class DailyReportFormFieldDefinitionService
         }
 
         $keys = array_map(
-            static fn (array $field): string =>
-                trim((string) ($field['key'] ?? '')),
+            static fn (array $field): string => trim((string) ($field['key'] ?? '')),
             $fields,
         );
 
@@ -150,8 +149,7 @@ final class DailyReportFormFieldDefinitionService
         }
 
         $orders = array_map(
-            static fn (array $field): int =>
-                (int) ($field['order'] ?? 0),
+            static fn (array $field): int => (int) ($field['order'] ?? 0),
             $fields,
         );
 
@@ -263,8 +261,7 @@ final class DailyReportFormFieldDefinitionService
 
         usort(
             $normalized,
-            static fn (array $left, array $right): int =>
-                $left['order'] <=> $right['order'],
+            static fn (array $left, array $right): int => $left['order'] <=> $right['order'],
         );
 
         return $normalized;

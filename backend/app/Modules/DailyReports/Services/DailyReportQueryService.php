@@ -6,9 +6,9 @@ namespace App\Modules\DailyReports\Services;
 
 use App\Core\Organizations\OrganizationContext;
 use App\Modules\DailyReports\Models\DailyReport;
-use Carbon\CarbonImmutable;
 use App\Modules\DailyReports\Models\DailyReportEvent;
 use App\Modules\DailyReports\Models\DailyReportVersion;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -37,6 +37,7 @@ final class DailyReportQueryService
             DailyReport::STATUS_CLOSED,
         ],
     ];
+
     public function __construct(
         private readonly OrganizationContext $organizationContext,
     ) {}
@@ -460,6 +461,7 @@ final class DailyReportQueryService
             'total' => $total,
         ];
     }
+
     public function findByPublicId(string $publicId): DailyReport
     {
         return DailyReport::query()

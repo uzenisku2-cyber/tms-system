@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\DailyReports\Controllers\DailyReportController;
+use App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware([
@@ -132,7 +133,7 @@ Route::middleware([
             Route::get(
                 '/',
                 [
-                    \App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController::class,
+                    DailyReportPerformancePolicyController::class,
                     'index',
                 ],
             )->name('index');
@@ -140,7 +141,7 @@ Route::middleware([
             Route::get(
                 '/effective',
                 [
-                    \App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController::class,
+                    DailyReportPerformancePolicyController::class,
                     'effective',
                 ],
             )->name('effective');
@@ -152,7 +153,7 @@ Route::middleware([
             Route::put(
                 '/organization',
                 [
-                    \App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController::class,
+                    DailyReportPerformancePolicyController::class,
                     'updateOrganization',
                 ],
             )->name('organization.update');
@@ -160,7 +161,7 @@ Route::middleware([
             Route::put(
                 '/routes/{routeNumber}',
                 [
-                    \App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController::class,
+                    DailyReportPerformancePolicyController::class,
                     'updateRoute',
                 ],
             )->name('route.update');
@@ -168,7 +169,7 @@ Route::middleware([
             Route::delete(
                 '/routes/{routeNumber}',
                 [
-                    \App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController::class,
+                    DailyReportPerformancePolicyController::class,
                     'deleteRoute',
                 ],
             )->name('route.delete');

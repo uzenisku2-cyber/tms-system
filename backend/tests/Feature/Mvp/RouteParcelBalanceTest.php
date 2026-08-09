@@ -109,8 +109,7 @@ final class RouteParcelBalanceTest extends TestCase
             'undelivered_parcels' => 5,
             'planned_km' => '100.00',
             'actual_km' => '100.00',
-            'actual_km_source' =>
-                DailyReport::ACTUAL_KM_SOURCE_MANUAL,
+            'actual_km_source' => DailyReport::ACTUAL_KM_SOURCE_MANUAL,
             'surcharge_amount' => '0.00',
             'operational_notes' => null,
             'current_version' => 1,

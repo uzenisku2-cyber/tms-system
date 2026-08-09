@@ -11,7 +11,7 @@ final class RouteCatalogCrudSourceContractTest extends TestCase
         $source = file_get_contents(base_path('app/Modules/Routes/Controllers/RouteCatalogController.php'));
 
         self::assertIsString($source);
-        self::assertStringContainsString("settings.catalogs.manage", $source);
+        self::assertStringContainsString('settings.catalogs.manage', $source);
         self::assertStringContainsString('authorizeManage', $source);
         self::assertStringContainsString('->can(', $source);
         self::assertStringNotContainsString("hasRole('super-admin')", $source);

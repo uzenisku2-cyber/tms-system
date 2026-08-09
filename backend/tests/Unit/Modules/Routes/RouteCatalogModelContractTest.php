@@ -11,7 +11,7 @@ class RouteCatalogModelContractTest extends TestCase
 {
     public function test_route_uses_stable_identity_separate_from_versioned_attributes(): void
     {
-        $route = new Route();
+        $route = new Route;
 
         $this->assertSame('routes', $route->getTable());
         $this->assertContains('active', $route->getFillable());
@@ -21,7 +21,7 @@ class RouteCatalogModelContractTest extends TestCase
 
     public function test_route_version_contains_historically_versioned_route_attributes(): void
     {
-        $version = new RouteVersion();
+        $version = new RouteVersion;
 
         $this->assertSame('route_versions', $version->getTable());
 

@@ -22,11 +22,11 @@ final class RouteSignedKilometreDifferenceTest extends TestCase
                 false,
             )
             ->assertSee(
-                "percentage >= 0",
+                'percentage >= 0',
                 false,
             )
             ->assertSee(
-                "Math.abs(percentage).toFixed(2)",
+                'Math.abs(percentage).toFixed(2)',
                 false,
             )
             ->assertSee(
