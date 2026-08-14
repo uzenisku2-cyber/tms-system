@@ -89,6 +89,13 @@ Route::middleware([
             ],
         )->name('carriers.index');
 
+        Route::get(
+            'ares/{ico}',
+            [
+                CarrierAdminController::class,
+                'lookupAres',
+            ],
+        )->name('carriers.ares');
         Route::post(
             '/',
             [
@@ -96,6 +103,13 @@ Route::middleware([
                 'store',
             ],
         )->name('carriers.store');
+        Route::post(
+            '/{carrier}/ares-verify',
+            [
+                CarrierAdminController::class,
+                'verifyAres',
+            ],
+        )->name('carriers.ares.verify');
     });
 
 // S020-03B ORGANIZATION PROFILE ROUTES
@@ -233,6 +247,17 @@ Route::middleware([
             ->whereNumber('driver')
             ->whereNumber('assignment')
             ->name('own-drivers.assignments.end');
+
+        Route::patch(
+            '/{assignment}/transfer',
+            [
+                DriverOrganizationAssignmentController::class,
+                'transfer',
+            ],
+        )
+            ->whereNumber('driver')
+            ->whereNumber('assignment')
+            ->name('own-drivers.assignments.transfer');
     });
 
 // S020-04B DAILY REPORT FORM CONFIGURATION ROUTES
