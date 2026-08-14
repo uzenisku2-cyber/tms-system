@@ -8,6 +8,7 @@ use App\Core\Organizations\OrganizationContext;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\DailyReports\Models\DailyReportEvent;
 use App\Modules\DailyReports\Models\DailyReportVersion;
+use App\Modules\Drivers\Models\Driver;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -290,6 +291,123 @@ final class DailyReportQueryService
                 );
         }
 
+        /*
+         * Driver selector metadata is deliberately independent
+         * of the currently selected driver. This keeps every
+         * driver with route history selectable while the route
+         * query itself remains server-side filtered.
+         */
+        $driverRouteRows = DailyReport::query()
+            ->forOrganization(
+                $this->organizationContext->requireId(),
+            )
+            ->selectRaw(
+                'performed_by_driver_id, COUNT(*) AS aggregate, MAX(service_date) AS last_service_date',
+            )
+            ->groupBy('performed_by_driver_id')
+            ->get();
+
+        /** @var array<int, int> $driverRouteCounts */
+        $driverRouteCounts = [];
+
+        /** @var array<int, string|null> $driverLastRouteDates */
+        $driverLastRouteDates = [];
+
+        foreach ($driverRouteRows as $driverRouteRow) {
+            $driverId = (int)
+                $driverRouteRow->getAttribute(
+                    'performed_by_driver_id',
+                );
+
+            if ($driverId <= 0) {
+                continue;
+            }
+
+            $driverRouteCounts[$driverId] = (int)
+                $driverRouteRow->getAttribute(
+                    'aggregate',
+                );
+            $lastServiceDate =
+                $driverRouteRow->getAttribute(
+                    'last_service_date',
+                );
+
+            $driverLastRouteDates[$driverId] =
+                is_string($lastServiceDate)
+                    ? $lastServiceDate
+                    : (
+                        $lastServiceDate !== null
+                            ? (string) $lastServiceDate
+                            : null
+                    );
+        }
+
+        $driverOptions = [];
+
+        if ($driverRouteCounts !== []) {
+            $driversById = Driver::query()
+                ->whereKey(
+                    array_keys($driverRouteCounts),
+                )
+                ->get()
+                ->keyBy(
+                    static fn (Driver $driver): int => (int) $driver->getKey(),
+                );
+
+            foreach ($driverRouteCounts as $driverId => $total) {
+                /** @var Driver|null $driver */
+                $driver = $driversById->get(
+                    $driverId,
+                );
+
+                if (! $driver instanceof Driver) {
+                    continue;
+                }
+
+                $name = trim(
+                    (string) $driver->getAttribute('last_name')
+                    .' '.
+                    (string) $driver->getAttribute('first_name'),
+                );
+
+                if ($name === '') {
+                    $externalDriverId =
+                        $driver->getAttribute(
+                            'external_driver_id',
+                        );
+
+                    $name = is_string($externalDriverId)
+                        && $externalDriverId !== ''
+                            ? $externalDriverId
+                            : 'ĹidiÄŤ '.$driverId;
+                }
+
+                $driverOptions[] = [
+                    'id' => $driverId,
+                    'name' => $name,
+                    'external_driver_id' => $driver->getAttribute(
+                        'external_driver_id',
+                    ),
+                    'total' => $total,
+                    'last_service_date' => $driverLastRouteDates[$driverId]
+                        ?? null,
+                    'active' => (bool) $driver->getAttribute(
+                        'active',
+                    ),
+                ];
+            }
+
+            usort(
+                $driverOptions,
+                static fn (
+                    array $left,
+                    array $right,
+                ): int => strnatcasecmp(
+                    (string) $left['name'],
+                    (string) $right['name'],
+                ),
+            );
+        }
         $timezone = config('app.timezone');
 
         if (! is_string($timezone) || $timezone === '') {
@@ -300,6 +418,7 @@ final class DailyReportQueryService
             $timezone,
         )->startOfDay();
 
+        $yesterday = $today->subDay();
         $lastSevenFrom = $today->subDays(6);
         $currentMonthFrom = $today->startOfMonth();
         $currentMonthTo = $today->endOfMonth();
@@ -316,8 +435,15 @@ final class DailyReportQueryService
             'today' => $today->format('Y-m-d'),
             'years' => $years,
             'months' => $months,
+            'drivers' => $driverOptions,
             'status_counts' => $statusCounts,
             'quick_periods' => [
+                'yesterday' => $this->quickPeriod(
+                    clone $baseQuery,
+                    "V\u{010D}era",
+                    $yesterday,
+                    $yesterday,
+                ),
                 'last_7_days' => $this->quickPeriod(
                     clone $baseQuery,
                     'Posledních 7 dní',

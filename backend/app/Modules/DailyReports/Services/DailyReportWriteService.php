@@ -81,6 +81,11 @@ final class DailyReportWriteService
                 'daily-reports.create',
             );
 
+            DriverOperationalWriteEligibilityGuard::assertEligible(
+                driverId: $driverId,
+                serviceDate: $serviceDate,
+            );
+
             return $this->persistence->createDraft(
                 performedByDriverId: $driverId,
                 enteredByUserId: $actorId,
@@ -116,6 +121,17 @@ final class DailyReportWriteService
     ): DailyReport {
         $dailyReport = $this->findReport($publicId);
 
+        $this->assertDirectOperationalEligibilityIfActorIsDriver(
+            actor: $actor,
+            dailyReport: $dailyReport,
+            serviceDateOverride: array_key_exists(
+                'service_date',
+                $input,
+            )
+                ? (string) $input['service_date']
+                : null,
+        );
+
         $this->assertOriginalEntryActorPermission(
             $actor,
             $dailyReport,
@@ -140,12 +156,98 @@ final class DailyReportWriteService
     /**
      * @param  array<string, mixed>  $input
      */
+    public function deleteDraft(
+        User $actor,
+        string $publicId,
+        array $input,
+    ): void {
+        $dailyReport =
+            $this->findReport(
+                $publicId,
+            );
+
+        $this->assertDirectOperationalEligibilityIfActorIsDriver(
+            actor: $actor,
+            dailyReport: $dailyReport,
+        );
+
+        $actorId =
+            $this->actorId(
+                $actor,
+            );
+
+        $entryMethod =
+            $this->reportString(
+                $dailyReport,
+                'entry_method',
+            );
+
+        $enteredByUserId =
+            $this->reportInteger(
+                $dailyReport,
+                'entered_by_user_id',
+            );
+
+        /*
+         * Authorized historical imports have no driver-user
+         * ownership. Their original importer may remove a draft
+         * through the same enter-for-driver authorization scope.
+         */
+        if (
+            $entryMethod
+            === DailyReport::ENTRY_METHOD_AUTHORIZED_IMPORT
+        ) {
+            if (
+                $actorId
+                !== $enteredByUserId
+            ) {
+                throw new AuthorizationException(
+                    'The authenticated user cannot delete this daily report.',
+                );
+            }
+
+            $this->assertPermission(
+                $actor,
+                'daily-reports.enter-for-driver',
+            );
+        } else {
+            $this->assertOriginalEntryActorPermission(
+                $actor,
+                $dailyReport,
+                'daily-reports.update',
+            );
+        }
+
+        $this->persistence->deleteDraft(
+            dailyReportId: $this->reportId(
+                $dailyReport,
+            ),
+            deletedByUserId: $actorId,
+            expectedVersion: $this->requiredInteger(
+                $input,
+                'expected_version',
+            ),
+            reason: $this->nullableString(
+                $input,
+                'reason',
+            ),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
     public function submit(
         User $actor,
         string $publicId,
         array $input,
     ): DailyReport {
         $dailyReport = $this->findReport($publicId);
+
+        $this->assertDirectOperationalEligibilityIfActorIsDriver(
+            actor: $actor,
+            dailyReport: $dailyReport,
+        );
 
         $this->assertOriginalEntryActorPermission(
             $actor,
@@ -225,6 +327,17 @@ final class DailyReportWriteService
     ): DailyReport {
         $dailyReport = $this->findReport($publicId);
 
+        $this->assertDirectOperationalEligibilityIfActorIsDriver(
+            actor: $actor,
+            dailyReport: $dailyReport,
+            serviceDateOverride: array_key_exists(
+                'service_date',
+                $input,
+            )
+                ? (string) $input['service_date']
+                : null,
+        );
+
         $this->assertCorrectionActorPermission(
             $actor,
             $dailyReport,
@@ -255,6 +368,11 @@ final class DailyReportWriteService
         array $input,
     ): DailyReport {
         $dailyReport = $this->findReport($publicId);
+
+        $this->assertDirectOperationalEligibilityIfActorIsDriver(
+            actor: $actor,
+            dailyReport: $dailyReport,
+        );
 
         $this->assertCorrectionActorPermission(
             $actor,
@@ -443,6 +561,32 @@ final class DailyReportWriteService
 
         throw new AuthorizationException(
             'The authenticated user cannot correct this daily report.',
+        );
+    }
+
+    private function assertDirectOperationalEligibilityIfActorIsDriver(
+        User $actor,
+        DailyReport $dailyReport,
+        ?string $serviceDateOverride = null,
+    ): void {
+        if (
+            $this->actorId($actor)
+            !== $this->reportDriverUserId(
+                $dailyReport,
+            )
+        ) {
+            return;
+        }
+
+        DriverOperationalWriteEligibilityGuard::assertEligible(
+            driverId: $this->reportInteger(
+                $dailyReport,
+                'performed_by_driver_id',
+            ),
+            serviceDate: $serviceDateOverride
+                ?? $dailyReport->getAttribute(
+                    'service_date',
+                ),
         );
     }
 
