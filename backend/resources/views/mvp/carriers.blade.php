@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dopravci a řidiči · TMS System</title>
+    <title>Dopravci · DRAYVIA</title>
     <style>
         :root {
             font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -526,7 +526,121 @@
                 width: 100%;
             }
         }
-    </style>
+            .ares-box {
+            margin-top: 16px;
+            padding: 16px;
+            border: 1px solid #d0d5dd;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .ares-box[hidden] {
+            display: none;
+        }
+
+        .ares-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            font-weight: 800;
+        }
+
+        .ares-status.ok {
+            color: #067647;
+        }
+
+        .ares-status.error {
+            color: #b42318;
+        }
+
+        .ares-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: currentColor;
+            flex: 0 0 auto;
+        }
+
+        .ares-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px 20px;
+        }
+
+        .ares-item {
+            min-width: 0;
+        }
+
+        .ares-item.wide {
+            grid-column: 1 / -1;
+        }
+
+        .ares-label {
+            display: block;
+            margin-bottom: 3px;
+            color: #667085;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .ares-value {
+            color: #18212f;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .ico-row {
+            display: grid;
+            grid-template-columns: minmax(0, 220px) auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        @media (max-width: 720px) {
+            .ico-row,
+            .ares-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ares-item.wide {
+                grid-column: auto;
+            }
+        }
+        .manual-carrier-box {
+            margin-top: 16px;
+            padding: 16px;
+            border: 1px solid #f0b44d;
+            border-radius: 12px;
+            background: #fffaeb;
+        }
+
+        .manual-carrier-title {
+            margin-bottom: 12px;
+            font-weight: 800;
+            color: #93370d;
+        }
+
+        .carrier-verification {
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .carrier-verification.verified {
+            color: #067647;
+        }
+
+        .carrier-verification.pending {
+            color: #b54708;
+        }
+
+        .carrier-action-group {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+</style>
 </head>
 <body>
 <div class="shell">
@@ -870,38 +984,408 @@
                     <form id="carrier-form">
                         <div class="form-grid">
                             <div class="wide">
-                                <label for="carrier-name">Název dopravce</label>
-                                <input id="carrier-name" name="name" maxlength="255" required>
+                                <label for="carrier-ico">IČO</label>
+
+                                <div class="ico-row">
+                                    <input
+                                        id="carrier-ico"
+                                        name="registration_number"
+                                        inputmode="numeric"
+                                        autocomplete="off"
+                                        maxlength="8"
+                                        pattern="[0-9]{8}"
+                                        placeholder="např. 12345678"
+                                        required
+                                    >
+
+                                    <button
+                                        id="carrier-ares-button"
+                                        class="btn btn-light"
+                                        type="button"
+                                    >
+                                        Ověřit v ARES
+                                    </button>
+                                </div>
+
+                                <div class="muted" style="margin-top:6px">
+                                    DRAYVIA se nejprve pokusí načíst
+                                    oficiální údaje z ARES.
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="carrier-relationship-valid-from">
+                                    Spolupráce od
+                                </label>
+
+                                <input
+                                    id="carrier-relationship-valid-from"
+                                    name="relationship_valid_from"
+                                    type="date"
+                                    required
+                                >
+
+                                <div class="muted" style="margin-top:6px">
+                                    Skutečný začátek spolupráce s master dopravcem.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            id="carrier-ares-result"
+                            class="ares-box"
+                            hidden
+                        >
+                            <div
+                                id="carrier-ares-status"
+                                class="ares-status"
+                            ></div>
+
+                            <div class="ares-grid">
+                                <div class="ares-item wide">
+                                    <span class="ares-label">Obchodní jméno</span>
+                                    <div id="carrier-ares-name" class="ares-value"></div>
+                                </div>
+
+                                <div class="ares-item">
+                                    <span class="ares-label">IČO</span>
+                                    <div id="carrier-ares-ico" class="ares-value"></div>
+                                </div>
+
+                                <div class="ares-item">
+                                    <span class="ares-label">DPH</span>
+                                    <div id="carrier-ares-vat-status" class="ares-value"></div>
+                                </div>
+
+                                <div class="ares-item">
+                                    <span class="ares-label">DIČ</span>
+                                    <div id="carrier-ares-vat-number" class="ares-value"></div>
+                                </div>
+
+                                <div class="ares-item">
+                                    <span class="ares-label">Země</span>
+                                    <div id="carrier-ares-country" class="ares-value"></div>
+                                </div>
+
+                                <div class="ares-item wide">
+                                    <span class="ares-label">Sídlo</span>
+                                    <div id="carrier-ares-address" class="ares-value"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:12px">
+                            <button
+                                id="carrier-manual-button"
+                                class="btn btn-light"
+                                type="button"
+                                hidden
+                            >
+                                Vyplnit ručně
+                            </button>
+                        </div>
+
+                        <div
+                            id="carrier-manual-panel"
+                            class="manual-carrier-box"
+                            hidden
+                        >
+                            <div class="manual-carrier-title">
+                                RUČNÍ ZADÁNÍ — ČEKÁ NA POZDĚJŠÍ OVĚŘENÍ V ARES
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="wide">
+                                    <label for="carrier-manual-name">
+                                        Název dopravce
+                                    </label>
+                                    <input
+                                        id="carrier-manual-name"
+                                        data-manual-carrier-field
+                                        maxlength="255"
+                                        disabled
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="carrier-manual-vat-status">
+                                        DPH
+                                    </label>
+                                    <select
+                                        id="carrier-manual-vat-status"
+                                        data-manual-carrier-field
+                                        disabled
+                                    >
+                                        <option value="">Vyberte</option>
+                                        <option value="payer">Plátce DPH</option>
+                                        <option value="non_payer">Neplátce DPH</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="carrier-manual-vat-number">
+                                        DIČ
+                                    </label>
+                                    <input
+                                        id="carrier-manual-vat-number"
+                                        data-manual-carrier-field
+                                        maxlength="32"
+                                        disabled
+                                    >
+                                </div>
+
+                                <div class="wide">
+                                    <label for="carrier-manual-street">
+                                        Ulice a číslo
+                                    </label>
+                                    <input
+                                        id="carrier-manual-street"
+                                        data-manual-carrier-field
+                                        maxlength="255"
+                                        disabled
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="carrier-manual-city">
+                                        Město
+                                    </label>
+                                    <input
+                                        id="carrier-manual-city"
+                                        data-manual-carrier-field
+                                        maxlength="100"
+                                        disabled
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="carrier-manual-postal-code">
+                                        PSČ
+                                    </label>
+                                    <input
+                                        id="carrier-manual-postal-code"
+                                        data-manual-carrier-field
+                                        maxlength="32"
+                                        disabled
+                                    >
+                                </div>
+
+                                <div>
+                                    <label for="carrier-manual-country">
+                                        Země
+                                    </label>
+                                    <select
+                                        id="carrier-manual-country"
+                                        data-manual-carrier-field
+                                        disabled
+                                    >
+                                        <option value="CZ" selected>
+                                            Česko (CZ)
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="muted" style="margin-top:10px">
+                                Dopravce bude uložen jako neověřený.
+                                DRAYVIA jej umožní ověřit v ARES později.
                             </div>
                         </div>
 
                         <div class="actions">
-                            <button id="carrier-create-cancel-button" class="btn btn-light" type="button">Zrušit</button>
-                            <button id="carrier-save-button" class="btn btn-primary" type="submit">Uložit dopravce</button>
+                            <button
+                                id="carrier-create-cancel-button"
+                                class="btn btn-light"
+                                type="button"
+                            >
+                                Zrušit
+                            </button>
+
+                            <button
+                                id="carrier-save-button"
+                                class="btn btn-primary"
+                                type="submit"
+                                disabled
+                            >
+                                Uložit dopravce
+                            </button>
                         </div>
                     </form>
                 </div>
 
-                <div id="carrier-edit-panel" class="form-panel" hidden>
-                    <h3 style="margin-top:0">Upravit dopravce</h3>
+                <div
+                    id="carrier-edit-panel"
+                    class="form-panel"
+                    hidden
+                >
+                    <h3 style="margin-top:0">
+                        Upravit dopravce
+                    </h3>
 
                     <form id="carrier-edit-form">
-                        <input id="edit-carrier-id" type="hidden">
+                        <input
+                            id="edit-carrier-id"
+                            type="hidden"
+                        >
 
                         <div class="form-grid">
+                            <div>
+                                <label for="edit-carrier-ico">
+                                    IČO
+                                </label>
+                                <input
+                                    id="edit-carrier-ico"
+                                    readonly
+                                >
+                                <div
+                                    class="muted"
+                                    style="margin-top:6px"
+                                >
+                                    IČO identifikuje právní subjekt
+                                    a po založení se běžně nemění.
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    for="edit-carrier-relationship-valid-from"
+                                >
+                                    Spolupráce od
+                                </label>
+                                <input
+                                    id="edit-carrier-relationship-valid-from"
+                                    type="date"
+                                    required
+                                >
+                            </div>
+
                             <div class="wide">
-                                <label for="edit-carrier-name">Název dopravce</label>
-                                <input id="edit-carrier-name" name="name" maxlength="255" required>
+                                <label for="edit-carrier-name">
+                                    Název dopravce
+                                </label>
+                                <input
+                                    id="edit-carrier-name"
+                                    maxlength="255"
+                                    required
+                                >
+                            </div>
+
+                            <div>
+                                <label
+                                    for="edit-carrier-vat-status"
+                                >
+                                    DPH
+                                </label>
+                                <select
+                                    id="edit-carrier-vat-status"
+                                    required
+                                >
+                                    <option value="payer">
+                                        Plátce DPH
+                                    </option>
+                                    <option value="non_payer">
+                                        Neplátce DPH
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label
+                                    for="edit-carrier-vat-number"
+                                >
+                                    DIČ
+                                </label>
+                                <input
+                                    id="edit-carrier-vat-number"
+                                    maxlength="32"
+                                >
+                            </div>
+
+                            <div class="wide">
+                                <label
+                                    for="edit-carrier-street"
+                                >
+                                    Ulice a číslo
+                                </label>
+                                <input
+                                    id="edit-carrier-street"
+                                    maxlength="255"
+                                >
+                            </div>
+
+                            <div>
+                                <label
+                                    for="edit-carrier-city"
+                                >
+                                    Město
+                                </label>
+                                <input
+                                    id="edit-carrier-city"
+                                    maxlength="100"
+                                >
+                            </div>
+
+                            <div>
+                                <label
+                                    for="edit-carrier-postal-code"
+                                >
+                                    PSČ
+                                </label>
+                                <input
+                                    id="edit-carrier-postal-code"
+                                    maxlength="32"
+                                >
+                            </div>
+
+                            <div>
+                                <label
+                                    for="edit-carrier-country-code"
+                                >
+                                    Země
+                                </label>
+                                <select
+                                    id="edit-carrier-country-code"
+                                >
+                                    <option value="CZ">
+                                        Česko (CZ)
+                                    </option>
+                                </select>
                             </div>
                         </div>
 
+                        <div
+                            id="edit-carrier-ares-state"
+                            class="security-note"
+                            style="margin-top:16px"
+                        ></div>
+
                         <div class="actions">
-                            <button id="carrier-edit-cancel-button" class="btn btn-light" type="button">Zrušit</button>
-                            <button id="carrier-edit-save-button" class="btn btn-primary" type="submit">Uložit změny dopravce</button>
+                            <button
+                                id="carrier-edit-cancel-button"
+                                class="btn btn-light"
+                                type="button"
+                            >
+                                Zrušit
+                            </button>
+
+                            <button
+                                id="carrier-edit-ares-button"
+                                class="btn btn-light"
+                                type="button"
+                            >
+                                Prověřit v ARES
+                            </button>
+
+                            <button
+                                id="carrier-edit-save-button"
+                                class="btn btn-primary"
+                                type="submit"
+                            >
+                                Uložit změny
+                            </button>
                         </div>
                     </form>
                 </div>
-
                 <div id="carrier-message" class="message"></div>
                 <div id="carrier-list" class="empty">Načítám dopravce…</div>
             </section>
@@ -2306,6 +2790,180 @@
     const carrierMessage = document.getElementById('carrier-message');
     const carrierList = document.getElementById('carrier-list');
 
+    const carrierIcoInput = document.getElementById('carrier-ico');
+    const carrierRelationshipValidFrom = document.getElementById('carrier-relationship-valid-from');
+    const carrierAresButton = document.getElementById('carrier-ares-button');
+    const carrierAresResult = document.getElementById('carrier-ares-result');
+    const carrierAresStatus = document.getElementById('carrier-ares-status');
+    const carrierAresName = document.getElementById('carrier-ares-name');
+    const carrierAresIco = document.getElementById('carrier-ares-ico');
+    const carrierAresVatStatus = document.getElementById('carrier-ares-vat-status');
+    const carrierAresVatNumber = document.getElementById('carrier-ares-vat-number');
+    const carrierAresCountry = document.getElementById('carrier-ares-country');
+    const carrierAresAddress = document.getElementById('carrier-ares-address');
+
+    const carrierManualButton = document.getElementById('carrier-manual-button');
+    const carrierManualPanel = document.getElementById('carrier-manual-panel');
+    const carrierManualName = document.getElementById('carrier-manual-name');
+    const carrierManualVatStatus = document.getElementById('carrier-manual-vat-status');
+    const carrierManualVatNumber = document.getElementById('carrier-manual-vat-number');
+    const carrierManualStreet = document.getElementById('carrier-manual-street');
+    const carrierManualCity = document.getElementById('carrier-manual-city');
+    const carrierManualPostalCode = document.getElementById('carrier-manual-postal-code');
+    const carrierManualCountry = document.getElementById('carrier-manual-country');
+
+    let verifiedCarrierIco = '';
+    let manualCarrierMode = false;
+
+    const vatStatusLabel = (value) => {
+        if (value === 'payer') {
+            return 'PLÁTCE DPH';
+        }
+
+        if (value === 'non_payer') {
+            return 'NEPLÁTCE DPH';
+        }
+
+        return value || '—';
+    };
+
+    const carrierAddress = (carrier) => [
+        carrier?.street,
+        carrier?.city,
+        carrier?.postal_code,
+    ].filter(Boolean).join(', ') || '—';
+
+    const updateManualCarrierValidity = () => {
+        if (!manualCarrierMode) {
+            return;
+        }
+
+        carrierManualVatNumber.required =
+            carrierManualVatStatus.value === 'payer';
+
+        const nameOk =
+            carrierManualName.value.trim() !== '';
+
+        const vatOk =
+            carrierManualVatStatus.value === 'payer'
+            || carrierManualVatStatus.value === 'non_payer';
+
+        const vatNumberOk =
+            carrierManualVatStatus.value !== 'payer'
+            || carrierManualVatNumber.value.trim() !== '';
+
+        const relationshipDateOk =
+            carrierRelationshipValidFrom.value !== '';
+
+        carrierSaveButton.disabled =
+            !(
+                nameOk
+                && vatOk
+                && vatNumberOk
+                && relationshipDateOk
+            );
+    };
+
+    const setManualCarrierMode = (enabled) => {
+        manualCarrierMode = enabled;
+
+        carrierManualPanel.hidden = !enabled;
+
+        document
+            .querySelectorAll('[data-manual-carrier-field]')
+            .forEach((field) => {
+                field.disabled = !enabled;
+            });
+
+        carrierManualName.required = enabled;
+        carrierManualVatStatus.required = enabled;
+
+        if (!enabled) {
+            carrierManualVatNumber.required = false;
+        }
+
+        if (enabled) {
+            verifiedCarrierIco = '';
+            carrierAresResult.hidden = true;
+            updateManualCarrierValidity();
+            carrierManualName.focus();
+        }
+    };
+
+    const resetCarrierCreateState = () => {
+        verifiedCarrierIco = '';
+        manualCarrierMode = false;
+
+        carrierSaveButton.disabled = true;
+
+        carrierAresResult.hidden = true;
+        carrierAresStatus.className = 'ares-status';
+        carrierAresStatus.replaceChildren();
+
+        carrierAresName.textContent = '';
+        carrierAresIco.textContent = '';
+        carrierAresVatStatus.textContent = '';
+        carrierAresVatNumber.textContent = '';
+        carrierAresCountry.textContent = '';
+        carrierAresAddress.textContent = '';
+
+        carrierManualButton.hidden = true;
+
+        carrierManualPanel.hidden = true;
+
+        document
+            .querySelectorAll('[data-manual-carrier-field]')
+            .forEach((field) => {
+                field.disabled = true;
+            });
+
+        carrierManualName.required = false;
+        carrierManualVatStatus.required = false;
+        carrierManualVatNumber.required = false;
+    };
+
+    const renderAresCarrier = (carrier) => {
+        setManualCarrierMode(false);
+
+        verifiedCarrierIco =
+            carrier.registration_number || '';
+
+        carrierManualButton.hidden = true;
+
+        carrierAresResult.hidden = false;
+        carrierAresStatus.className = 'ares-status ok';
+
+        const dot = document.createElement('span');
+        dot.className = 'ares-dot';
+
+        const text = document.createElement('span');
+        text.textContent = 'IČO OVĚŘENO V ARES';
+
+        carrierAresStatus.replaceChildren(dot, text);
+
+        carrierAresName.textContent =
+            carrier.name || '—';
+
+        carrierAresIco.textContent =
+            carrier.registration_number || '—';
+
+        carrierAresVatStatus.textContent =
+            vatStatusLabel(carrier.vat_status);
+
+        carrierAresVatNumber.textContent =
+            carrier.vat_number || '—';
+
+        carrierAresCountry.textContent =
+            carrier.country_code || '—';
+
+        carrierAresAddress.textContent =
+            carrier.full_address ||
+            carrierAddress(carrier);
+
+        carrierSaveButton.disabled =
+            carrierRelationshipValidFrom.value === '';
+    };
+
     const closeCarrierPanels = () => {
         carrierCreatePanel.hidden = true;
         carrierEditPanel.hidden = true;
@@ -2314,86 +2972,617 @@
 
     carrierAddButton.addEventListener('click', () => {
         clearMessage(carrierMessage);
+
         carrierEditPanel.hidden = true;
         carrierCreatePanel.hidden = false;
         carrierAddButton.hidden = true;
-        document.getElementById('carrier-name').focus();
+
+        carrierForm.reset();
+        resetCarrierCreateState();
+
+        carrierIcoInput.focus();
     });
 
     carrierCreateCancelButton.addEventListener('click', () => {
         carrierForm.reset();
+        resetCarrierCreateState();
         closeCarrierPanels();
         clearMessage(carrierMessage);
     });
 
-    carrierEditCancelButton.addEventListener('click', () => {
-        carrierEditForm.reset();
-        closeCarrierPanels();
+    carrierIcoInput.addEventListener('input', () => {
+        carrierIcoInput.value =
+            carrierIcoInput.value
+                .replace(/\D/g, '')
+                .slice(0, 8);
+
+        resetCarrierCreateState();
         clearMessage(carrierMessage);
     });
 
-    const editCarrier = (carrier) => {
+    carrierRelationshipValidFrom.addEventListener('input', () => {
+        if (manualCarrierMode) {
+            updateManualCarrierValidity();
+            return;
+        }
+
+        carrierSaveButton.disabled =
+            !(
+                verifiedCarrierIco !== ''
+                && carrierRelationshipValidFrom.value !== ''
+            );
+    });
+    carrierManualButton.addEventListener('click', () => {
         clearMessage(carrierMessage);
+        carrierManualButton.hidden = true;
+        setManualCarrierMode(true);
+    });
+
+    [
+        carrierManualName,
+        carrierManualVatStatus,
+        carrierManualVatNumber,
+        carrierManualStreet,
+        carrierManualCity,
+        carrierManualPostalCode,
+        carrierManualCountry,
+    ].forEach((field) => {
+        field.addEventListener(
+            'input',
+            updateManualCarrierValidity,
+        );
+
+        field.addEventListener(
+            'change',
+            updateManualCarrierValidity,
+        );
+    });
+
+    carrierAresButton.addEventListener('click', async () => {
+        const ico =
+            carrierIcoInput.value.trim();
+
+        resetCarrierCreateState();
+        clearMessage(carrierMessage);
+
+        if (!/^\d{8}$/.test(ico)) {
+            showMessage(
+                carrierMessage,
+                'IČO musí obsahovat přesně 8 číslic.',
+                'error',
+            );
+
+            carrierIcoInput.focus();
+            return;
+        }
+
+        carrierAresButton.disabled = true;
+        carrierIcoInput.disabled = true;
+
+        try {
+            const response = await fetch(
+                `/api/v1/carriers/ares/${encodeURIComponent(ico)}`,
+                {
+                    headers: headers(),
+                },
+            );
+
+            if (unauthorizedOrForbidden(response)) {
+                return;
+            }
+
+            if (!response.ok) {
+                showMessage(
+                    carrierMessage,
+                    `${await apiError(response)} Údaje můžete zadat ručně a ověřit později.`,
+                    'error',
+                );
+
+                carrierManualButton.hidden = false;
+                return;
+            }
+
+            const payload =
+                await response.json();
+
+            const carrier =
+                payload?.data;
+
+            if (
+                !carrier
+                || carrier.registration_number !== ico
+            ) {
+                showMessage(
+                    carrierMessage,
+                    'ARES vrátil neočekávaná data. Údaje můžete zadat ručně.',
+                    'error',
+                );
+
+                carrierManualButton.hidden = false;
+                return;
+            }
+
+            renderAresCarrier(carrier);
+        } catch {
+            showMessage(
+                carrierMessage,
+                'ARES se nepodařilo kontaktovat. Údaje můžete zadat ručně a ověřit později.',
+                'error',
+            );
+
+            carrierManualButton.hidden = false;
+        } finally {
+            carrierAresButton.disabled = false;
+            carrierIcoInput.disabled = false;
+        }
+    });
+
+    let editCarrierItem = null;
+    let editCarrierAresVerified = false;
+
+    const editCarrierAresState =
+        document.getElementById(
+            'edit-carrier-ares-state',
+        );
+
+    const editCarrierAresButton =
+        document.getElementById(
+            'carrier-edit-ares-button',
+        );
+
+    const setEditCarrierAresState = (
+        text,
+        state = 'neutral',
+    ) => {
+        editCarrierAresState.textContent = text;
+
+        if (state === 'success') {
+            editCarrierAresState.style.background =
+                '#ecfdf3';
+            editCarrierAresState.style.color =
+                '#067647';
+            return;
+        }
+
+        if (state === 'warning') {
+            editCarrierAresState.style.background =
+                '#fffaeb';
+            editCarrierAresState.style.color =
+                '#b54708';
+            return;
+        }
+
+        editCarrierAresState.style.background =
+            '#f2f4f7';
+        editCarrierAresState.style.color =
+            '#475467';
+    };
+
+    const populateCarrierEditForm = (carrier) => {
+        document.getElementById(
+            'edit-carrier-id',
+        ).value = carrier.id ?? '';
+
+        document.getElementById(
+            'edit-carrier-ico',
+        ).value =
+            carrier.registration_number ?? '';
+
+        document.getElementById(
+            'edit-carrier-relationship-valid-from',
+        ).value =
+            carrier.relationship_valid_from ?? '';
+
+        document.getElementById(
+            'edit-carrier-name',
+        ).value =
+            carrier.name ?? '';
+
+        document.getElementById(
+            'edit-carrier-vat-status',
+        ).value =
+            carrier.vat_status ?? 'non_payer';
+
+        document.getElementById(
+            'edit-carrier-vat-number',
+        ).value =
+            carrier.vat_number ?? '';
+
+        document.getElementById(
+            'edit-carrier-street',
+        ).value =
+            carrier.street ?? '';
+
+        document.getElementById(
+            'edit-carrier-city',
+        ).value =
+            carrier.city ?? '';
+
+        document.getElementById(
+            'edit-carrier-postal-code',
+        ).value =
+            carrier.postal_code ?? '';
+
+        document.getElementById(
+            'edit-carrier-country-code',
+        ).value =
+            carrier.country_code ?? 'CZ';
+    };
+
+    const openCarrierEdit = (carrier) => {
+        clearMessage(carrierMessage);
+
+        editCarrierItem = carrier;
+        editCarrierAresVerified = false;
+
         carrierCreatePanel.hidden = true;
         carrierEditPanel.hidden = false;
         carrierAddButton.hidden = true;
-        document.getElementById('edit-carrier-id').value = carrier.id;
-        document.getElementById('edit-carrier-name').value = carrier.name ?? '';
-        document.getElementById('edit-carrier-name').focus();
+
+        populateCarrierEditForm(carrier);
+
+        if (carrier.ares_verified_at) {
+            setEditCarrierAresState(
+                'ARES: ULOŽENÉ ÚDAJE JSOU OZNAČENÉ JAKO OVĚŘENÉ.',
+                'success',
+            );
+        } else {
+            setEditCarrierAresState(
+                'ARES: ČEKÁ NA OVĚŘENÍ.',
+                'warning',
+            );
+        }
+
+        carrierEditPanel.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+        });
     };
 
+    carrierEditCancelButton.addEventListener(
+        'click',
+        () => {
+            carrierEditForm.reset();
+            editCarrierItem = null;
+            editCarrierAresVerified = false;
+            closeCarrierPanels();
+            clearMessage(carrierMessage);
+        },
+    );
+
+    const editAresManagedFields = [
+        'edit-carrier-name',
+        'edit-carrier-vat-status',
+        'edit-carrier-vat-number',
+        'edit-carrier-street',
+        'edit-carrier-city',
+        'edit-carrier-postal-code',
+        'edit-carrier-country-code',
+    ];
+
+    editAresManagedFields.forEach((id) => {
+        const field =
+            document.getElementById(id);
+
+        const markManualChange = () => {
+            if (!editCarrierItem) {
+                return;
+            }
+
+            editCarrierAresVerified = false;
+
+            setEditCarrierAresState(
+                'RUČNĚ UPRAVENO — PO ULOŽENÍ BUDE POTŘEBA ÚDAJE ZNOVU PROVĚŘIT V ARES.',
+                'warning',
+            );
+        };
+
+        field.addEventListener(
+            'input',
+            markManualChange,
+        );
+
+        field.addEventListener(
+            'change',
+            markManualChange,
+        );
+    });
+
+    editCarrierAresButton.addEventListener(
+        'click',
+        async () => {
+            if (!editCarrierItem) {
+                return;
+            }
+
+            const ico =
+                document.getElementById(
+                    'edit-carrier-ico',
+                ).value.trim();
+
+            clearMessage(carrierMessage);
+
+            editCarrierAresButton.disabled = true;
+
+            try {
+                const response = await fetch(
+                    `/api/v1/carriers/ares/${encodeURIComponent(ico)}`,
+                    {
+                        headers: headers(),
+                    },
+                );
+
+                if (unauthorizedOrForbidden(response)) {
+                    return;
+                }
+
+                if (!response.ok) {
+                    setEditCarrierAresState(
+                        'ARES SE NEPODAŘILO OVĚŘIT. ULOŽENÁ DATA ZŮSTALA BEZE ZMĚNY.',
+                        'warning',
+                    );
+
+                    showMessage(
+                        carrierMessage,
+                        await apiError(response),
+                        'error',
+                    );
+
+                    return;
+                }
+
+                const payload =
+                    await response.json();
+
+                const ares =
+                    payload?.data;
+
+                if (
+                    !ares
+                    || ares.registration_number !== ico
+                ) {
+                    throw new Error(
+                        'Unexpected ARES payload.',
+                    );
+                }
+
+                const before = {
+                    name:
+                        document.getElementById(
+                            'edit-carrier-name',
+                        ).value,
+                    vat_status:
+                        document.getElementById(
+                            'edit-carrier-vat-status',
+                        ).value,
+                    vat_number:
+                        document.getElementById(
+                            'edit-carrier-vat-number',
+                        ).value,
+                    street:
+                        document.getElementById(
+                            'edit-carrier-street',
+                        ).value,
+                    city:
+                        document.getElementById(
+                            'edit-carrier-city',
+                        ).value,
+                    postal_code:
+                        document.getElementById(
+                            'edit-carrier-postal-code',
+                        ).value,
+                    country_code:
+                        document.getElementById(
+                            'edit-carrier-country-code',
+                        ).value,
+                };
+
+                document.getElementById(
+                    'edit-carrier-name',
+                ).value =
+                    ares.name ?? '';
+
+                document.getElementById(
+                    'edit-carrier-vat-status',
+                ).value =
+                    ares.vat_status ?? 'non_payer';
+
+                document.getElementById(
+                    'edit-carrier-vat-number',
+                ).value =
+                    ares.vat_number ?? '';
+
+                document.getElementById(
+                    'edit-carrier-street',
+                ).value =
+                    ares.street ?? '';
+
+                document.getElementById(
+                    'edit-carrier-city',
+                ).value =
+                    ares.city ?? '';
+
+                document.getElementById(
+                    'edit-carrier-postal-code',
+                ).value =
+                    ares.postal_code ?? '';
+
+                document.getElementById(
+                    'edit-carrier-country-code',
+                ).value =
+                    ares.country_code ?? 'CZ';
+
+                const changed =
+                    before.name !== (ares.name ?? '')
+                    || before.vat_status !==
+                        (ares.vat_status ?? 'non_payer')
+                    || before.vat_number !==
+                        (ares.vat_number ?? '')
+                    || before.street !==
+                        (ares.street ?? '')
+                    || before.city !==
+                        (ares.city ?? '')
+                    || before.postal_code !==
+                        (ares.postal_code ?? '')
+                    || before.country_code !==
+                        (ares.country_code ?? 'CZ');
+
+                editCarrierAresVerified = true;
+
+                setEditCarrierAresState(
+                    changed
+                        ? 'ARES NALEZL ZMĚNY. FORMULÁŘ JE PŘEDVYPLNĚN AKTUÁLNÍMI ÚDAJI — ULOŽTE ZMĚNY.'
+                        : 'ARES: ULOŽENÉ ÚDAJE SOUHLASÍ S AKTUÁLNÍMI ÚDAJI.',
+                    'success',
+                );
+            } catch {
+                editCarrierAresVerified = false;
+
+                setEditCarrierAresState(
+                    'ARES SE NEPODAŘILO OVĚŘIT. ULOŽENÁ DATA ZŮSTALA BEZE ZMĚNY.',
+                    'warning',
+                );
+            } finally {
+                editCarrierAresButton.disabled = false;
+            }
+        },
+    );
     const renderCarriers = () => {
         carrierList.replaceChildren();
 
         if (carrierItems.length === 0) {
             carrierList.className = 'empty';
-            carrierList.textContent = 'Zatím není založen žádný externí dopravce.';
+            carrierList.textContent =
+                'Zatím není založen žádný externí dopravce.';
             return;
         }
 
         carrierList.className = '';
 
-        const table = document.createElement('table');
-        const head = document.createElement('thead');
-        const headRow = document.createElement('tr');
+        const table =
+            document.createElement('table');
 
-        ['Dopravce', 'Typ', 'Stav', ''].forEach((label) => {
-            const th = document.createElement('th');
+        const head =
+            document.createElement('thead');
+
+        const headRow =
+            document.createElement('tr');
+
+        [
+            'Dopravce',
+            'IČO',
+            'DPH',
+            'DIČ',
+            'Sídlo',
+            'Spolupráce od',
+            'ARES',
+            'Stav',
+            '',
+        ].forEach((label) => {
+            const th =
+                document.createElement('th');
+
             th.textContent = label;
+
             headRow.appendChild(th);
         });
 
         head.appendChild(headRow);
         table.appendChild(head);
 
-        const body = document.createElement('tbody');
+        const body =
+            document.createElement('tbody');
 
         carrierItems.forEach((carrier) => {
-            const row = document.createElement('tr');
+            const row =
+                document.createElement('tr');
 
-            const nameCell = document.createElement('td');
-            nameCell.textContent = carrier.name || '—';
+            [
+                carrier.name || '—',
+                carrier.registration_number || '—',
+                vatStatusLabel(carrier.vat_status),
+                carrier.vat_number || '—',
+                carrierAddress(carrier),
+                carrier.relationship_valid_from || '—',
+            ].forEach((value) => {
+                const cell =
+                    document.createElement('td');
 
-            const typeCell = document.createElement('td');
-            typeCell.textContent = carrier.type === 'subcontractor'
-                ? 'Externí dopravce'
-                : (carrier.type || '—');
+                cell.textContent = value;
 
-            const statusCell = document.createElement('td');
-            const badge = document.createElement('span');
-            badge.className = 'status-badge';
-            badge.textContent = carrier.status === 'active' ? 'Aktivní' : (carrier.status || '—');
-            statusCell.appendChild(badge);
+                row.appendChild(cell);
+            });
 
-            const actionCell = document.createElement('td');
-            const editButton = document.createElement('button');
+            const verificationCell =
+                document.createElement('td');
+
+            const verification =
+                document.createElement('span');
+
+            if (carrier.ares_verified_at) {
+                verification.className =
+                    'carrier-verification verified';
+
+                verification.textContent =
+                    'OVĚŘENO';
+            } else {
+                verification.className =
+                    'carrier-verification pending';
+
+                verification.textContent =
+                    'ČEKÁ NA OVĚŘENÍ';
+            }
+
+            verificationCell.appendChild(
+                verification,
+            );
+
+            row.appendChild(
+                verificationCell,
+            );
+
+            const statusCell =
+                document.createElement('td');
+
+            statusCell.textContent =
+                carrier.status === 'active'
+                    ? 'AKTIVNÍ'
+                    : (carrier.status || '—');
+
+            row.appendChild(statusCell);
+
+            const actionCell =
+                document.createElement('td');
+
+            const actionGroup =
+                document.createElement('div');
+
+            actionGroup.className =
+                'carrier-action-group';
+
+
+const editButton =
+                document.createElement('button');
+
             editButton.type = 'button';
-            editButton.className = 'btn btn-success';
-            editButton.textContent = 'Upravit dopravce';
-            editButton.addEventListener('click', () => editCarrier(carrier));
-            actionCell.appendChild(editButton);
+            editButton.className = 'btn btn-light';
+            editButton.textContent = 'Upravit';
 
-            row.append(nameCell, typeCell, statusCell, actionCell);
+            editButton.addEventListener(
+                'click',
+                () => openCarrierEdit(carrier),
+            );
+
+            actionGroup.appendChild(
+                editButton,
+            );
+
+            actionCell.appendChild(
+                actionGroup,
+            );
+
+            row.appendChild(actionCell);
+
             body.appendChild(row);
         });
 
@@ -2402,9 +3591,12 @@
     };
 
     const loadCarriers = async () => {
-        const response = await fetch('/api/v1/carriers', {
-            headers: headers(),
-        });
+        const response = await fetch(
+            '/api/v1/carriers',
+            {
+                headers: headers(),
+            },
+        );
 
         if (unauthorizedOrForbidden(response)) {
             return;
@@ -2412,88 +3604,280 @@
 
         if (!response.ok) {
             carrierList.className = 'empty';
-            carrierList.textContent = await apiError(response);
+            carrierList.textContent =
+                await apiError(response);
+
             return;
         }
 
-        const payload = await response.json();
-        carrierItems = payload?.data?.items || [];
+        const payload =
+            await response.json();
+
+        carrierItems =
+            payload?.data?.items || [];
+
         renderCarriers();
     };
 
     carrierForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
+        const ico =
+            carrierIcoInput.value.trim();
+
+        const relationshipValidFrom =
+            carrierRelationshipValidFrom.value;
+
+        clearMessage(carrierMessage);
+
+        if (relationshipValidFrom === '') {
+            showMessage(
+                carrierMessage,
+                'Vyplňte datum začátku spolupráce.',
+                'error',
+            );
+
+            carrierRelationshipValidFrom.focus();
+            return;
+        }
+
+        let payload;
+
+        if (manualCarrierMode) {
+            updateManualCarrierValidity();
+
+            if (carrierSaveButton.disabled) {
+                showMessage(
+                    carrierMessage,
+                    'Doplňte povinné údaje ručního zadání.',
+                    'error',
+                );
+                return;
+            }
+
+            payload = {
+                registration_number: ico,
+                relationship_valid_from: relationshipValidFrom,
+                manual_entry: true,
+                name:
+                    carrierManualName.value.trim(),
+                vat_status:
+                    carrierManualVatStatus.value,
+                vat_number:
+                    carrierManualVatNumber.value.trim() || null,
+                street:
+                    carrierManualStreet.value.trim() || null,
+                city:
+                    carrierManualCity.value.trim() || null,
+                postal_code:
+                    carrierManualPostalCode.value.trim() || null,
+                country_code:
+                    carrierManualCountry.value || 'CZ',
+            };
+        } else {
+            if (
+                verifiedCarrierIco === ''
+                || verifiedCarrierIco !== ico
+            ) {
+                showMessage(
+                    carrierMessage,
+                    'Nejdříve ověřte IČO v ARES nebo použijte ruční zadání.',
+                    'error',
+                );
+
+                return;
+            }
+
+            payload = {
+                registration_number: ico,
+                relationship_valid_from: relationshipValidFrom,
+            };
+        }
+
         carrierSaveButton.disabled = true;
-        clearMessage(carrierMessage);
-
-        const payload = Object.fromEntries(
-            new FormData(carrierForm).entries(),
-        );
+        carrierAresButton.disabled = true;
+        carrierIcoInput.disabled = true;
 
         try {
-            const response = await fetch('/api/v1/carriers', {
-                method: 'POST',
-                headers: headers(true),
-                body: JSON.stringify(payload),
-            });
+            const response = await fetch(
+                '/api/v1/carriers',
+                {
+                    method: 'POST',
+                    headers: headers(true),
+                    body: JSON.stringify(payload),
+                },
+            );
 
             if (unauthorizedOrForbidden(response)) {
                 return;
             }
 
             if (!response.ok) {
-                showMessage(carrierMessage, await apiError(response), 'error');
+                showMessage(
+                    carrierMessage,
+                    await apiError(response),
+                    'error',
+                );
+
                 return;
             }
 
-            const result = await response.json();
+            const result =
+                await response.json();
+
             carrierForm.reset();
+            resetCarrierCreateState();
             closeCarrierPanels();
+
             await loadCarriers();
-            showMessage(carrierMessage, result?.message || 'Dopravce byl vytvořen.', 'ok');
+
+            showMessage(
+                carrierMessage,
+                result?.message ||
+                    'Dopravce byl vytvořen.',
+                'ok',
+            );
         } finally {
-            carrierSaveButton.disabled = false;
+            carrierAresButton.disabled = false;
+            carrierIcoInput.disabled = false;
+
+            if (manualCarrierMode) {
+                updateManualCarrierValidity();
+            } else if (verifiedCarrierIco !== '') {
+                carrierSaveButton.disabled = false;
+            }
         }
     });
 
-    carrierEditForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+    carrierEditForm.addEventListener(
+        'submit',
+        async (event) => {
+            event.preventDefault();
 
-        carrierEditSaveButton.disabled = true;
-        clearMessage(carrierMessage);
-
-        const carrierId = document.getElementById('edit-carrier-id').value;
-        const payload = Object.fromEntries(
-            new FormData(carrierEditForm).entries(),
-        );
-
-        try {
-            const response = await fetch(`/api/v1/carriers/${carrierId}`, {
-                method: 'PATCH',
-                headers: headers(true),
-                body: JSON.stringify(payload),
-            });
-
-            if (unauthorizedOrForbidden(response)) {
+            if (!editCarrierItem) {
                 return;
             }
 
-            if (!response.ok) {
-                showMessage(carrierMessage, await apiError(response), 'error');
+            carrierEditSaveButton.disabled = true;
+            clearMessage(carrierMessage);
+
+            const vatStatus =
+                document.getElementById(
+                    'edit-carrier-vat-status',
+                ).value;
+
+            const vatNumber =
+                document.getElementById(
+                    'edit-carrier-vat-number',
+                ).value.trim();
+
+            if (
+                vatStatus === 'payer'
+                && vatNumber === ''
+            ) {
+                showMessage(
+                    carrierMessage,
+                    'DIČ je u plátce DPH povinné.',
+                    'error',
+                );
+
+                carrierEditSaveButton.disabled = false;
                 return;
             }
 
-            const result = await response.json();
-            carrierEditForm.reset();
-            closeCarrierPanels();
-            await loadCarriers();
-            showMessage(carrierMessage, result?.message || 'Dopravce byl upraven.', 'ok');
-        } finally {
-            carrierEditSaveButton.disabled = false;
-        }
-    });
+            const relationshipValidFrom =
+                document.getElementById(
+                    'edit-carrier-relationship-valid-from',
+                ).value;
 
+            if (relationshipValidFrom === '') {
+                showMessage(
+                    carrierMessage,
+                    'Vyplňte datum začátku spolupráce.',
+                    'error',
+                );
+
+                carrierEditSaveButton.disabled = false;
+                return;
+            }
+
+            const payload = {
+                name:
+                    document.getElementById(
+                        'edit-carrier-name',
+                    ).value.trim(),
+                vat_status:
+                    vatStatus,
+                vat_number:
+                    vatNumber || null,
+                street:
+                    document.getElementById(
+                        'edit-carrier-street',
+                    ).value.trim() || null,
+                city:
+                    document.getElementById(
+                        'edit-carrier-city',
+                    ).value.trim() || null,
+                postal_code:
+                    document.getElementById(
+                        'edit-carrier-postal-code',
+                    ).value.trim() || null,
+                country_code:
+                    document.getElementById(
+                        'edit-carrier-country-code',
+                    ).value || 'CZ',
+                relationship_valid_from:
+                    relationshipValidFrom,
+                verify_with_ares:
+                    editCarrierAresVerified,
+            };
+
+            try {
+                const response = await fetch(
+                    `/api/v1/carriers/${editCarrierItem.id}`,
+                    {
+                        method: 'PATCH',
+                        headers: headers(true),
+                        body: JSON.stringify(payload),
+                    },
+                );
+
+                if (unauthorizedOrForbidden(response)) {
+                    return;
+                }
+
+                if (!response.ok) {
+                    showMessage(
+                        carrierMessage,
+                        await apiError(response),
+                        'error',
+                    );
+                    return;
+                }
+
+                const result =
+                    await response.json();
+
+                carrierEditForm.reset();
+
+                editCarrierItem = null;
+                editCarrierAresVerified = false;
+
+                closeCarrierPanels();
+
+                await loadCarriers();
+
+                showMessage(
+                    carrierMessage,
+                    result?.message ||
+                        'Údaje dopravce byly uloženy.',
+                    'ok',
+                );
+            } finally {
+                carrierEditSaveButton.disabled = false;
+            }
+        },
+    );
     Promise.all([
         loadCompany(),
         loadDrivers(),
