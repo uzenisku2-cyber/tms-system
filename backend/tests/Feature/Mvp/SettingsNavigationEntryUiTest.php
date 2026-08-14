@@ -14,16 +14,19 @@ class SettingsNavigationEntryUiTest extends TestCase
 
         $this->assertSame(
             1,
-            substr_count($source, 'data-testid="management-settings-link"')
+            substr_count(
+                $source,
+                'data-drayvia-page="settings"',
+            ),
         );
 
         $this->assertStringContainsString(
-            'href="/settings"',
+            'const settings = () =>',
             $source
         );
 
         $this->assertStringContainsString(
-            '>Nastavení</a>',
+            "event.target.closest('[data-drayvia-page]')",
             $source
         );
     }

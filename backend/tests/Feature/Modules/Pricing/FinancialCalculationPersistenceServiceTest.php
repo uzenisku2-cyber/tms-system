@@ -897,6 +897,7 @@ final class FinancialCalculationPersistenceServiceTest extends TestCase
 
             'completion_confirmed_at' => '2026-07-29 09:00:00',
 
+            'loaded_parcels' => 23,
             'delivered_parcels' => 20,
             'redirected_parcels' => 2,
             'undelivered_parcels' => 1,
@@ -938,6 +939,7 @@ final class FinancialCalculationPersistenceServiceTest extends TestCase
 
             'service_date' => '2026-07-29',
             'status' => DailyReport::STATUS_APPROVED,
+            'loaded_parcels' => 23,
             'delivered_parcels' => 20,
             'redirected_parcels' => 2,
             'undelivered_parcels' => 1,

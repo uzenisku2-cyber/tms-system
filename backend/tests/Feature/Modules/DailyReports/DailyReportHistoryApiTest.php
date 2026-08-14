@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules\DailyReports;
 use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReportEvent;
 use App\Modules\Drivers\Models\Driver;
+use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -285,7 +286,7 @@ final class DailyReportHistoryApiTest extends TestCase
         User $user,
         string $licensePrefix,
     ): Driver {
-        return Driver::query()->create([
+        $driver = Driver::query()->create([
             'user_id' => $user->getKey(),
             'first_name' => 'History',
             'last_name' => 'Driver',
@@ -295,6 +296,25 @@ final class DailyReportHistoryApiTest extends TestCase
             'license_category' => 'B',
             'active' => true,
         ]);
+
+        $membership = OrganizationMembership::query()
+            ->where('user_id', $user->getKey())
+            ->where('status', OrganizationMembership::STATUS_ACTIVE)
+            ->whereNull('valid_until')
+            ->sole();
+
+        DriverOrganizationAssignment::query()->create([
+            'driver_id' => $driver->getKey(),
+            'organization_id' => $membership->getAttribute('organization_id'),
+            'employment_type' => DriverOrganizationAssignment::EMPLOYMENT_EMPLOYEE,
+            'valid_from' => '2026-07-01',
+            'valid_until' => null,
+            'end_reason' => null,
+            'created_by_user_id' => $user->getKey(),
+            'ended_by_user_id' => null,
+        ]);
+
+        return $driver;
     }
 
     /**
