@@ -39,6 +39,7 @@ class PriceList extends Model
         'owner_organization_id',
         'customer_organization_id',
         'provider_organization_id',
+        'managed_by_organization_id',
         'name',
         'description',
         'currency',

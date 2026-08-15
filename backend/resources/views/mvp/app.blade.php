@@ -11534,66 +11534,596 @@ const fuel = () => `
     `;
 
     const finance = () => `
-        ${header(
-            'Finance',
-            'Výpočty odměn, PP, fakturace řidičů a fakturace firmy.'
-        )}
+                ${pageHeader(
+                    'Finance',
+                    'Odběratelé, ceníky, fakturace, srovnání a ziskovost v jednom finančním prostoru.'
+                )}
 
-        <div class="drayvia-preview-actions">
-            <button class="drayvia-preview-action primary" type="button">
-                Fakturace řidičů
-            </button>
-            <button class="drayvia-preview-action" type="button">
-                Fakturace firmy
-            </button>
-            <button class="drayvia-preview-action" type="button">
-                Palivový příplatek
-            </button>
-            <button class="drayvia-preview-action" type="button">
-                Ceníky a sazby
-            </button>
-            <button class="drayvia-preview-action" type="button">
-                Pravidla výpočtů
-            </button>
-        </div>
+                <style>
+                    .drayvia-finance-shell {
+                        display: grid;
+                        gap: 18px;
+                    }
 
-        <div class="drayvia-preview-grid" style="margin-top:18px;">
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Odměny řidičů</div>
-                <div class="drayvia-preview-card-value">— Kč</div>
-            </div>
+                    .drayvia-finance-tab-input,
+                    .drayvia-price-list-tab-input {
+                        position: absolute;
+                        opacity: 0;
+                        pointer-events: none;
+                    }
 
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">PP od depa</div>
-                <div class="drayvia-preview-card-value">— Kč</div>
-            </div>
+                    .drayvia-finance-tabs,
+                    .drayvia-price-list-tabs {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                    }
 
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">PP řidičům</div>
-                <div class="drayvia-preview-card-value">— Kč</div>
-            </div>
+                    .drayvia-finance-tab,
+                    .drayvia-price-list-tab {
+                        cursor: pointer;
+                        border: 1px solid #d7dce3;
+                        border-radius: 10px;
+                        padding: 10px 14px;
+                        background: #fff;
+                        font-weight: 700;
+                    }
 
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Rozdíl PP</div>
-                <div class="drayvia-preview-card-value">— Kč</div>
-            </div>
-        </div>
+                    .drayvia-finance-panel,
+                    .drayvia-price-list-panel {
+                        display: none;
+                    }
 
-        <div class="drayvia-preview-panel">
-            <div class="drayvia-preview-panel-head">
-                <h2 class="drayvia-preview-panel-title">
-                    Vyúčtování – ${monthLabel()}
-                </h2>
-                <div class="drayvia-preview-panel-subtitle">
-                    Výsledky budou vznikat z provozních dat a platných ceníků DRAYVIA.
-                </div>
-            </div>
+                    #finance-tab-customers:checked
+                        ~ .drayvia-finance-tabs
+                        label[for="finance-tab-customers"],
+                    #finance-tab-price-lists:checked
+                        ~ .drayvia-finance-tabs
+                        label[for="finance-tab-price-lists"],
+                    #finance-tab-billing:checked
+                        ~ .drayvia-finance-tabs
+                        label[for="finance-tab-billing"],
+                    #finance-tab-comparison:checked
+                        ~ .drayvia-finance-tabs
+                        label[for="finance-tab-comparison"],
+                    #finance-tab-profitability:checked
+                        ~ .drayvia-finance-tabs
+                        label[for="finance-tab-profitability"],
+                    #price-list-tab-billing:checked
+                        ~ .drayvia-price-list-tabs
+                        label[for="price-list-tab-billing"],
+                    #price-list-tab-drivers:checked
+                        ~ .drayvia-price-list-tabs
+                        label[for="price-list-tab-drivers"] {
+                        border-color: #1f2937;
+                        background: #f3f4f6;
+                    }
 
-            <div class="drayvia-preview-panel-body">
-                Přehled jednotlivých řidičů a fakturace bude zde.
-            </div>
-        </div>
-    `;
+                    #finance-tab-customers:checked
+                        ~ .drayvia-finance-panels
+                        .drayvia-finance-panel-customers,
+                    #finance-tab-price-lists:checked
+                        ~ .drayvia-finance-panels
+                        .drayvia-finance-panel-price-lists,
+                    #finance-tab-billing:checked
+                        ~ .drayvia-finance-panels
+                        .drayvia-finance-panel-billing,
+                    #finance-tab-comparison:checked
+                        ~ .drayvia-finance-panels
+                        .drayvia-finance-panel-comparison,
+                    #finance-tab-profitability:checked
+                        ~ .drayvia-finance-panels
+                        .drayvia-finance-panel-profitability,
+                    #price-list-tab-billing:checked
+                        ~ .drayvia-price-list-panels
+                        .drayvia-price-list-panel-billing,
+                    #price-list-tab-drivers:checked
+                        ~ .drayvia-price-list-panels
+                        .drayvia-price-list-panel-drivers {
+                        display: block;
+                    }
+
+                    .drayvia-finance-card {
+                        border: 1px solid #e5e7eb;
+                        border-radius: 14px;
+                        background: #fff;
+                        padding: 18px;
+                    }
+
+                    .drayvia-finance-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                        gap: 14px;
+                    }
+
+                    .drayvia-finance-field {
+                        display: grid;
+                        gap: 6px;
+                    }
+
+                    .drayvia-finance-field label {
+                        font-size: 13px;
+                        font-weight: 700;
+                    }
+
+                    .drayvia-finance-field input,
+                    .drayvia-finance-field select {
+                        width: 100%;
+                        box-sizing: border-box;
+                        border: 1px solid #cfd5dd;
+                        border-radius: 8px;
+                        padding: 10px 11px;
+                        background: #fff;
+                    }
+
+                    .drayvia-finance-note {
+                        border-left: 4px solid #9ca3af;
+                        padding: 10px 12px;
+                        background: #f8fafc;
+                    }
+
+                    .drayvia-finance-status {
+                        display: inline-flex;
+                        align-items: center;
+                        border-radius: 999px;
+                        padding: 5px 9px;
+                        background: #f3f4f6;
+                        font-size: 12px;
+                        font-weight: 700;
+                    }
+
+                    .drayvia-price-table,
+                    .drayvia-customer-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+
+                    .drayvia-price-table th,
+                    .drayvia-price-table td,
+                    .drayvia-customer-table th,
+                    .drayvia-customer-table td {
+                        text-align: left;
+                        border-bottom: 1px solid #e5e7eb;
+                        padding: 10px 8px;
+                        vertical-align: middle;
+                    }
+
+                    .drayvia-price-table input {
+                        width: 100%;
+                        min-width: 110px;
+                        box-sizing: border-box;
+                        border: 1px solid #cfd5dd;
+                        border-radius: 8px;
+                        padding: 9px 10px;
+                    }
+                </style>
+
+                <section class="drayvia-finance-shell" data-finance-root>
+                    <input
+                        class="drayvia-finance-tab-input"
+                        id="finance-tab-customers"
+                        name="finance-tab"
+                        type="radio"
+                        checked
+                    >
+                    <input
+                        class="drayvia-finance-tab-input"
+                        id="finance-tab-price-lists"
+                        name="finance-tab"
+                        type="radio"
+                    >
+                    <input
+                        class="drayvia-finance-tab-input"
+                        id="finance-tab-billing"
+                        name="finance-tab"
+                        type="radio"
+                    >
+                    <input
+                        class="drayvia-finance-tab-input"
+                        id="finance-tab-comparison"
+                        name="finance-tab"
+                        type="radio"
+                    >
+                    <input
+                        class="drayvia-finance-tab-input"
+                        id="finance-tab-profitability"
+                        name="finance-tab"
+                        type="radio"
+                    >
+
+                    <nav class="drayvia-finance-tabs" aria-label="Finance">
+                        <label class="drayvia-finance-tab" for="finance-tab-customers">
+                            Odběratelé
+                        </label>
+                        <label class="drayvia-finance-tab" for="finance-tab-price-lists">
+                            Ceníky
+                        </label>
+                        <label class="drayvia-finance-tab" for="finance-tab-billing">
+                            Fakturace
+                        </label>
+                        <label class="drayvia-finance-tab" for="finance-tab-comparison">
+                            Srovnání
+                        </label>
+                        <label class="drayvia-finance-tab" for="finance-tab-profitability">
+                            Ziskovost
+                        </label>
+                    </nav>
+
+                    <div class="drayvia-finance-panels">
+                        <section
+                            class="drayvia-finance-panel drayvia-finance-panel-customers"
+                            data-finance-panel="customers"
+                            data-customer-index-endpoint="/api/v1/customers"
+                        >
+                            <div class="drayvia-finance-card">
+                                <h3>Odběratelé</h3>
+                                <p>
+                                    Odběratel je obchodní role existující organizace.
+                                </p>
+
+                                <div class="drayvia-finance-note">
+                                    Směr vztahu zůstává:
+                                    odběratel/customer = source,
+                                    DRAYVIA/provider = target.
+                                </div>
+                                <form
+                                    data-customer-create-form
+                                    style="margin-top: 18px;"
+                                >
+                                    <div class="drayvia-finance-grid">
+                                        <div class="drayvia-finance-field">
+                                            <label for="finance-customer-registration-number">
+                                                IČO odběratele
+                                            </label>
+                                            <input
+                                                id="finance-customer-registration-number"
+                                                data-customer-registration-number
+                                                type="text"
+                                                inputmode="numeric"
+                                                pattern="[0-9]{8}"
+                                                maxlength="8"
+                                                placeholder="8 číslic"
+                                                required
+                                            >
+                                        </div>
+
+                                        <div class="drayvia-finance-field">
+                                            <label for="finance-customer-valid-from">
+                                                Platnost vztahu od
+                                            </label>
+                                            <input
+                                                id="finance-customer-valid-from"
+                                                data-customer-valid-from
+                                                type="date"
+                                                required
+                                            >
+                                        </div>
+
+                                        <div class="drayvia-finance-field">
+                                            <label>&nbsp;</label>
+                                            <button
+                                                type="submit"
+                                                data-customer-create-submit
+                                            >
+                                                Přidat odběratele
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <p
+                                        data-customer-create-message
+                                        class="drayvia-finance-note"
+                                        style="margin-top: 12px;"
+                                        hidden
+                                    ></p>
+                                </form>
+
+                                <div style="overflow-x: auto; margin-top: 18px;">
+                                    <table class="drayvia-customer-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Odběratel</th>
+                                                <th>IČO</th>
+                                                <th>Vztah</th>
+                                                <th>Fakturační ceníky</th>
+                                                <th>Stav</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody data-customer-list>
+                                            <tr>
+                                                <td colspan="5">
+                                                    Datové načtení odběratelů bude
+                                                    připojeno k připravenému API
+                                                    v navazující jednotce.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div
+                                    class="drayvia-finance-card"
+                                    style="margin-top: 18px;"
+                                    data-customer-detail
+                                >
+                                    <h4>Detail odběratele</h4>
+                                    <p>
+                                        Detail zobrazí identitu firmy,
+                                        platnost obchodního vztahu a všechny
+                                        jeho současné i historické fakturační ceníky.
+                                    </p>
+                                    <span class="drayvia-finance-status">
+                                        GET /api/v1/customers/{relationship}
+                                    </span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section
+                            class="drayvia-finance-panel drayvia-finance-panel-price-lists"
+                            data-finance-panel="price-lists"
+                        >
+                            <div class="drayvia-finance-card">
+                                <h3>Ceníky</h3>
+                                <p>
+                                    Fakturační ceníky a ceníky řidičů jsou vedené
+                                    jako dva samostatné finanční vztahy.
+                                </p>
+
+                                <div class="drayvia-finance-shell">
+                                    <input
+                                        class="drayvia-price-list-tab-input"
+                                        id="price-list-tab-billing"
+                                        name="price-list-tab"
+                                        type="radio"
+                                        checked
+                                    >
+                                    <input
+                                        class="drayvia-price-list-tab-input"
+                                        id="price-list-tab-drivers"
+                                        name="price-list-tab"
+                                        type="radio"
+                                    >
+
+                                    <nav class="drayvia-price-list-tabs">
+                                        <label
+                                            class="drayvia-price-list-tab"
+                                            for="price-list-tab-billing"
+                                        >
+                                            Fakturační ceníky
+                                        </label>
+                                        <label
+                                            class="drayvia-price-list-tab"
+                                            for="price-list-tab-drivers"
+                                        >
+                                            Ceníky řidičů
+                                        </label>
+                                    </nav>
+
+                                    <div class="drayvia-price-list-panels">
+                                        <section
+                                            class="drayvia-price-list-panel drayvia-price-list-panel-billing"
+                                            data-price-list-panel="billing"
+                                            data-provider-managed-price-list-endpoint="/api/v1/customers/{relationship}/price-lists"
+                                        >
+                                            <div class="drayvia-finance-card">
+                                                <h4>Nový fakturační ceník odběratele</h4>
+
+                                                <div class="drayvia-finance-grid">
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="billing-price-list-customer">
+                                                            Odběratel
+                                                        </label>
+                                                        <select
+                                                            id="billing-price-list-customer"
+                                                            data-billing-price-list-customer
+                                                        >
+                                                            <option value="">
+                                                                Vyberte odběratele
+                                                            </option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="billing-price-list-name">
+                                                            Název ceníku
+                                                        </label>
+                                                        <input
+                                                            id="billing-price-list-name"
+                                                            data-billing-price-list-name
+                                                            type="text"
+                                                            placeholder="Např. Fakturační ceník 2026"
+                                                         required>
+                                                    </div>
+
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="billing-price-list-currency">
+                                                            Měna
+                                                        </label>
+                                                        <select id="billing-price-list-currency"
+                                                            data-billing-price-list-currency>
+                                                            <option value="CZK">CZK</option>
+                                                            <option value="EUR">EUR</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="billing-price-list-valid-from">
+                                                            Platnost od
+                                                        </label>
+                                                        <input
+                                                            id="billing-price-list-valid-from"
+                                                            data-billing-price-list-valid-from
+                                                            type="date"
+                                                         required>
+                                                    </div>
+
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="billing-price-list-valid-until">
+                                                            Platnost do
+                                                        </label>
+                                                        <input
+                                                            id="billing-price-list-valid-until"
+                                                            data-billing-price-list-valid-until
+                                                            type="date"
+                                                        >
+                                                    </div>
+                                                </div>
+
+                                                <div style="overflow-x: auto; margin-top: 18px;">
+                                                    <table class="drayvia-price-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Položka</th>
+                                                                <th>Jednotka</th>
+                                                                <th>Sazba</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr data-pricing-code="delivered_parcels">
+                                                                <td>Doručená zásilka</td>
+                                                                <td>zásilka</td>
+                                                                <td>
+                                                                    <input
+                                                                        data-price-list-rate="delivered_parcels"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.0001"
+                                                                     required>
+                                                                </td>
+                                                            </tr>
+                                                            <tr data-pricing-code="redirected_parcels">
+                                                                <td>Přesměrovaná zásilka</td>
+                                                                <td>zásilka</td>
+                                                                <td>
+                                                                    <input
+                                                                        data-price-list-rate="redirected_parcels"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.0001"
+                                                                     required>
+                                                                </td>
+                                                            </tr>
+                                                            <tr data-pricing-code="undelivered_parcels">
+                                                                <td>Nedoručená zásilka</td>
+                                                                <td>zásilka</td>
+                                                                <td>
+                                                                    <input
+                                                                        data-price-list-rate="undelivered_parcels"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.0001"
+                                                                     required>
+                                                                </td>
+                                                            </tr>
+                                                            <tr data-pricing-code="actual_km">
+                                                                <td>Skutečný kilometr</td>
+                                                                <td>km</td>
+                                                                <td>
+                                                                    <input
+                                                                        data-price-list-rate="actual_km"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.0001"
+                                                                     required>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                <div
+                                                    style="margin-top: 18px;"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        data-billing-price-list-save
+                                                    >
+                                                        Uložit fakturační ceník
+                                                    </button>
+
+                                                    <p
+                                                        data-billing-price-list-message
+                                                        class="drayvia-finance-note"
+                                                        style="margin-top: 12px;"
+                                                        hidden
+                                                    ></p>
+
+                                                    <div
+                                                        class="drayvia-finance-note"
+                                                        style="margin-top: 12px;"
+                                                    >
+                                                        Ceník se uloží jako kompletní
+                                                        draft v1. Schválení a aktivace
+                                                        zůstávají samostatné kroky.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section
+                                            class="drayvia-price-list-panel drayvia-price-list-panel-drivers"
+                                            data-price-list-panel="drivers"
+                                        >
+                                            <div class="drayvia-finance-card">
+                                                <h4>Ceníky řidičů</h4>
+                                                <p>
+                                                    Ceníky řidičů zůstávají samostatným
+                                                    driver-specific finančním kontraktem
+                                                    a nepoužívají organization Price List
+                                                    jen proto, že mají podobné sazby.
+                                                </p>
+                                            </div>
+                                        </section>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section
+                            class="drayvia-finance-panel drayvia-finance-panel-billing"
+                            data-finance-panel="billing"
+                        >
+                            <div class="drayvia-finance-card">
+                                <h3>Fakturace</h3>
+                                <p>
+                                    Přehled odběratelů, období, tras a částek
+                                    připravených k vyúčtování.
+                                </p>
+                            </div>
+                        </section>
+
+                        <section
+                            class="drayvia-finance-panel drayvia-finance-panel-comparison"
+                            data-finance-panel="comparison"
+                        >
+                            <div class="drayvia-finance-card">
+                                <h3>Srovnání</h3>
+                                <p>
+                                    Fakturace odběrateli versus náklad řidiče,
+                                    v korunách i procentech.
+                                </p>
+                            </div>
+                        </section>
+
+                        <section
+                            class="drayvia-finance-panel drayvia-finance-panel-profitability"
+                            data-finance-panel="profitability"
+                        >
+                            <div class="drayvia-finance-card">
+                                <h3>Ziskovost</h3>
+                                <p>
+                                    První úroveň je Hrubá marže Kč a Marže %.
+                                    Dokud nejsou zahrnuté všechny relevantní
+                                    náklady, nebude výsledek označen jako čistý zisk.
+                                </p>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+            `;
+
+
 
     const bank = () => `
         ${header(
@@ -12041,6 +12571,974 @@ const templates = {
             );
         }
     };
+            // S021-03E READ-ONLY FINANCE CUSTOMER LOADER
+            const financeCustomerDate = (value) => {
+                if (!value) {
+                    return '\u2014';
+                }
+
+                const parts = String(value).slice(0, 10).split('-');
+
+                if (parts.length !== 3) {
+                    return String(value);
+                }
+
+                return `${parts[2]}.${parts[1]}.${parts[0]}`;
+            };
+
+            const financeCustomerStatus = (value) => {
+                const statuses = {
+                    active: 'Aktivn\u00ed',
+                    inactive: 'Neaktivn\u00ed',
+                    suspended: 'Pozastaven\u00fd',
+                    draft: 'Koncept',
+                    approved: 'Schv\u00e1len\u00fd',
+                    active_price_list: 'Aktivn\u00ed',
+                    replaced: 'Nahrazen\u00fd',
+                    expired: 'Ukon\u010den\u00fd',
+                    archived: 'Archivovan\u00fd',
+                };
+
+                return statuses[value] || value || '\u2014';
+            };
+
+            const financeCustomerRelationshipPeriod = (item) => {
+                const from =
+                    financeCustomerDate(
+                        item?.relationship_valid_from
+                    );
+
+                const until =
+                    financeCustomerDate(
+                        item?.relationship_valid_until
+                    );
+
+                return `${from} \u2013 ${until}`;
+            };
+
+            const financeCustomerPriceListSummary = (priceLists) => {
+                const items =
+                    Array.isArray(priceLists)
+                        ? priceLists
+                        : [];
+
+                if (items.length === 0) {
+                    return 'Bez faktura\u010dn\u00edho cen\u00edku';
+                }
+
+                const current =
+                    items.filter(
+                        (item) =>
+                            item?.status === 'active'
+                            || item?.status === 'draft'
+                    );
+
+                if (current.length === 0) {
+                    return `${items.length} historick\u00fdch`;
+                }
+
+                return `${current.length} aktu\u00e1ln\u00ed / ${items.length} celkem`;
+            };
+
+            const renderFinanceCustomerDetail = (item) => {
+                const root =
+                    document.querySelector(
+                        '[data-finance-root]'
+                    );
+
+                const detail =
+                    root?.querySelector(
+                        '[data-customer-detail]'
+                    );
+
+                if (!detail) {
+                    return;
+                }
+
+                detail.replaceChildren();
+
+                const title =
+                    document.createElement('h4');
+
+                title.textContent =
+                    item?.customer?.name
+                    || 'Detail odb\u011bratele';
+
+                const identity =
+                    document.createElement('div');
+
+                identity.className =
+                    'drayvia-finance-grid';
+
+                const identityRows = [
+                    [
+                        'I\u010cO',
+                        item?.customer?.registration_number
+                            || '\u2014',
+                    ],
+                    [
+                        'DI\u010c',
+                        item?.customer?.vat_number
+                            || '\u2014',
+                    ],
+                    [
+                        'Stav firmy',
+                        financeCustomerStatus(
+                            item?.customer?.status
+                        ),
+                    ],
+                    [
+                        'Platnost vztahu',
+                        financeCustomerRelationshipPeriod(
+                            item
+                        ),
+                    ],
+                ];
+
+                identityRows.forEach(
+                    ([label, value]) => {
+                        const field =
+                            document.createElement('div');
+
+                        field.className =
+                            'drayvia-finance-field';
+
+                        const key =
+                            document.createElement('label');
+
+                        key.textContent = label;
+
+                        const data =
+                            document.createElement('strong');
+
+                        data.textContent =
+                            String(value ?? '\u2014');
+
+                        field.append(
+                            key,
+                            data
+                        );
+
+                        identity.appendChild(field);
+                    }
+                );
+
+                const priceTitle =
+                    document.createElement('h4');
+
+                priceTitle.textContent =
+                    'Faktura\u010dn\u00ed cen\u00edky';
+
+                priceTitle.style.marginTop =
+                    '18px';
+
+                const priceLists =
+                    Array.isArray(item?.price_lists)
+                        ? item.price_lists
+                        : [];
+
+                const priceTable =
+                    document.createElement('table');
+
+                priceTable.className =
+                    'drayvia-customer-table';
+
+                const priceHead =
+                    document.createElement('thead');
+
+                const priceHeadRow =
+                    document.createElement('tr');
+
+                [
+                    'Cen\u00edk',
+                    'Stav',
+                    'Verze',
+                    'Spr\u00e1va',
+                ].forEach((label) => {
+                    const cell =
+                        document.createElement('th');
+
+                    cell.textContent = label;
+
+                    priceHeadRow.appendChild(cell);
+                });
+
+                priceHead.appendChild(priceHeadRow);
+                priceTable.appendChild(priceHead);
+
+                const priceBody =
+                    document.createElement('tbody');
+
+                if (priceLists.length === 0) {
+                    const row =
+                        document.createElement('tr');
+
+                    const cell =
+                        document.createElement('td');
+
+                    cell.colSpan = 4;
+                    cell.textContent =
+                        'Odb\u011bratel zat\u00edm nem\u00e1 evidovan\u00fd faktura\u010dn\u00ed cen\u00edk.';
+
+                    row.appendChild(cell);
+                    priceBody.appendChild(row);
+                }
+                else {
+                    priceLists.forEach(
+                        (priceList) => {
+                            const row =
+                                document.createElement('tr');
+
+                            const values = [
+                                priceList?.name || '\u2014',
+                                financeCustomerStatus(
+                                    priceList?.status
+                                ),
+                                priceList?.current_version
+                                    ?? '\u2014',
+                                priceList?.managed_by_provider
+                                    ? 'DRAYVIA'
+                                    : 'Odb\u011bratel',
+                            ];
+
+                            values.forEach((value) => {
+                                const cell =
+                                    document.createElement('td');
+
+                                cell.textContent =
+                                    String(value);
+
+                                row.appendChild(cell);
+                            });
+
+                            priceBody.appendChild(row);
+                        }
+                    );
+                }
+
+                priceTable.appendChild(priceBody);
+
+                detail.append(
+                    title,
+                    identity,
+                    priceTitle,
+                    priceTable
+                );
+            };
+
+            const loadFinanceCustomerDetail = async (
+                relationshipId
+            ) => {
+                if (!relationshipId) {
+                    return;
+                }
+
+                const root =
+                    document.querySelector(
+                        '[data-finance-root]'
+                    );
+
+                const detail =
+                    root?.querySelector(
+                        '[data-customer-detail]'
+                    );
+
+                const select =
+                    root?.querySelector(
+                        '[data-billing-price-list-customer]'
+                    );
+
+                if (!root || !detail) {
+                    return;
+                }
+
+                detail.textContent =
+                    'Na\u010d\u00edt\u00e1m detail odb\u011bratele\u2026';
+
+                try {
+                    const body =
+                        await api(
+                            `/api/v1/customers/${encodeURIComponent(relationshipId)}`
+                        );
+
+                    const item =
+                        getPayload(body);
+
+                    if (
+                        !item
+                        || Number(item.relationship_id)
+                            !== Number(relationshipId)
+                    ) {
+                        throw new Error(
+                            'API vr\u00e1tilo neo\u010dek\u00e1van\u00fd detail odb\u011bratele.'
+                        );
+                    }
+
+                    if (select) {
+                        select.value =
+                            String(relationshipId);
+                    }
+
+                    renderFinanceCustomerDetail(
+                        item
+                    );
+                }
+                catch (error) {
+                    detail.textContent =
+                        `Detail odb\u011bratele se nepoda\u0159ilo na\u010d\u00edst: ${error.message}`;
+                }
+            };
+
+                        /*
+             * S021-03M BROWSER CUSTOMER CREATION
+             *
+             * Creates only the customer organization/business relationship.
+             * Billing-price-list creation remains a separate workflow.
+             */
+            const bindFinanceCustomerCreate = () => {
+                const root =
+                    document.querySelector(
+                        '[data-finance-root]'
+                    );
+
+                const form =
+                    root?.querySelector(
+                        '[data-customer-create-form]'
+                    );
+
+                if (
+                    !root
+                    || !form
+                    || form.dataset.bound === '1'
+                ) {
+                    return;
+                }
+
+                const registrationNumber =
+                    form.querySelector(
+                        '[data-customer-registration-number]'
+                    );
+
+                const validFrom =
+                    form.querySelector(
+                        '[data-customer-valid-from]'
+                    );
+
+                const submit =
+                    form.querySelector(
+                        '[data-customer-create-submit]'
+                    );
+
+                const message =
+                    form.querySelector(
+                        '[data-customer-create-message]'
+                    );
+
+                if (
+                    !registrationNumber
+                    || !validFrom
+                    || !submit
+                    || !message
+                ) {
+                    return;
+                }
+
+                form.dataset.bound = '1';
+
+                form.addEventListener(
+                    'submit',
+                    async (event) => {
+                        event.preventDefault();
+
+                        if (!form.reportValidity()) {
+                            return;
+                        }
+
+                        const ico =
+                            registrationNumber.value
+                                .trim();
+
+                        if (!/^[0-9]{8}$/.test(ico)) {
+                            registrationNumber.setCustomValidity(
+                                'IČO musí obsahovat přesně 8 číslic.'
+                            );
+
+                            registrationNumber.reportValidity();
+                            registrationNumber.setCustomValidity('');
+                            return;
+                        }
+
+                        submit.disabled = true;
+                        message.hidden = false;
+                        message.textContent =
+                            'Zakládám odběratele a ověřuji IČO v ARES…';
+
+                        try {
+                            const body =
+                                await api(
+                                    '/api/v1/customers',
+                                    {
+                                        method: 'POST',
+                                        body: JSON.stringify({
+                                            registration_number:
+                                                ico,
+                                            relationship_valid_from:
+                                                validFrom.value,
+                                        }),
+                                    }
+                                );
+
+                            const created =
+                                getPayload(body);
+
+                            const relationshipId =
+                                Number(
+                                    created?.relationship_id
+                                );
+
+                            registrationNumber.value = '';
+
+                            message.textContent =
+                                'Odběratel byl úspěšně přidán.';
+
+                            await loadFinanceCustomers();
+
+                            if (
+                                Number.isInteger(
+                                    relationshipId
+                                )
+                                && relationshipId > 0
+                            ) {
+                                await loadFinanceCustomerDetail(
+                                    relationshipId
+                                );
+                            }
+                        }
+                        catch (error) {
+                            message.textContent =
+                                `Odběratele se nepodařilo přidat: ${error.message}`;
+                        }
+                        finally {
+                            submit.disabled = false;
+                        }
+                    }
+                );
+            };
+            /*
+             * S021-03N ATOMIC BILLING DRAFT
+             *
+             * The provider-managed customer endpoint creates the PriceList,
+             * draft version 1 and all canonical rate items in one backend
+             * transaction. Approval and activation remain separate.
+             */
+            const bindFinanceBillingPriceListCreate = () => {
+                const root =
+                    document.querySelector(
+                        '[data-finance-root]'
+                    );
+
+                const panel =
+                    root?.querySelector(
+                        '[data-provider-managed-price-list-endpoint]'
+                    );
+
+                if (
+                    !root
+                    || !panel
+                    || panel.dataset.billingCreateBound === '1'
+                ) {
+                    return;
+                }
+
+                const customer =
+                    panel.querySelector(
+                        '[data-billing-price-list-customer]'
+                    );
+
+                const name =
+                    panel.querySelector(
+                        '[data-billing-price-list-name]'
+                    );
+
+                const currency =
+                    panel.querySelector(
+                        '[data-billing-price-list-currency]'
+                    );
+
+                const validFrom =
+                    panel.querySelector(
+                        '[data-billing-price-list-valid-from]'
+                    );
+
+                const validUntil =
+                    panel.querySelector(
+                        '[data-billing-price-list-valid-until]'
+                    );
+
+                const save =
+                    panel.querySelector(
+                        '[data-billing-price-list-save]'
+                    );
+
+                const message =
+                    panel.querySelector(
+                        '[data-billing-price-list-message]'
+                    );
+
+                const rateInputs =
+                    Array.from(
+                        panel.querySelectorAll(
+                            '[data-price-list-rate]'
+                        )
+                    );
+
+                if (
+                    !customer
+                    || !name
+                    || !currency
+                    || !validFrom
+                    || !validUntil
+                    || !save
+                    || !message
+                    || rateInputs.length !== 4
+                ) {
+                    return;
+                }
+
+                const itemDescriptions = {
+                    delivered_parcels:
+                        'Doručená zásilka',
+                    redirected_parcels:
+                        'Přesměrovaná zásilka',
+                    undelivered_parcels:
+                        'Nedoručená zásilka',
+                    actual_km:
+                        'Skutečný kilometr',
+                };
+
+                const canonicalCodes = [
+                    'delivered_parcels',
+                    'redirected_parcels',
+                    'undelivered_parcels',
+                    'actual_km',
+                ];
+
+                panel.dataset.billingCreateBound = '1';
+
+                save.addEventListener(
+                    'click',
+                    async () => {
+                        const relationshipId =
+                            Number(customer.value);
+
+                        if (
+                            !Number.isInteger(
+                                relationshipId
+                            )
+                            || relationshipId < 1
+                        ) {
+                            message.hidden = false;
+                            message.textContent =
+                                'Vyberte odběratele.';
+                            return;
+                        }
+
+                        if (
+                            name.value.trim() === ''
+                            || validFrom.value === ''
+                        ) {
+                            message.hidden = false;
+                            message.textContent =
+                                'Vyplňte název ceníku a platnost od.';
+                            return;
+                        }
+
+                        if (
+                            validUntil.value !== ''
+                            && validUntil.value <
+                                validFrom.value
+                        ) {
+                            message.hidden = false;
+                            message.textContent =
+                                'Platnost do nesmí být před platností od.';
+                            return;
+                        }
+
+                        const rateMap =
+                            new Map(
+                                rateInputs.map(
+                                    (input) => [
+                                        input.dataset
+                                            .priceListRate,
+                                        input,
+                                    ]
+                                )
+                            );
+
+                        const items =
+                            canonicalCodes.map(
+                                (code) => {
+                                    const input =
+                                        rateMap.get(code);
+
+                                    const unitRate =
+                                        input?.value
+                                            ?.trim()
+                                            ?? '';
+
+                                    return {
+                                        code,
+                                        description:
+                                            itemDescriptions[
+                                                code
+                                            ],
+                                        unit_rate:
+                                            unitRate,
+                                    };
+                                }
+                            );
+
+                        if (
+                            items.some(
+                                (item) =>
+                                    item.unit_rate === ''
+                                    || !Number.isFinite(
+                                        Number(
+                                            item.unit_rate
+                                        )
+                                    )
+                                    || Number(
+                                        item.unit_rate
+                                    ) < 0
+                            )
+                        ) {
+                            message.hidden = false;
+                            message.textContent =
+                                'Vyplňte všechny čtyři nezáporné sazby.';
+                            return;
+                        }
+
+                        const endpoint =
+                            panel.dataset
+                                .providerManagedPriceListEndpoint
+                                .replace(
+                                    '{relationship}',
+                                    encodeURIComponent(
+                                        String(
+                                            relationshipId
+                                        )
+                                    )
+                                );
+
+                        save.disabled = true;
+                        message.hidden = false;
+                        message.textContent =
+                            'Ukládám kompletní draft fakturačního ceníku…';
+
+                        try {
+                            await api(
+                                endpoint,
+                                {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        name:
+                                            name.value.trim(),
+                                        currency:
+                                            currency.value,
+                                        valid_from:
+                                            validFrom.value,
+                                        valid_until:
+                                            validUntil.value
+                                            || null,
+                                        change_reason:
+                                            'Založení fakturačního ceníku přes Finance UI.',
+                                        items,
+                                    }),
+                                }
+                            );
+
+                            message.textContent =
+                                'Fakturační ceník byl uložen jako kompletní draft v1 se čtyřmi sazbami.';
+
+                            name.value = '';
+
+                            rateInputs.forEach(
+                                (input) => {
+                                    input.value = '';
+                                }
+                            );
+
+                            await loadFinanceCustomers();
+
+                            await loadFinanceCustomerDetail(
+                                relationshipId
+                            );
+                        }
+                        catch (error) {
+                            message.textContent =
+                                `Fakturační ceník se nepodařilo uložit: ${error.message}`;
+                        }
+                        finally {
+                            save.disabled = false;
+                        }
+                    }
+                );
+            };
+const loadFinanceCustomers = async () => {
+                const root =
+                    document.querySelector(
+                        '[data-finance-root]'
+                    );
+
+                if (!root) {
+                    return;
+                }
+
+                const customerPanel =
+                    root.querySelector(
+                        '[data-customer-index-endpoint]'
+                    );
+
+                const list =
+                    root.querySelector(
+                        '[data-customer-list]'
+                    );
+
+                const select =
+                    root.querySelector(
+                        '[data-billing-price-list-customer]'
+                    );
+
+                const detail =
+                    root.querySelector(
+                        '[data-customer-detail]'
+                    );
+
+                if (
+                    !customerPanel
+                    || !list
+                    || !select
+                    || !detail
+                ) {
+                    return;
+                }
+
+                const customerIndexEndpoint =
+                    customerPanel.dataset
+                        .customerIndexEndpoint;
+
+                list.replaceChildren();
+                select.replaceChildren();
+                select.disabled = true;
+
+                const loadingRow =
+                    document.createElement('tr');
+
+                const loadingCell =
+                    document.createElement('td');
+
+                loadingCell.colSpan = 5;
+                loadingCell.textContent =
+                    'Na\u010d\u00edt\u00e1m odb\u011bratele\u2026';
+
+                loadingRow.appendChild(loadingCell);
+                list.appendChild(loadingRow);
+
+                const emptyOption =
+                    document.createElement('option');
+
+                emptyOption.value = '';
+                emptyOption.textContent =
+                    'Vyberte odb\u011bratele';
+
+                select.appendChild(emptyOption);
+
+                try {
+                    const body =
+                        await api(
+                            customerIndexEndpoint
+                        );
+
+                    const payload =
+                        getPayload(body);
+
+                    const customers =
+                        Array.isArray(payload)
+                            ? payload
+                            : [];
+
+                    list.replaceChildren();
+
+                    if (customers.length === 0) {
+                        const row =
+                            document.createElement('tr');
+
+                        const cell =
+                            document.createElement('td');
+
+                        cell.colSpan = 5;
+                        cell.textContent =
+                            'Pro aktu\u00e1ln\u00ed organizaci nen\u00ed evidov\u00e1n \u017e\u00e1dn\u00fd odb\u011bratelsk\u00fd vztah.';
+
+                        row.appendChild(cell);
+                        list.appendChild(row);
+
+                        detail.textContent =
+                            'Nejprve je pot\u0159eba zalo\u017eit obchodn\u00ed vztah s odb\u011bratelem.';
+
+                        return;
+                    }
+
+                    customers.forEach((item) => {
+                        const relationshipId =
+                            Number(
+                                item?.relationship_id
+                            );
+
+                        const customer =
+                            item?.customer || {};
+
+                        const option =
+                            document.createElement('option');
+
+                        option.value =
+                            String(relationshipId);
+
+                        option.textContent =
+                            customer.registration_number
+                                ? `${customer.name} \u00b7 I\u010cO ${customer.registration_number}`
+                                : (
+                                    customer.name
+                                    || `Odb\u011bratel ${relationshipId}`
+                                );
+
+                        select.appendChild(option);
+
+                        const row =
+                            document.createElement('tr');
+
+                        const values = [
+                            customer.name || '\u2014',
+                            customer.registration_number
+                                || '\u2014',
+                            financeCustomerRelationshipPeriod(
+                                item
+                            ),
+                            financeCustomerPriceListSummary(
+                                item?.price_lists
+                            ),
+                        ];
+
+                        values.forEach((value) => {
+                            const cell =
+                                document.createElement('td');
+
+                            cell.textContent =
+                                String(value);
+
+                            row.appendChild(cell);
+                        });
+
+                        const actionCell =
+                            document.createElement('td');
+
+                        const detailButton =
+                            document.createElement('button');
+
+                        detailButton.type = 'button';
+                        detailButton.className =
+                            'drayvia-finance-tab';
+                        detailButton.textContent =
+                            'Detail';
+
+                        detailButton.addEventListener(
+                            'click',
+                            () => {
+                                loadFinanceCustomerDetail(
+                                    relationshipId
+                                );
+                            }
+                        );
+
+                        actionCell.appendChild(
+                            detailButton
+                        );
+
+                        row.appendChild(
+                            actionCell
+                        );
+
+                        list.appendChild(row);
+                    });
+
+                    select.disabled = false;
+
+                    if (
+                        select.dataset.financeDetailBound
+                        !== '1'
+                    ) {
+                        select.dataset.financeDetailBound =
+                            '1';
+
+                        select.addEventListener(
+                            'change',
+                            () => {
+                                if (!select.value) {
+                                    return;
+                                }
+
+                                loadFinanceCustomerDetail(
+                                    Number(select.value)
+                                );
+                            }
+                        );
+                    }
+
+                    const firstRelationshipId =
+                        Number(
+                            customers[0]
+                                ?.relationship_id
+                        );
+
+                    if (
+                        Number.isInteger(
+                            firstRelationshipId
+                        )
+                        && firstRelationshipId > 0
+                    ) {
+                        select.value =
+                            String(
+                                firstRelationshipId
+                            );
+
+                        await loadFinanceCustomerDetail(
+                            firstRelationshipId
+                        );
+                    }
+                }
+                catch (error) {
+                    list.replaceChildren();
+
+                    const row =
+                        document.createElement('tr');
+
+                    const cell =
+                        document.createElement('td');
+
+                    cell.colSpan = 5;
+                    cell.textContent =
+                        `Odb\u011bratele se nepoda\u0159ilo na\u010d\u00edst: ${error.message}`;
+
+                    row.appendChild(cell);
+                    list.appendChild(row);
+
+                    detail.textContent =
+                        'Detail odb\u011bratele nen\u00ed dostupn\u00fd.';
+
+                    select.disabled = true;
+                }
+            };
+
     const render = (page) => {
         const template = templates[page];
 
@@ -12074,6 +13572,12 @@ const templates = {
 
         if (page === 'statistics') {
             loadDriverStatistics();
+        }
+
+if (page === 'finance') {
+            bindFinanceCustomerCreate();
+            bindFinanceBillingPriceListCreate();
+            loadFinanceCustomers();
         }
 
         const scroll = layer.querySelector('.drayvia-preview-scroll');
