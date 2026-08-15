@@ -120,6 +120,7 @@ final class CustomerBillingAdministrationContractTest extends TestCase
             $routes,
         );
     }
+
     public function test_customer_write_foundation_uses_incoming_relationship_without_new_entity(): void
     {
         $backend = dirname(__DIR__, 4);

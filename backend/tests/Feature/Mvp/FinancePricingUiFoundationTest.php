@@ -132,7 +132,7 @@ final class FinancePricingUiFoundationTest extends TestCase
             '[data-customer-list]',
             '[data-billing-price-list-customer]',
             '[data-customer-detail]',
-            "select.dataset.financeDetailBound",
+            'select.dataset.financeDetailBound',
             "!== '1'",
         ] as $marker) {
             self::assertStringContainsString(
@@ -156,6 +156,7 @@ final class FinancePricingUiFoundationTest extends TestCase
             $source,
         );
     }
+
     public function test_finance_ui_can_create_customer_through_existing_api_helper(): void
     {
         $source = file_get_contents(
@@ -199,6 +200,7 @@ final class FinancePricingUiFoundationTest extends TestCase
             $source,
         );
     }
+
     public function test_finance_ui_creates_complete_billing_price_list_draft_atomically(): void
     {
         $source = file_get_contents(
@@ -241,7 +243,7 @@ final class FinancePricingUiFoundationTest extends TestCase
         );
 
         self::assertStringNotContainsString(
-            "/versions/1",
+            '/versions/1',
             $source,
         );
     }

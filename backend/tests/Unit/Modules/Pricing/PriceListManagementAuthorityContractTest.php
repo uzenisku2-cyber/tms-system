@@ -75,7 +75,7 @@ final class PriceListManagementAuthorityContractTest extends TestCase
         );
 
         self::assertStringContainsString(
-            "OrganizationRelationship::TYPE_SUBCONTRACTING",
+            'OrganizationRelationship::TYPE_SUBCONTRACTING',
             $service,
         );
     }
@@ -101,7 +101,7 @@ final class PriceListManagementAuthorityContractTest extends TestCase
         );
 
         self::assertStringContainsString(
-            "whereNull(",
+            'whereNull(',
             $service,
         );
 

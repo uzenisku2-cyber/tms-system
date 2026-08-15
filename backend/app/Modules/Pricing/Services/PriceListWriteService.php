@@ -404,20 +404,15 @@ final class PriceListWriteService
                 }
 
                 $priceList = PriceList::query()->create([
-                    'organization_relationship_id' =>
-                        $relationship->getKey(),
+                    'organization_relationship_id' => $relationship->getKey(),
 
-                    'owner_organization_id' =>
-                        $customerId,
+                    'owner_organization_id' => $customerId,
 
-                    'customer_organization_id' =>
-                        $customerId,
+                    'customer_organization_id' => $customerId,
 
-                    'provider_organization_id' =>
-                        $providerId,
+                    'provider_organization_id' => $providerId,
 
-                    'managed_by_organization_id' =>
-                        $providerId,
+                    'managed_by_organization_id' => $providerId,
 
                     'name' => $name,
                     'description' => $description,
@@ -518,30 +513,30 @@ final class PriceListWriteService
             ): PriceListVersion {
                 $priceList = PriceList::query()
                     ->where(
-                            function ($managementQuery) use (
-                                $organizationId,
-                            ): void {
-                                $managementQuery
-                                    ->where(
-                                        'managed_by_organization_id',
+                        function ($managementQuery) use (
+                            $organizationId,
+                        ): void {
+                            $managementQuery
+                                ->where(
+                                    'managed_by_organization_id',
+                                    $organizationId,
+                                )
+                                ->orWhere(
+                                    function ($legacyOwnerQuery) use (
                                         $organizationId,
-                                    )
-                                    ->orWhere(
-                                        function ($legacyOwnerQuery) use (
-                                            $organizationId,
-                                        ): void {
-                                            $legacyOwnerQuery
-                                                ->whereNull(
-                                                    'managed_by_organization_id',
-                                                )
-                                                ->where(
-                                                    'owner_organization_id',
-                                                    $organizationId,
-                                                );
-                                        },
-                                    );
-                            },
-                        )
+                                    ): void {
+                                        $legacyOwnerQuery
+                                            ->whereNull(
+                                                'managed_by_organization_id',
+                                            )
+                                            ->where(
+                                                'owner_organization_id',
+                                                $organizationId,
+                                            );
+                                    },
+                                );
+                        },
+                    )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -675,30 +670,30 @@ final class PriceListWriteService
             ): PriceListVersion {
                 $priceList = PriceList::query()
                     ->where(
-                            function ($managementQuery) use (
-                                $organizationId,
-                            ): void {
-                                $managementQuery
-                                    ->where(
-                                        'managed_by_organization_id',
+                        function ($managementQuery) use (
+                            $organizationId,
+                        ): void {
+                            $managementQuery
+                                ->where(
+                                    'managed_by_organization_id',
+                                    $organizationId,
+                                )
+                                ->orWhere(
+                                    function ($legacyOwnerQuery) use (
                                         $organizationId,
-                                    )
-                                    ->orWhere(
-                                        function ($legacyOwnerQuery) use (
-                                            $organizationId,
-                                        ): void {
-                                            $legacyOwnerQuery
-                                                ->whereNull(
-                                                    'managed_by_organization_id',
-                                                )
-                                                ->where(
-                                                    'owner_organization_id',
-                                                    $organizationId,
-                                                );
-                                        },
-                                    );
-                            },
-                        )
+                                    ): void {
+                                        $legacyOwnerQuery
+                                            ->whereNull(
+                                                'managed_by_organization_id',
+                                            )
+                                            ->where(
+                                                'owner_organization_id',
+                                                $organizationId,
+                                            );
+                                    },
+                                );
+                        },
+                    )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -824,30 +819,30 @@ final class PriceListWriteService
             ): PriceListVersion {
                 $priceList = PriceList::query()
                     ->where(
-                            function ($managementQuery) use (
-                                $organizationId,
-                            ): void {
-                                $managementQuery
-                                    ->where(
-                                        'managed_by_organization_id',
+                        function ($managementQuery) use (
+                            $organizationId,
+                        ): void {
+                            $managementQuery
+                                ->where(
+                                    'managed_by_organization_id',
+                                    $organizationId,
+                                )
+                                ->orWhere(
+                                    function ($legacyOwnerQuery) use (
                                         $organizationId,
-                                    )
-                                    ->orWhere(
-                                        function ($legacyOwnerQuery) use (
-                                            $organizationId,
-                                        ): void {
-                                            $legacyOwnerQuery
-                                                ->whereNull(
-                                                    'managed_by_organization_id',
-                                                )
-                                                ->where(
-                                                    'owner_organization_id',
-                                                    $organizationId,
-                                                );
-                                        },
-                                    );
-                            },
-                        )
+                                    ): void {
+                                        $legacyOwnerQuery
+                                            ->whereNull(
+                                                'managed_by_organization_id',
+                                            )
+                                            ->where(
+                                                'owner_organization_id',
+                                                $organizationId,
+                                            );
+                                    },
+                                );
+                        },
+                    )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -959,30 +954,30 @@ final class PriceListWriteService
             ): PriceListVersion {
                 $priceList = PriceList::query()
                     ->where(
-                            function ($managementQuery) use (
-                                $organizationId,
-                            ): void {
-                                $managementQuery
-                                    ->where(
-                                        'managed_by_organization_id',
+                        function ($managementQuery) use (
+                            $organizationId,
+                        ): void {
+                            $managementQuery
+                                ->where(
+                                    'managed_by_organization_id',
+                                    $organizationId,
+                                )
+                                ->orWhere(
+                                    function ($legacyOwnerQuery) use (
                                         $organizationId,
-                                    )
-                                    ->orWhere(
-                                        function ($legacyOwnerQuery) use (
-                                            $organizationId,
-                                        ): void {
-                                            $legacyOwnerQuery
-                                                ->whereNull(
-                                                    'managed_by_organization_id',
-                                                )
-                                                ->where(
-                                                    'owner_organization_id',
-                                                    $organizationId,
-                                                );
-                                        },
-                                    );
-                            },
-                        )
+                                    ): void {
+                                        $legacyOwnerQuery
+                                            ->whereNull(
+                                                'managed_by_organization_id',
+                                            )
+                                            ->where(
+                                                'owner_organization_id',
+                                                $organizationId,
+                                            );
+                                    },
+                                );
+                        },
+                    )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -1221,30 +1216,30 @@ final class PriceListWriteService
             ): PriceListVersion {
                 $priceList = PriceList::query()
                     ->where(
-                            function ($managementQuery) use (
-                                $organizationId,
-                            ): void {
-                                $managementQuery
-                                    ->where(
-                                        'managed_by_organization_id',
+                        function ($managementQuery) use (
+                            $organizationId,
+                        ): void {
+                            $managementQuery
+                                ->where(
+                                    'managed_by_organization_id',
+                                    $organizationId,
+                                )
+                                ->orWhere(
+                                    function ($legacyOwnerQuery) use (
                                         $organizationId,
-                                    )
-                                    ->orWhere(
-                                        function ($legacyOwnerQuery) use (
-                                            $organizationId,
-                                        ): void {
-                                            $legacyOwnerQuery
-                                                ->whereNull(
-                                                    'managed_by_organization_id',
-                                                )
-                                                ->where(
-                                                    'owner_organization_id',
-                                                    $organizationId,
-                                                );
-                                        },
-                                    );
-                            },
-                        )
+                                    ): void {
+                                        $legacyOwnerQuery
+                                            ->whereNull(
+                                                'managed_by_organization_id',
+                                            )
+                                            ->where(
+                                                'owner_organization_id',
+                                                $organizationId,
+                                            );
+                                    },
+                                );
+                        },
+                    )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();

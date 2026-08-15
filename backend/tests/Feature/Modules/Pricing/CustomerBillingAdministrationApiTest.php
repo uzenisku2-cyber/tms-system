@@ -130,31 +130,23 @@ final class CustomerBillingAdministrationApiTest extends TestCase
                     'change_reason' => 'Initial customer billing tariff.',
                     'items' => [
                         [
-                            'code' =>
-                                PriceListItem::CODE_DELIVERED_PARCELS,
-                            'description' =>
-                                'Doručená zásilka',
+                            'code' => PriceListItem::CODE_DELIVERED_PARCELS,
+                            'description' => 'Doručená zásilka',
                             'unit_rate' => '12.5000',
                         ],
                         [
-                            'code' =>
-                                PriceListItem::CODE_REDIRECTED_PARCELS,
-                            'description' =>
-                                'Přesměrovaná zásilka',
+                            'code' => PriceListItem::CODE_REDIRECTED_PARCELS,
+                            'description' => 'Přesměrovaná zásilka',
                             'unit_rate' => '8.0000',
                         ],
                         [
-                            'code' =>
-                                PriceListItem::CODE_UNDELIVERED_PARCELS,
-                            'description' =>
-                                'Nedoručená zásilka',
+                            'code' => PriceListItem::CODE_UNDELIVERED_PARCELS,
+                            'description' => 'Nedoručená zásilka',
                             'unit_rate' => '3.0000',
                         ],
                         [
-                            'code' =>
-                                PriceListItem::CODE_ACTUAL_KM,
-                            'description' =>
-                                'Skutečný kilometr',
+                            'code' => PriceListItem::CODE_ACTUAL_KM,
+                            'description' => 'Skutečný kilometr',
                             'unit_rate' => '5.2500',
                         ],
                     ],
@@ -313,31 +305,23 @@ final class CustomerBillingAdministrationApiTest extends TestCase
                     'valid_from' => '2026-01-01',
                     'items' => [
                         [
-                            'code' =>
-                                PriceListItem::CODE_DELIVERED_PARCELS,
-                            'description' =>
-                                'Doručená zásilka',
+                            'code' => PriceListItem::CODE_DELIVERED_PARCELS,
+                            'description' => 'Doručená zásilka',
                             'unit_rate' => '12.5000',
                         ],
                         [
-                            'code' =>
-                                PriceListItem::CODE_REDIRECTED_PARCELS,
-                            'description' =>
-                                'Přesměrovaná zásilka',
+                            'code' => PriceListItem::CODE_REDIRECTED_PARCELS,
+                            'description' => 'Přesměrovaná zásilka',
                             'unit_rate' => '8.0000',
                         ],
                         [
-                            'code' =>
-                                PriceListItem::CODE_UNDELIVERED_PARCELS,
-                            'description' =>
-                                'Nedoručená zásilka',
+                            'code' => PriceListItem::CODE_UNDELIVERED_PARCELS,
+                            'description' => 'Nedoručená zásilka',
                             'unit_rate' => '3.0000',
                         ],
                         [
-                            'code' =>
-                                PriceListItem::CODE_ACTUAL_KM,
-                            'description' =>
-                                'Skutečný kilometr',
+                            'code' => PriceListItem::CODE_ACTUAL_KM,
+                            'description' => 'Skutečný kilometr',
                             'unit_rate' => '5.2500',
                         ],
                     ],
@@ -544,16 +528,11 @@ final class CustomerBillingAdministrationApiTest extends TestCase
         ])->save();
 
         OrganizationRelationship::query()->create([
-            'source_organization_id' =>
-                $existingCustomer->getKey(),
-            'target_organization_id' =>
-                $foundation['provider']->getKey(),
-            'relationship_type' =>
-                OrganizationRelationship::TYPE_SUBCONTRACTING,
-            'status' =>
-                OrganizationRelationship::STATUS_ACTIVE,
-            'valid_from' =>
-                now()->subDay()->startOfDay(),
+            'source_organization_id' => $existingCustomer->getKey(),
+            'target_organization_id' => $foundation['provider']->getKey(),
+            'relationship_type' => OrganizationRelationship::TYPE_SUBCONTRACTING,
+            'status' => OrganizationRelationship::STATUS_ACTIVE,
+            'valid_from' => now()->subDay()->startOfDay(),
             'valid_until' => null,
         ]);
 
@@ -612,18 +591,15 @@ final class CustomerBillingAdministrationApiTest extends TestCase
                 'valid_from' => '2026-01-01',
                 'items' => [
                     [
-                        'code' =>
-                            PriceListItem::CODE_DELIVERED_PARCELS,
+                        'code' => PriceListItem::CODE_DELIVERED_PARCELS,
                         'unit_rate' => '12.5000',
                     ],
                     [
-                        'code' =>
-                            PriceListItem::CODE_REDIRECTED_PARCELS,
+                        'code' => PriceListItem::CODE_REDIRECTED_PARCELS,
                         'unit_rate' => '8.0000',
                     ],
                     [
-                        'code' =>
-                            PriceListItem::CODE_ACTUAL_KM,
+                        'code' => PriceListItem::CODE_ACTUAL_KM,
                         'unit_rate' => '5.2500',
                     ],
                 ],
@@ -752,6 +728,7 @@ final class CustomerBillingAdministrationApiTest extends TestCase
             (string) $organization->getKey(),
         );
     }
+
     private function organization(string $name): Organization
     {
         return Organization::query()->create([

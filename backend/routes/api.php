@@ -10,7 +10,9 @@ use App\Modules\DailyReports\Controllers\DailyReportFormConfigurationController;
 use App\Modules\Drivers\Controllers\DriverOrganizationAssignmentController;
 use App\Modules\Drivers\Controllers\OwnDriverAdminController;
 use App\Modules\Organizations\Controllers\CarrierAdminController;
+use App\Modules\Organizations\Controllers\CustomerAdminController;
 use App\Modules\Organizations\Controllers\OrganizationProfileController;
+use App\Modules\Pricing\Controllers\CustomerBillingPriceListController;
 use App\Modules\Routes\Controllers\RouteCatalogController;
 use Illuminate\Support\Facades\Route;
 
@@ -351,7 +353,7 @@ Route::middleware([
         Route::get(
             '/customers',
             [
-                \App\Modules\Organizations\Controllers\CustomerAdminController::class,
+                CustomerAdminController::class,
                 'index',
             ],
         )
@@ -361,7 +363,7 @@ Route::middleware([
         Route::get(
             '/customers/{relationship}',
             [
-                \App\Modules\Organizations\Controllers\CustomerAdminController::class,
+                CustomerAdminController::class,
                 'show',
             ],
         )
@@ -372,7 +374,7 @@ Route::middleware([
         Route::post(
             '/customers',
             [
-                \App\Modules\Organizations\Controllers\CustomerAdminController::class,
+                CustomerAdminController::class,
                 'store',
             ],
         )
@@ -382,7 +384,7 @@ Route::middleware([
         Route::post(
             '/customers/{relationship}/price-lists',
             [
-                \App\Modules\Pricing\Controllers\CustomerBillingPriceListController::class,
+                CustomerBillingPriceListController::class,
                 'store',
             ],
         )

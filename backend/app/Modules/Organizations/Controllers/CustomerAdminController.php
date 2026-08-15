@@ -9,8 +9,8 @@ use App\Http\Controllers\Controller;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationRelationship;
 use App\Modules\Organizations\Services\AresEconomicSubjectService;
-use Carbon\CarbonImmutable;
 use App\Modules\Pricing\Models\PriceList;
+use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -150,21 +150,14 @@ final class CustomerAdminController extends Controller
                             'name' => $aresData['name'],
                             'type' => Organization::TYPE_CARRIER,
                             'status' => Organization::STATUS_ACTIVE,
-                            'registration_number' =>
-                                $aresData['registration_number'],
-                            'vat_number' =>
-                                $aresData['vat_number'],
-                            'vat_status' =>
-                                $aresData['vat_status'],
+                            'registration_number' => $aresData['registration_number'],
+                            'vat_number' => $aresData['vat_number'],
+                            'vat_status' => $aresData['vat_status'],
                             'ares_verified_at' => now(),
-                            'street' =>
-                                $aresData['street'],
-                            'city' =>
-                                $aresData['city'],
-                            'postal_code' =>
-                                $aresData['postal_code'],
-                            'country_code' =>
-                                $aresData['country_code'],
+                            'street' => $aresData['street'],
+                            'city' => $aresData['city'],
+                            'postal_code' => $aresData['postal_code'],
+                            'country_code' => $aresData['country_code'],
                         ]);
                 }
 
@@ -210,8 +203,7 @@ final class CustomerAdminController extends Controller
                         ->first();
 
                 if (
-                    $existingRelationship instanceof
-                    OrganizationRelationship
+                    $existingRelationship instanceof OrganizationRelationship
                 ) {
                     throw ValidationException::withMessages([
                         'registration_number' => [
@@ -222,16 +214,11 @@ final class CustomerAdminController extends Controller
 
                 $relationship =
                     OrganizationRelationship::query()->create([
-                        'source_organization_id' =>
-                            (int) $customer->getKey(),
-                        'target_organization_id' =>
-                            $providerOrganizationId,
-                        'relationship_type' =>
-                            OrganizationRelationship::TYPE_SUBCONTRACTING,
-                        'status' =>
-                            OrganizationRelationship::STATUS_ACTIVE,
-                        'valid_from' =>
-                            $relationshipValidFrom,
+                        'source_organization_id' => (int) $customer->getKey(),
+                        'target_organization_id' => $providerOrganizationId,
+                        'relationship_type' => OrganizationRelationship::TYPE_SUBCONTRACTING,
+                        'status' => OrganizationRelationship::STATUS_ACTIVE,
+                        'valid_from' => $relationshipValidFrom,
                         'valid_until' => null,
                     ]);
 
@@ -341,18 +328,12 @@ final class CustomerAdminController extends Controller
                 'name' => (string) $customer->getAttribute('name'),
                 'type' => (string) $customer->getAttribute('type'),
                 'status' => (string) $customer->getAttribute('status'),
-                'registration_number' =>
-                    $customer->getAttribute('registration_number'),
-                'vat_number' =>
-                    $customer->getAttribute('vat_number'),
-                'street' =>
-                    $customer->getAttribute('street'),
-                'city' =>
-                    $customer->getAttribute('city'),
-                'postal_code' =>
-                    $customer->getAttribute('postal_code'),
-                'country_code' =>
-                    $customer->getAttribute('country_code'),
+                'registration_number' => $customer->getAttribute('registration_number'),
+                'vat_number' => $customer->getAttribute('vat_number'),
+                'street' => $customer->getAttribute('street'),
+                'city' => $customer->getAttribute('city'),
+                'postal_code' => $customer->getAttribute('postal_code'),
+                'country_code' => $customer->getAttribute('country_code'),
             ],
             'price_lists' => $priceLists
                 ->map(
@@ -380,10 +361,9 @@ final class CustomerAdminController extends Controller
                             'current_version' => (int) $priceList->getAttribute(
                                 'current_version',
                             ),
-                            'managed_by_provider' =>
-                                (int) $priceList->getAttribute(
-                                    'managed_by_organization_id',
-                                ) === $providerOrganizationId,
+                            'managed_by_provider' => (int) $priceList->getAttribute(
+                                'managed_by_organization_id',
+                            ) === $providerOrganizationId,
                             'versions' => $priceList->versions
                                 ->map(
                                     fn ($version): array => [
