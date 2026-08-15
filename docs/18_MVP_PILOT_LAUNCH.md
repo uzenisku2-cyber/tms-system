@@ -817,3 +817,16 @@ The existing organization default and route-override policy model is retained
 until the driver-management UI and explicit supervisory-scope model are
 implemented. No driver-specific or cross-organization inheritance is invented
 by this correction block.
+## 30. DRAYVIA route filtering refinements
+
+The internal DRAYVIA route-history view supports combined server-side operational filtering by period, driver and workflow status.
+
+The route filter now includes a dynamic driver selector populated from drivers that have DailyReport history in the current organization. The selected driver is sent through the existing `performed_by_driver_id` Daily Reports API filter and combines with `service_date_from`, `service_date_to` and `status_group`.
+
+The quick-period navigation includes `VÄŤera` in addition to the existing seven-day, month, year and custom-date options. `VÄŤera` remains visible even when its result count is zero.
+
+Filter chips use a neutral inactive state. Green styling identifies only an actively selected option. Workflow-status colors remain presentation semantics for route status badges and are no longer used to make inactive filter controls appear selected.
+
+The route summary includes the selected driver. Clearing filters resets period, driver and workflow status together.
+
+This UI refinement does not mutate DailyReport records, historical driver assignments or workflow state.

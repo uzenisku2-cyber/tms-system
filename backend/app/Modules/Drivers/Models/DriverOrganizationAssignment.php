@@ -12,9 +12,25 @@ use Illuminate\Support\Carbon;
 
 final class DriverOrganizationAssignment extends Model
 {
+    public const EMPLOYMENT_EMPLOYEE = 'employee';
+
+    public const EMPLOYMENT_DPP = 'dpp';
+
+    public const EMPLOYMENT_DPC = 'dpc';
+
+    public const EMPLOYMENT_OTHER = 'other';
+
+    public const EMPLOYMENT_TYPES = [
+        self::EMPLOYMENT_EMPLOYEE,
+        self::EMPLOYMENT_DPP,
+        self::EMPLOYMENT_DPC,
+        self::EMPLOYMENT_OTHER,
+    ];
+
     protected $fillable = [
         'driver_id',
         'organization_id',
+        'employment_type',
         'valid_from',
         'valid_until',
         'end_reason',

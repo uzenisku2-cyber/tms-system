@@ -30,9 +30,13 @@ final class FinancialCalculationSnapshotBuilder
         'route_number_normalized',
         'service_date',
         'status',
+        'loaded_parcels',
         'delivered_parcels',
         'redirected_parcels',
         'undelivered_parcels',
+        'customer_rejected_parcels',
+        'not_delivered_parcels',
+        'processed_parcels',
         'planned_km',
         'actual_km',
         'actual_km_source',
@@ -55,9 +59,13 @@ final class FinancialCalculationSnapshotBuilder
      *     route_number_normalized: string,
      *     service_date: string,
      *     status: string,
+     *     loaded_parcels: int,
      *     delivered_parcels: int,
      *     redirected_parcels: int,
      *     undelivered_parcels: int,
+     *     customer_rejected_parcels: int,
+     *     not_delivered_parcels: int,
+     *     processed_parcels: int,
      *     planned_km: string|null,
      *     actual_km: string,
      *     actual_km_source: string|null,
@@ -186,6 +194,11 @@ final class FinancialCalculationSnapshotBuilder
             );
         }
 
+        $parcelMetrics =
+            (new FinancialSnapshotParcelMetricResolver)->resolve(
+                $sourceSnapshot,
+            );
+
         $snapshot = [
             'daily_report_id' => $dailyReportId,
             'daily_report_version' => $versionNumber,
@@ -256,6 +269,8 @@ final class FinancialCalculationSnapshotBuilder
 
             'status' => $status,
 
+            'loaded_parcels' => $parcelMetrics['loaded_parcels'],
+
             'delivered_parcels' => $this->nonNegativeInteger(
                 $this->sourceValue(
                     $sourceSnapshot,
@@ -279,6 +294,12 @@ final class FinancialCalculationSnapshotBuilder
                 ),
                 'Undelivered parcel count',
             ),
+
+            'customer_rejected_parcels' => $parcelMetrics['customer_rejected_parcels'],
+
+            'not_delivered_parcels' => $parcelMetrics['not_delivered_parcels'],
+
+            'processed_parcels' => $parcelMetrics['processed_parcels'],
 
             'planned_km' => $this->nullableDecimal(
                 $this->sourceValue(

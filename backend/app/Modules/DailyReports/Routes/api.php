@@ -53,6 +53,12 @@ Route::middleware([
         )
             ->whereUuid('dailyReport')
             ->name('update');
+        Route::delete(
+            '/{dailyReport}',
+            [DailyReportController::class, 'destroy'],
+        )
+            ->whereUuid('dailyReport')
+            ->name('destroy');
 
         Route::post(
             '/{dailyReport}/submit',

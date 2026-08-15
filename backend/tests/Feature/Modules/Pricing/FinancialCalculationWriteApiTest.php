@@ -2214,6 +2214,7 @@ final class FinancialCalculationWriteApiTest extends TestCase
             'entry_method' => DailyReport::ENTRY_METHOD_DRIVER,
             'entered_on_behalf' => false,
             'completion_confirmed_at' => '2026-07-29 09:00:00',
+            'loaded_parcels' => 23,
             'delivered_parcels' => 20,
             'redirected_parcels' => 2,
             'undelivered_parcels' => 1,
@@ -2248,6 +2249,7 @@ final class FinancialCalculationWriteApiTest extends TestCase
                     ),
                     'service_date' => '2026-07-29',
                     'status' => DailyReport::STATUS_APPROVED,
+                    'loaded_parcels' => 23,
                     'delivered_parcels' => 20,
                     'redirected_parcels' => 2,
                     'undelivered_parcels' => 1,
@@ -4010,6 +4012,12 @@ final class FinancialCalculationWriteApiTest extends TestCase
 
         $snapshot['current_version'] =
             $nextVersion;
+
+        $snapshot['loaded_parcels'] =
+            ((int) (
+                $snapshot['loaded_parcels']
+                ?? 0
+            )) + 1;
 
         $snapshot['delivered_parcels'] =
             ((int) (

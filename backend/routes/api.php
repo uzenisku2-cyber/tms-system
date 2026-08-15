@@ -10,7 +10,9 @@ use App\Modules\DailyReports\Controllers\DailyReportFormConfigurationController;
 use App\Modules\Drivers\Controllers\DriverOrganizationAssignmentController;
 use App\Modules\Drivers\Controllers\OwnDriverAdminController;
 use App\Modules\Organizations\Controllers\CarrierAdminController;
+use App\Modules\Organizations\Controllers\CustomerAdminController;
 use App\Modules\Organizations\Controllers\OrganizationProfileController;
+use App\Modules\Pricing\Controllers\CustomerBillingPriceListController;
 use App\Modules\Routes\Controllers\RouteCatalogController;
 use Illuminate\Support\Facades\Route;
 
@@ -89,6 +91,13 @@ Route::middleware([
             ],
         )->name('carriers.index');
 
+        Route::get(
+            'ares/{ico}',
+            [
+                CarrierAdminController::class,
+                'lookupAres',
+            ],
+        )->name('carriers.ares');
         Route::post(
             '/',
             [
@@ -96,6 +105,13 @@ Route::middleware([
                 'store',
             ],
         )->name('carriers.store');
+        Route::post(
+            '/{carrier}/ares-verify',
+            [
+                CarrierAdminController::class,
+                'verifyAres',
+            ],
+        )->name('carriers.ares.verify');
     });
 
 // S020-03B ORGANIZATION PROFILE ROUTES
@@ -233,6 +249,17 @@ Route::middleware([
             ->whereNumber('driver')
             ->whereNumber('assignment')
             ->name('own-drivers.assignments.end');
+
+        Route::patch(
+            '/{assignment}/transfer',
+            [
+                DriverOrganizationAssignmentController::class,
+                'transfer',
+            ],
+        )
+            ->whereNumber('driver')
+            ->whereNumber('assignment')
+            ->name('own-drivers.assignments.transfer');
     });
 
 // S020-04B DAILY REPORT FORM CONFIGURATION ROUTES
@@ -312,4 +339,56 @@ Route::prefix('v1/settings/catalogs/routes')
             '/{route}/active',
             [RouteCatalogController::class, 'setActive'],
         )->name('api.v1.settings.catalogs.routes.active');
+    });
+
+//
+// S021-03C CUSTOMER BILLING ADMINISTRATION ROUTES
+//
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+])
+    ->prefix('v1')
+    ->group(function (): void {
+        Route::get(
+            '/customers',
+            [
+                CustomerAdminController::class,
+                'index',
+            ],
+        )
+            ->middleware('perm:pricing.view')
+            ->name('customers.index');
+
+        Route::get(
+            '/customers/{relationship}',
+            [
+                CustomerAdminController::class,
+                'show',
+            ],
+        )
+            ->middleware('perm:pricing.view')
+            ->whereNumber('relationship')
+            ->name('customers.show');
+
+        Route::post(
+            '/customers',
+            [
+                CustomerAdminController::class,
+                'store',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->name('customers.store');
+
+        Route::post(
+            '/customers/{relationship}/price-lists',
+            [
+                CustomerBillingPriceListController::class,
+                'store',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->whereNumber('relationship')
+            ->name('customers.price-lists.store');
     });

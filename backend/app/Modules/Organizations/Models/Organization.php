@@ -30,6 +30,15 @@ class Organization extends Model
 
     public const STATUS_ARCHIVED = 'archived';
 
+    public const VAT_STATUS_PAYER = 'payer';
+
+    public const VAT_STATUS_NON_PAYER = 'non_payer';
+
+    public const VAT_STATUSES = [
+        self::VAT_STATUS_PAYER,
+        self::VAT_STATUS_NON_PAYER,
+    ];
+
     /** @var list<string> */
     public const TYPES = [
         self::TYPE_MASTER,
@@ -51,6 +60,8 @@ class Organization extends Model
         'status',
         'registration_number',
         'vat_number',
+        'vat_status',
+        'ares_verified_at',
         'street',
         'city',
         'postal_code',
@@ -58,6 +69,13 @@ class Organization extends Model
         'contact_email',
         'contact_phone',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'ares_verified_at' => 'immutable_datetime',
+        ];
+    }
 
     /** @var array<string, mixed> */
     protected $attributes = [

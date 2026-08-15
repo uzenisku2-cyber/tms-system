@@ -169,6 +169,7 @@ final class DriverOrganizationAssignmentAuthorizationTest extends TestCase
                 ),
                 [
                     'organization_id' => (int) $master->getKey(),
+                    'employment_type' => 'employee',
                     'valid_from' => '2026-08-06',
                     'valid_until' => null,
                 ],

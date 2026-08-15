@@ -712,6 +712,104 @@ final class DailyReportPersistenceService
         );
     }
 
+    public function deleteDraft(
+        int $dailyReportId,
+        int $deletedByUserId,
+        int $expectedVersion,
+        ?string $reason = null,
+    ): void {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        if (
+            $dailyReportId <= 0
+            || $deletedByUserId <= 0
+            || $expectedVersion <= 0
+        ) {
+            throw new InvalidArgumentException(
+                'Delete identifiers and expected version must be positive.',
+            );
+        }
+
+        $normalizedReason =
+            $reason === null
+                ? null
+                : trim($reason);
+
+        if ($normalizedReason === '') {
+            $normalizedReason = null;
+        }
+
+        DB::transaction(
+            function () use (
+                $organizationId,
+                $dailyReportId,
+                $deletedByUserId,
+                $expectedVersion,
+                $normalizedReason,
+            ): void {
+                $dailyReport =
+                    DailyReport::query()
+                        ->whereKey(
+                            $dailyReportId,
+                        )
+                        ->where(
+                            'organization_id',
+                            $organizationId,
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                if (
+                    $dailyReport->getAttribute(
+                        'status',
+                    ) !== DailyReport::STATUS_DRAFT
+                ) {
+                    throw new DomainException(
+                        'Only draft daily reports can be deleted.',
+                    );
+                }
+
+                $currentVersion =
+                    (int) $dailyReport->getAttribute(
+                        'current_version',
+                    );
+
+                if (
+                    $currentVersion
+                    !== $expectedVersion
+                ) {
+                    throw new DomainException(
+                        sprintf(
+                            'Daily report version conflict: expected %d, current %d.',
+                            $expectedVersion,
+                            $currentVersion,
+                        ),
+                    );
+                }
+
+                $dailyReport->setAttribute(
+                    'deleted_by_user_id',
+                    $deletedByUserId,
+                );
+
+                $dailyReport->setAttribute(
+                    'deletion_reason',
+                    $normalizedReason,
+                );
+
+                $dailyReport->saveOrFail();
+
+                if (! $dailyReport->delete()) {
+                    throw new LogicException(
+                        'The draft daily report could not be deleted.',
+                    );
+                }
+            },
+            3,
+        );
+    }
+
     public function submitDraft(
         int $dailyReportId,
         int $enteredByUserId,

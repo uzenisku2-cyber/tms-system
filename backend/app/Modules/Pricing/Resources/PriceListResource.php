@@ -29,6 +29,9 @@ final class PriceListResource extends JsonResource
             'public_id' => (string) $priceList->getAttribute(
                 'public_id',
             ),
+            'code' => (string) $priceList->getAttribute(
+                'code',
+            ),
             'name' => (string) $priceList->getAttribute(
                 'name',
             ),

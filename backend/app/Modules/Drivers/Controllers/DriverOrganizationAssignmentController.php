@@ -13,6 +13,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -93,6 +94,10 @@ final class DriverOrganizationAssignmentController
                 'integer',
                 'min:1',
             ],
+            'employment_type' => [
+                'nullable',
+                'in:employee,dpp,dpc,other',
+            ],
             'valid_from' => [
                 'required',
                 'date_format:Y-m-d',
@@ -110,6 +115,19 @@ final class DriverOrganizationAssignmentController
         ]);
 
         $masterOrganizationId = $context->requireId();
+
+        $employmentType = $validated['employment_type'] ?? null;
+
+        if (
+            (int) $validated['organization_id'] === $masterOrganizationId
+            && $employmentType === null
+        ) {
+            throw ValidationException::withMessages([
+                'employment_type' => [
+                    'Typ pracovního vztahu je u vlastního řidiče povinný.',
+                ],
+            ]);
+        }
 
         $this->assertMasterOrganization(
             $masterOrganizationId,
@@ -158,6 +176,7 @@ final class DriverOrganizationAssignmentController
                 return DriverOrganizationAssignment::query()->create([
                     'driver_id' => (int) $driverModel->getKey(),
                     'organization_id' => $organizationId,
+                    'employment_type' => $validated['employment_type'] ?? null,
                     'valid_from' => $validFrom,
                     'valid_until' => $validUntil,
                     'end_reason' => self::nullableTrimmed(
@@ -271,6 +290,219 @@ final class DriverOrganizationAssignmentController
             'data' => $this->resource(
                 $target->refresh()->load('organization'),
             ),
+        ]);
+    }
+
+    public function transfer(
+        Request $request,
+        OrganizationContext $context,
+        int $driver,
+        int $assignment,
+    ): JsonResponse {
+        $validated = $request->validate([
+            'organization_id' => [
+                'required',
+                'integer',
+                'min:1',
+            ],
+            'employment_type' => [
+                'nullable',
+                'in:employee,dpp,dpc,other',
+            ],
+            'valid_from' => [
+                'required',
+                'date_format:Y-m-d',
+            ],
+            'end_reason' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+        ]);
+
+        $masterOrganizationId = $context->requireId();
+
+        $this->assertMasterOrganization(
+            $masterOrganizationId,
+        );
+
+        $actor = $this->actor(
+            $request,
+        );
+
+        $driverModel = $this->authorizationService->findVisibleDriver(
+            actor: $actor,
+            organizationId: $masterOrganizationId,
+            driverId: $driver,
+        );
+
+        $organizationId = (int) $validated['organization_id'];
+
+        $employmentType = $validated['employment_type'] ?? null;
+
+        if (
+            $organizationId === $masterOrganizationId
+            && $employmentType === null
+        ) {
+            throw ValidationException::withMessages([
+                'employment_type' => [
+                    'Typ pracovního vztahu je u vlastního řidiče povinný.',
+                ],
+            ]);
+        }
+
+        if ($organizationId !== $masterOrganizationId) {
+            $employmentType = null;
+        }
+
+        $effectiveFrom = CarbonImmutable::createFromFormat(
+            '!Y-m-d',
+            (string) $validated['valid_from'],
+        );
+
+        $effectiveDate = $effectiveFrom->toDateString();
+
+        $this->authorizationService->findManageableOrganization(
+            actor: $actor,
+            organizationId: $masterOrganizationId,
+            targetOrganizationId: $organizationId,
+            moment: Carbon::parse(
+                $effectiveDate,
+            ),
+        );
+        [$previousAssignment, $newAssignment] = DB::transaction(
+            function () use (
+                $driverModel,
+                $assignment,
+                $organizationId,
+                $employmentType,
+                $effectiveFrom,
+                $effectiveDate,
+                $validated,
+                $actor,
+            ): array {
+                $assignments = DriverOrganizationAssignment::query()
+                    ->where(
+                        'driver_id',
+                        $driverModel->getKey(),
+                    )
+                    ->orderBy('valid_from')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $target = $assignments->first(
+                    static fn (
+                        DriverOrganizationAssignment $item,
+                    ): bool => (int) $item->getKey() === $assignment,
+                );
+
+                if (! $target instanceof DriverOrganizationAssignment) {
+                    abort(404);
+                }
+
+                if ($target->getAttribute('valid_until') !== null) {
+                    throw ValidationException::withMessages([
+                        'valid_from' => [
+                            'Přeřadit lze pouze aktuálně neukončené přiřazení.',
+                        ],
+                    ]);
+                }
+
+                $currentOrganizationId =
+                    (int) $target->getAttribute('organization_id');
+
+                if ($currentOrganizationId === $organizationId) {
+                    throw ValidationException::withMessages([
+                        'organization_id' => [
+                            'Nový dopravce musí být jiný než současný.',
+                        ],
+                    ]);
+                }
+
+                $currentFrom = CarbonImmutable::parse(
+                    $target->getAttribute('valid_from'),
+                )->startOfDay();
+
+                if ($effectiveFrom->lessThanOrEqualTo($currentFrom)) {
+                    throw ValidationException::withMessages([
+                        'valid_from' => [
+                            'Datum změny musí být po začátku současného přiřazení.',
+                        ],
+                    ]);
+                }
+
+                $overlapExists = $assignments->contains(
+                    static function (
+                        DriverOrganizationAssignment $item,
+                    ) use (
+                        $assignment,
+                        $effectiveDate,
+                    ): bool {
+                        if ((int) $item->getKey() === $assignment) {
+                            return false;
+                        }
+
+                        $validUntil = $item->getAttribute('valid_until');
+
+                        return $validUntil === null
+                            || CarbonImmutable::parse(
+                                $validUntil,
+                            )->toDateString() >= $effectiveDate;
+                    },
+                );
+
+                if ($overlapExists) {
+                    throw ValidationException::withMessages([
+                        'valid_from' => [
+                            'Nové přiřazení by se překrývalo s již uloženým obdobím tohoto řidiče.',
+                        ],
+                    ]);
+                }
+
+                $previousUntil = $effectiveFrom
+                    ->subDay()
+                    ->toDateString();
+
+                $target->forceFill([
+                    'valid_until' => $previousUntil,
+                    'end_reason' => self::nullableTrimmed(
+                        $validated['end_reason'] ?? null,
+                    ),
+                    'ended_by_user_id' => (int) $actor->getKey(),
+                ]);
+
+                $target->save();
+
+                $newAssignment = DriverOrganizationAssignment::query()
+                    ->create([
+                        'driver_id' => (int) $driverModel->getKey(),
+                        'organization_id' => $organizationId,
+                        'employment_type' => $employmentType,
+                        'valid_from' => $effectiveDate,
+                        'valid_until' => null,
+                        'end_reason' => null,
+                        'created_by_user_id' => (int) $actor->getKey(),
+                        'ended_by_user_id' => null,
+                    ]);
+
+                return [
+                    $target->refresh(),
+                    $newAssignment,
+                ];
+            },
+        );
+
+        return response()->json([
+            'message' => 'Přiřazení řidiče bylo změněno.',
+            'data' => [
+                'previous_assignment' => $this->resource(
+                    $previousAssignment->load('organization'),
+                ),
+                'new_assignment' => $this->resource(
+                    $newAssignment->load('organization'),
+                ),
+            ],
         ]);
     }
 
@@ -401,6 +633,8 @@ final class DriverOrganizationAssignmentController
             'id' => (int) $assignment->getKey(),
             'organization_id' => (int) $assignment->getAttribute('organization_id'),
             'organization_name' => (string) $assignment->organization->getAttribute('name'),
+            'organization_type' => (string) $assignment->organization->getAttribute('type'),
+            'employment_type' => $assignment->getAttribute('employment_type'),
             'valid_from' => $validFrom,
             'valid_until' => $validUntil,
             'end_reason' => $assignment->getAttribute('end_reason'),

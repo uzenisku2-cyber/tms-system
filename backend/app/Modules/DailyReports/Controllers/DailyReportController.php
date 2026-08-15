@@ -95,6 +95,25 @@ final class DailyReportController extends BaseController
         );
     }
 
+    public function destroy(
+        DailyReportTransitionRequest $request,
+        string $dailyReport,
+        DailyReportWriteService $writes,
+    ): JsonResponse {
+        $writes->deleteDraft(
+            $this->actor($request),
+            $dailyReport,
+            $request->validated(),
+        );
+
+        return $this->success(
+            [
+                'deleted' => true,
+            ],
+            'Daily report deleted.',
+        );
+    }
+
     public function submit(
         DailyReportTransitionRequest $request,
         string $dailyReport,

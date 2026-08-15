@@ -16,6 +16,40 @@ final class DailyReportIndexRequest extends FormRequest
     }
 
     /**
+     * Normalize numeric HTTP query parameters before validation.
+     *
+     * Query-string values arrive as strings, while downstream
+     * query services intentionally require typed integer filters.
+     */
+    protected function prepareForValidation(): void
+    {
+        $normalized = [];
+
+        foreach (
+            [
+                'performed_by_driver_id',
+                'per_page',
+            ] as $key
+        ) {
+            $value = $this->query($key);
+
+            if (
+                is_string($value)
+                && ctype_digit($value)
+            ) {
+                $normalized[$key] =
+                    (int) $value;
+            }
+        }
+
+        if ($normalized !== []) {
+            $this->merge(
+                $normalized,
+            );
+        }
+    }
+
+    /**
      * @return array<string, list<mixed>>
      */
     public function rules(): array

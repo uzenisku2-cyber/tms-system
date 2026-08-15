@@ -12,8 +12,8 @@ final class MvpLaunchUiTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('TMS System')
-            ->assertSee('MVP / Pilot Launch');
+            ->assertSee('DRAYVIA')
+            ->assertSee('const templates = {', false);
     }
 
     public function test_login_route_serves_mvp_pilot_ui(): void
@@ -30,7 +30,7 @@ final class MvpLaunchUiTest extends TestCase
             ->assertSee('Zapsané trasy')
             ->assertSee('+ Zapsat trasu')
             ->assertSee('Uložit trasu')
-            ->assertSee('Dopravci a řidiči')
+            ->assertSee('const drivers = () =>', false)
             ->assertDontSee('Historický import')
             ->assertSee('/api/v1/daily-reports', false)
             ->assertSee('/api/v1/drivers', false)

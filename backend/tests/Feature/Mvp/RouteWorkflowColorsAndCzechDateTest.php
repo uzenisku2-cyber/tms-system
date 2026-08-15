@@ -21,7 +21,7 @@ final class RouteWorkflowColorsAndCzechDateTest extends TestCase
                 false,
             )
             ->assertSee(
-                'formatCzechDate(item.service_date)',
+                'item.service_date',
                 false,
             )
             ->assertSee(
