@@ -197,6 +197,8 @@ final class PriceListWriteService
 
                     'provider_organization_id' => $providerId,
 
+                    'managed_by_organization_id' => $customerId,
+
                     'name' => $name,
 
                     'description' => $description,
@@ -235,6 +237,233 @@ final class PriceListWriteService
     /**
      * @param  array<string, mixed>  $input
      */
+    public function createProviderManagedDraft(
+        User $actor,
+        int $relationshipId,
+        array $input,
+    ): PriceList {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $actorId = (int) $actor->getKey();
+
+        if ($actorId < 1) {
+            throw new LogicException(
+                'The authenticated user has no valid identifier.',
+            );
+        }
+
+        if ($relationshipId < 1) {
+            throw new LogicException(
+                'The commercial relationship identifier must be positive.',
+            );
+        }
+
+        $name = $this->requiredString(
+            $input,
+            'name',
+        );
+
+        $description = $this->nullableString(
+            $input,
+            'description',
+        );
+
+        $currency = $this->requiredString(
+            $input,
+            'currency',
+        );
+
+        $validFrom = $this->nullableString(
+            $input,
+            'valid_from',
+        );
+
+        $validUntil = $this->nullableString(
+            $input,
+            'valid_until',
+        );
+
+        $changeReason = $this->nullableString(
+            $input,
+            'change_reason',
+        );
+        $items =
+            $this->pricingItems($input);
+
+        return DB::transaction(
+            function () use (
+                $organizationId,
+                $actorId,
+                $relationshipId,
+                $name,
+                $description,
+                $currency,
+                $validFrom,
+                $validUntil,
+                $changeReason,
+                $items,
+            ): PriceList {
+                $relationship =
+                    OrganizationRelationship::query()
+                        ->with([
+                            'sourceOrganization',
+                            'targetOrganization',
+                        ])
+                        ->whereKey($relationshipId)
+                        ->where(
+                            'target_organization_id',
+                            $organizationId,
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                if (
+                    $relationship->getAttribute(
+                        'relationship_type',
+                    ) !==
+                    OrganizationRelationship::TYPE_SUBCONTRACTING
+                ) {
+                    $this->validationFailure(
+                        'organization_relationship_id',
+                        (
+                            'The selected relationship does not support '
+                            .'provider-managed billing price lists.'
+                        ),
+                    );
+                }
+
+                if (! $relationship->isActiveAt(now())) {
+                    $this->validationFailure(
+                        'organization_relationship_id',
+                        (
+                            'The selected customer relationship is not '
+                            .'currently active.'
+                        ),
+                    );
+                }
+
+                $customer =
+                    $relationship->sourceOrganization;
+
+                $provider =
+                    $relationship->targetOrganization;
+
+                if (
+                    ! $customer instanceof Organization
+                    || ! $provider instanceof Organization
+                ) {
+                    throw new LogicException(
+                        (
+                            'The selected customer relationship has '
+                            .'incomplete organization data.'
+                        ),
+                    );
+                }
+
+                if (
+                    ! $customer->isActive()
+                    || ! $provider->isActive()
+                ) {
+                    $this->validationFailure(
+                        'organization_relationship_id',
+                        (
+                            'Both organizations in the customer relationship '
+                            .'must be active.'
+                        ),
+                    );
+                }
+
+                $customerId =
+                    (int) $customer->getKey();
+
+                $providerId =
+                    (int) $provider->getKey();
+
+                if (
+                    $customerId < 1
+                    || $providerId < 1
+                    || $customerId === $providerId
+                ) {
+                    $this->validationFailure(
+                        'organization_relationship_id',
+                        (
+                            'The selected customer relationship does not '
+                            .'contain two distinct organizations.'
+                        ),
+                    );
+                }
+
+                if ($providerId !== $organizationId) {
+                    throw new LogicException(
+                        (
+                            'The verified organization does not match '
+                            .'the relationship provider.'
+                        ),
+                    );
+                }
+
+                $priceList = PriceList::query()->create([
+                    'organization_relationship_id' =>
+                        $relationship->getKey(),
+
+                    'owner_organization_id' =>
+                        $customerId,
+
+                    'customer_organization_id' =>
+                        $customerId,
+
+                    'provider_organization_id' =>
+                        $providerId,
+
+                    'managed_by_organization_id' =>
+                        $providerId,
+
+                    'name' => $name,
+                    'description' => $description,
+                    'currency' => $currency,
+                    'status' => PriceList::STATUS_DRAFT,
+                    'current_version' => 1,
+                    'created_by_user_id' => $actorId,
+                ]);
+
+                $version = $priceList->versions()->create([
+                    'version_number' => 1,
+                    'lock_version' => 1,
+                    'status' => PriceListVersion::STATUS_DRAFT,
+                    'valid_from' => $validFrom,
+                    'valid_until' => $validUntil,
+                    'change_reason' => $changeReason,
+                    'created_by_user_id' => $actorId,
+                ]);
+
+                foreach ($items as $item) {
+                    $code = $item['code'];
+
+                    $version->items()->create([
+                        'code' => $code,
+                        'description' => $item['description'],
+                        'calculation_method' => (
+                            PriceListItem::CALCULATION_METHOD_QUANTITY_TIMES_RATE
+                        ),
+                        'unit' => $this->unitForCode($code),
+                        'unit_rate' => $item['unit_rate'],
+                        'currency' => $currency,
+                        'quantity_source' => $code,
+                        'rounding_scale' => 2,
+                        'rounding_method' => (
+                            PriceListItem::ROUNDING_METHOD_HALF_UP
+                        ),
+                        'position' => $this->positionForCode($code),
+                    ]);
+                }
+
+                return $priceList->refresh();
+            },
+            3,
+        );
+    }
+
     public function createDraftVersion(
         User $actor,
         string $publicId,
@@ -288,7 +517,31 @@ final class PriceListWriteService
                 $changeReason,
             ): PriceListVersion {
                 $priceList = PriceList::query()
-                    ->forOwnerOrganization($organizationId)
+                    ->where(
+                            function ($managementQuery) use (
+                                $organizationId,
+                            ): void {
+                                $managementQuery
+                                    ->where(
+                                        'managed_by_organization_id',
+                                        $organizationId,
+                                    )
+                                    ->orWhere(
+                                        function ($legacyOwnerQuery) use (
+                                            $organizationId,
+                                        ): void {
+                                            $legacyOwnerQuery
+                                                ->whereNull(
+                                                    'managed_by_organization_id',
+                                                )
+                                                ->where(
+                                                    'owner_organization_id',
+                                                    $organizationId,
+                                                );
+                                        },
+                                    );
+                            },
+                        )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -421,7 +674,31 @@ final class PriceListWriteService
                 $items,
             ): PriceListVersion {
                 $priceList = PriceList::query()
-                    ->forOwnerOrganization($organizationId)
+                    ->where(
+                            function ($managementQuery) use (
+                                $organizationId,
+                            ): void {
+                                $managementQuery
+                                    ->where(
+                                        'managed_by_organization_id',
+                                        $organizationId,
+                                    )
+                                    ->orWhere(
+                                        function ($legacyOwnerQuery) use (
+                                            $organizationId,
+                                        ): void {
+                                            $legacyOwnerQuery
+                                                ->whereNull(
+                                                    'managed_by_organization_id',
+                                                )
+                                                ->where(
+                                                    'owner_organization_id',
+                                                    $organizationId,
+                                                );
+                                        },
+                                    );
+                            },
+                        )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -546,7 +823,31 @@ final class PriceListWriteService
                 $expectedLockVersion,
             ): PriceListVersion {
                 $priceList = PriceList::query()
-                    ->forOwnerOrganization($organizationId)
+                    ->where(
+                            function ($managementQuery) use (
+                                $organizationId,
+                            ): void {
+                                $managementQuery
+                                    ->where(
+                                        'managed_by_organization_id',
+                                        $organizationId,
+                                    )
+                                    ->orWhere(
+                                        function ($legacyOwnerQuery) use (
+                                            $organizationId,
+                                        ): void {
+                                            $legacyOwnerQuery
+                                                ->whereNull(
+                                                    'managed_by_organization_id',
+                                                )
+                                                ->where(
+                                                    'owner_organization_id',
+                                                    $organizationId,
+                                                );
+                                        },
+                                    );
+                            },
+                        )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -657,7 +958,31 @@ final class PriceListWriteService
                 $expectedLockVersion,
             ): PriceListVersion {
                 $priceList = PriceList::query()
-                    ->forOwnerOrganization($organizationId)
+                    ->where(
+                            function ($managementQuery) use (
+                                $organizationId,
+                            ): void {
+                                $managementQuery
+                                    ->where(
+                                        'managed_by_organization_id',
+                                        $organizationId,
+                                    )
+                                    ->orWhere(
+                                        function ($legacyOwnerQuery) use (
+                                            $organizationId,
+                                        ): void {
+                                            $legacyOwnerQuery
+                                                ->whereNull(
+                                                    'managed_by_organization_id',
+                                                )
+                                                ->where(
+                                                    'owner_organization_id',
+                                                    $organizationId,
+                                                );
+                                        },
+                                    );
+                            },
+                        )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -895,7 +1220,31 @@ final class PriceListWriteService
                 $requestedValidUntil,
             ): PriceListVersion {
                 $priceList = PriceList::query()
-                    ->forOwnerOrganization($organizationId)
+                    ->where(
+                            function ($managementQuery) use (
+                                $organizationId,
+                            ): void {
+                                $managementQuery
+                                    ->where(
+                                        'managed_by_organization_id',
+                                        $organizationId,
+                                    )
+                                    ->orWhere(
+                                        function ($legacyOwnerQuery) use (
+                                            $organizationId,
+                                        ): void {
+                                            $legacyOwnerQuery
+                                                ->whereNull(
+                                                    'managed_by_organization_id',
+                                                )
+                                                ->where(
+                                                    'owner_organization_id',
+                                                    $organizationId,
+                                                );
+                                        },
+                                    );
+                            },
+                        )
                     ->where('public_id', $publicId)
                     ->lockForUpdate()
                     ->firstOrFail();

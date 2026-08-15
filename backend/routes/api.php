@@ -338,3 +338,55 @@ Route::prefix('v1/settings/catalogs/routes')
             [RouteCatalogController::class, 'setActive'],
         )->name('api.v1.settings.catalogs.routes.active');
     });
+
+//
+// S021-03C CUSTOMER BILLING ADMINISTRATION ROUTES
+//
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+])
+    ->prefix('v1')
+    ->group(function (): void {
+        Route::get(
+            '/customers',
+            [
+                \App\Modules\Organizations\Controllers\CustomerAdminController::class,
+                'index',
+            ],
+        )
+            ->middleware('perm:pricing.view')
+            ->name('customers.index');
+
+        Route::get(
+            '/customers/{relationship}',
+            [
+                \App\Modules\Organizations\Controllers\CustomerAdminController::class,
+                'show',
+            ],
+        )
+            ->middleware('perm:pricing.view')
+            ->whereNumber('relationship')
+            ->name('customers.show');
+
+        Route::post(
+            '/customers',
+            [
+                \App\Modules\Organizations\Controllers\CustomerAdminController::class,
+                'store',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->name('customers.store');
+
+        Route::post(
+            '/customers/{relationship}/price-lists',
+            [
+                \App\Modules\Pricing\Controllers\CustomerBillingPriceListController::class,
+                'store',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->whereNumber('relationship')
+            ->name('customers.price-lists.store');
+    });
