@@ -339,6 +339,7 @@ final class CustomerAdminController extends Controller
                 ->map(
                     function (
                         PriceList $priceList,
+                        int $_key,
                     ) use (
                         $providerOrganizationId,
                     ): array {
@@ -381,7 +382,8 @@ final class CustomerAdminController extends Controller
                                         ),
                                     ],
                                 )
-                                ->values(),
+                                ->values()
+                                ->all(),
                         ];
                     },
                 )

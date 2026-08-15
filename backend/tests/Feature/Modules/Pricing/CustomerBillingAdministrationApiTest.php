@@ -266,7 +266,7 @@ final class CustomerBillingAdministrationApiTest extends TestCase
 
         self::assertSame(
             PriceListItem::CODE_ACTUAL_KM,
-            $items->last()?->getAttribute(
+            $items->last()->getAttribute(
                 'quantity_source',
             ),
         );
