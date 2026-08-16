@@ -8869,6 +8869,25 @@ const calendarJuly2026 = {
 
         return body;
     };
+
+    /*
+     * S022 FINANCE API SCOPE BRIDGE
+     *
+     * Finance and the preview application live in this second IIFE.
+     * Reuse its authenticated API helper rather than reaching into
+     * the private login/application IIFE.
+     */
+    const api = realDriverApi;
+
+    const getPayload = (body) =>
+        body
+        && Object.prototype.hasOwnProperty.call(
+            body,
+            'data'
+        )
+            ? body.data
+            : body;
+
     /* DRAYVIA-25E2B STATISTICS PAGE */
     const driverStatisticsNow = new Date();
 
@@ -11534,7 +11553,7 @@ const fuel = () => `
     `;
 
     const finance = () => `
-                ${pageHeader(
+                ${header(
                     'Finance',
                     'Odběratelé, ceníky, fakturace, srovnání a ziskovost v jednom finančním prostoru.'
                 )}
@@ -12065,14 +12084,187 @@ const fuel = () => `
                                             class="drayvia-price-list-panel drayvia-price-list-panel-drivers"
                                             data-price-list-panel="drivers"
                                         >
-                                            <div class="drayvia-finance-card">
+                                            <div
+                                                class="drayvia-finance-card"
+                                                data-driver-price-list-root
+                                            >
                                                 <h4>Ceníky řidičů</h4>
                                                 <p>
-                                                    Ceníky řidičů zůstávají samostatným
-                                                    driver-specific finančním kontraktem
-                                                    a nepoužívají organization Price List
-                                                    jen proto, že mají podobné sazby.
+                                                    Nastavte sazby řidiče přímo v TMS.
+                                                    Po uložení se první verze automaticky
+                                                    schválí a aktivuje, aby byla připravená
+                                                    pro výpočty bez dalšího Excelu.
                                                 </p>
+
+                                                <div class="drayvia-finance-grid">
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="driver-price-list-assignment">
+                                                            Řidič
+                                                        </label>
+                                                        <select
+                                                            id="driver-price-list-assignment"
+                                                            data-driver-price-list-assignment
+                                                            required
+                                                            disabled
+                                                        >
+                                                            <option value="">
+                                                                Načítám řidiče…
+                                                            </option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="driver-price-list-name">
+                                                            Název ceníku
+                                                        </label>
+                                                        <input
+                                                            id="driver-price-list-name"
+                                                            data-driver-price-list-name
+                                                            type="text"
+                                                            maxlength="150"
+                                                            value="Ceník řidiče"
+                                                            required
+                                                        >
+                                                    </div>
+
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="driver-price-list-valid-from">
+                                                            Platnost od
+                                                        </label>
+                                                        <input
+                                                            id="driver-price-list-valid-from"
+                                                            data-driver-price-list-valid-from
+                                                            type="date"
+                                                            required
+                                                        >
+                                                    </div>
+
+                                                    <div class="drayvia-finance-field">
+                                                        <label for="driver-price-list-valid-until">
+                                                            Platnost do
+                                                        </label>
+                                                        <input
+                                                            id="driver-price-list-valid-until"
+                                                            data-driver-price-list-valid-until
+                                                            type="date"
+                                                        >
+                                                    </div>
+
+                                                    <div class="drayvia-finance-field">
+                                                        <label>Měna</label>
+                                                        <strong>CZK</strong>
+                                                    </div>
+                                                </div>
+
+                                                <div style="overflow-x: auto; margin-top: 18px;">
+                                                    <table class="drayvia-price-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Položka</th>
+                                                                <th>Jednotka</th>
+                                                                <th>Sazba Kč</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td>Doručená zásilka</td>
+                                                                <td>zásilka</td>
+                                                                <td>
+                                                                    <input
+                                                                        data-driver-price-list-rate="delivered_parcels"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.0001"
+                                                                        required
+                                                                    >
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Přesměrovaná zásilka</td>
+                                                                <td>zásilka</td>
+                                                                <td>
+                                                                    <input
+                                                                        data-driver-price-list-rate="redirected_parcels"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.0001"
+                                                                        required
+                                                                    >
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Nedoručená zásilka</td>
+                                                                <td>zásilka</td>
+                                                                <td>
+                                                                    <input
+                                                                        data-driver-price-list-rate="undelivered_parcels"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.0001"
+                                                                        value="0"
+                                                                        required
+                                                                    >
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Skutečný kilometr</td>
+                                                                <td>km</td>
+                                                                <td>
+                                                                    <input
+                                                                        data-driver-price-list-rate="actual_km"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.0001"
+                                                                        required
+                                                                    >
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                <div style="margin-top: 18px;">
+                                                    <button
+                                                        type="button"
+                                                        data-driver-price-list-save
+                                                    >
+                                                        Uložit a aktivovat ceník
+                                                    </button>
+
+                                                    <p
+                                                        data-driver-price-list-message
+                                                        class="drayvia-finance-note"
+                                                        style="margin-top: 12px;"
+                                                        hidden
+                                                    ></p>
+                                                </div>
+
+                                                <div
+                                                    class="drayvia-finance-card"
+                                                    style="margin-top: 22px;"
+                                                >
+                                                    <h4>Existující ceníky řidičů</h4>
+                                                    <div style="overflow-x: auto;">
+                                                        <table class="drayvia-customer-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Řidič</th>
+                                                                    <th>Ceník</th>
+                                                                    <th>Stav</th>
+                                                                    <th>Verze</th>
+                                                                    <th>Měna</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody data-driver-price-list-list>
+                                                                <tr>
+                                                                    <td colspan="5">
+                                                                        Načítám ceníky…
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </section>
                                     </div>
@@ -13284,6 +13476,749 @@ const templates = {
                     }
                 );
             };
+            /*
+             * S022-MVP-01 DRIVER PRICE LIST WEB UI
+             *
+             * This browser workflow deliberately uses the existing authenticated
+             * API helper and verified organization context. It creates the complete
+             * driver compensation draft, then approves and activates version 1.
+             */
+            let financeDriverAssignments = new Map();
+
+            const financeDriverPriceListArray = (body) => {
+                const payload = getPayload(body) || {};
+                const items =
+                    payload?.items?.data
+                    ?? payload?.items
+                    ?? [];
+
+                return Array.isArray(items)
+                    ? items
+                    : [];
+            };
+
+            const financeDriverLabel = (
+                driver,
+                assignment
+            ) => {
+                const name =
+                    driver?.full_name
+                    || `${driver?.first_name ?? ''} ${driver?.last_name ?? ''}`.trim()
+                    || `Řidič ${driver?.id ?? ''}`;
+
+                const organization =
+                    assignment?.organization_name
+                    || assignment?.organization?.name
+                    || '';
+
+                return organization
+                    ? `${name} · ${organization}`
+                    : name;
+            };
+
+            const loadFinanceDriverPriceLists = async () => {
+                const root =
+                    document.querySelector(
+                        '[data-driver-price-list-root]'
+                    );
+
+                const list =
+                    root?.querySelector(
+                        '[data-driver-price-list-list]'
+                    );
+
+                const assignmentSelect =
+                    root?.querySelector(
+                        '[data-driver-price-list-assignment]'
+                    );
+
+                if (!root || !list) {
+                    return;
+                }
+
+                list.replaceChildren();
+
+                const loadingRow =
+                    document.createElement('tr');
+
+                const loadingCell =
+                    document.createElement('td');
+
+                loadingCell.colSpan = 5;
+                loadingCell.textContent =
+                    'Načítám ceníky řidičů…';
+
+                loadingRow.appendChild(
+                    loadingCell
+                );
+
+                list.appendChild(
+                    loadingRow
+                );
+
+                try {
+                    const params =
+                        new URLSearchParams();
+
+                    params.set(
+                        'per_page',
+                        '100'
+                    );
+
+                    params.set(
+                        'sort_by',
+                        'name'
+                    );
+
+                    params.set(
+                        'sort_dir',
+                        'asc'
+                    );
+
+                    const assignmentId =
+                        Number(
+                            assignmentSelect?.value
+                            || 0
+                        );
+
+                    if (
+                        Number.isInteger(assignmentId)
+                        && assignmentId > 0
+                    ) {
+                        params.set(
+                            'driver_organization_assignment_id',
+                            String(assignmentId)
+                        );
+                    }
+
+                    const body =
+                        await api(
+                            `/api/v1/driver-price-lists?${params.toString()}`
+                        );
+
+                    const priceLists =
+                        financeDriverPriceListArray(
+                            body
+                        );
+
+                    list.replaceChildren();
+
+                    if (priceLists.length === 0) {
+                        const row =
+                            document.createElement('tr');
+
+                        const cell =
+                            document.createElement('td');
+
+                        cell.colSpan = 5;
+                        cell.textContent =
+                            'Pro vybraného řidiče zatím není evidován žádný ceník.';
+
+                        row.appendChild(cell);
+                        list.appendChild(row);
+                        return;
+                    }
+
+                    priceLists.forEach(
+                        (priceList) => {
+                            const row =
+                                document.createElement('tr');
+
+                            const assignmentKey =
+                                Number(
+                                    priceList
+                                        ?.driver_organization_assignment_id
+                                );
+
+                            const driverInfo =
+                                financeDriverAssignments.get(
+                                    assignmentKey
+                                );
+
+                            const values = [
+                                driverInfo?.label
+                                    || `Přiřazení ${assignmentKey}`,
+                                priceList?.name
+                                    || '—',
+                                financeCustomerStatus(
+                                    priceList?.status
+                                ),
+                                priceList?.current_version
+                                    ?? '—',
+                                priceList?.currency
+                                    || '—',
+                            ];
+
+                            values.forEach(
+                                (value) => {
+                                    const cell =
+                                        document.createElement('td');
+
+                                    cell.textContent =
+                                        String(value);
+
+                                    row.appendChild(
+                                        cell
+                                    );
+                                }
+                            );
+
+                            list.appendChild(
+                                row
+                            );
+                        }
+                    );
+                }
+                catch (error) {
+                    list.replaceChildren();
+
+                    const row =
+                        document.createElement('tr');
+
+                    const cell =
+                        document.createElement('td');
+
+                    cell.colSpan = 5;
+                    cell.textContent =
+                        `Ceníky řidičů se nepodařilo načíst: ${error.message}`;
+
+                    row.appendChild(cell);
+                    list.appendChild(row);
+                }
+            };
+
+            const loadFinanceDriverAssignments = async () => {
+                const root =
+                    document.querySelector(
+                        '[data-driver-price-list-root]'
+                    );
+
+                const select =
+                    root?.querySelector(
+                        '[data-driver-price-list-assignment]'
+                    );
+
+                const message =
+                    root?.querySelector(
+                        '[data-driver-price-list-message]'
+                    );
+
+                if (!root || !select) {
+                    return;
+                }
+
+                select.disabled = true;
+                select.replaceChildren();
+
+                const loading =
+                    document.createElement('option');
+
+                loading.value = '';
+                loading.textContent =
+                    'Načítám řidiče…';
+
+                select.appendChild(
+                    loading
+                );
+
+                financeDriverAssignments =
+                    new Map();
+
+                try {
+                    const body =
+                        await api(
+                            '/api/v1/own-drivers'
+                        );
+
+                    const payload =
+                        getPayload(body) || {};
+
+                    const drivers =
+                        Array.isArray(payload?.items)
+                            ? payload.items
+                            : (
+                                Array.isArray(payload)
+                                    ? payload
+                                    : []
+                            );
+
+                    const enriched =
+                        await Promise.all(
+                            drivers.map(
+                                async (driver) => {
+                                    try {
+                                        const assignmentBody =
+                                            await api(
+                                                `/api/v1/own-drivers/${encodeURIComponent(String(driver.id))}/assignments`
+                                            );
+
+                                        const assignmentData =
+                                            getPayload(
+                                                assignmentBody
+                                            ) || {};
+
+                                        const assignment =
+                                            assignmentData?.current
+                                            ?? null;
+
+                                        if (
+                                            !assignment
+                                            || !Number.isInteger(
+                                                Number(
+                                                    assignment.id
+                                                )
+                                            )
+                                        ) {
+                                            return null;
+                                        }
+
+                                        return {
+                                            driver,
+                                            assignment,
+                                            label:
+                                                financeDriverLabel(
+                                                    driver,
+                                                    assignment
+                                                ),
+                                        };
+                                    }
+                                    catch {
+                                        return null;
+                                    }
+                                }
+                            )
+                        );
+
+                    const usable =
+                        enriched
+                            .filter(Boolean)
+                            .sort(
+                                (left, right) =>
+                                    left.label.localeCompare(
+                                        right.label,
+                                        'cs'
+                                    )
+                            );
+
+                    select.replaceChildren();
+
+                    const empty =
+                        document.createElement('option');
+
+                    empty.value = '';
+                    empty.textContent =
+                        usable.length > 0
+                            ? 'Vyberte řidiče'
+                            : 'Žádný řidič s aktuálním přiřazením';
+
+                    select.appendChild(
+                        empty
+                    );
+
+                    usable.forEach(
+                        (item) => {
+                            const assignmentId =
+                                Number(
+                                    item.assignment.id
+                                );
+
+                            financeDriverAssignments.set(
+                                assignmentId,
+                                item
+                            );
+
+                            const option =
+                                document.createElement('option');
+
+                            option.value =
+                                String(assignmentId);
+
+                            option.textContent =
+                                item.label;
+
+                            select.appendChild(
+                                option
+                            );
+                        }
+                    );
+
+                    select.disabled =
+                        usable.length === 0;
+
+                    if (usable.length > 0) {
+                        select.value =
+                            String(
+                                usable[0]
+                                    .assignment
+                                    .id
+                            );
+                    }
+
+                    await loadFinanceDriverPriceLists();
+                }
+                catch (error) {
+                    select.replaceChildren();
+
+                    const failed =
+                        document.createElement('option');
+
+                    failed.value = '';
+                    failed.textContent =
+                        'Řidiče se nepodařilo načíst';
+
+                    select.appendChild(
+                        failed
+                    );
+
+                    if (message) {
+                        message.hidden = false;
+                        message.textContent =
+                            `Řidiče pro ceník se nepodařilo načíst: ${error.message}`;
+                    }
+                }
+            };
+
+            const bindFinanceDriverPriceListCreate = () => {
+                const root =
+                    document.querySelector(
+                        '[data-driver-price-list-root]'
+                    );
+
+                if (
+                    !root
+                    || root.dataset.driverPriceListBound === '1'
+                ) {
+                    return;
+                }
+
+                const assignment =
+                    root.querySelector(
+                        '[data-driver-price-list-assignment]'
+                    );
+
+                const name =
+                    root.querySelector(
+                        '[data-driver-price-list-name]'
+                    );
+
+                const validFrom =
+                    root.querySelector(
+                        '[data-driver-price-list-valid-from]'
+                    );
+
+                const validUntil =
+                    root.querySelector(
+                        '[data-driver-price-list-valid-until]'
+                    );
+
+                const save =
+                    root.querySelector(
+                        '[data-driver-price-list-save]'
+                    );
+
+                const message =
+                    root.querySelector(
+                        '[data-driver-price-list-message]'
+                    );
+
+                const rateInputs =
+                    Array.from(
+                        root.querySelectorAll(
+                            '[data-driver-price-list-rate]'
+                        )
+                    );
+
+                if (
+                    !assignment
+                    || !name
+                    || !validFrom
+                    || !validUntil
+                    || !save
+                    || !message
+                    || rateInputs.length !== 4
+                ) {
+                    return;
+                }
+
+                const canonicalCodes = [
+                    'delivered_parcels',
+                    'redirected_parcels',
+                    'undelivered_parcels',
+                    'actual_km',
+                ];
+
+                const descriptions = {
+                    delivered_parcels:
+                        'Doručená zásilka',
+                    redirected_parcels:
+                        'Přesměrovaná zásilka',
+                    undelivered_parcels:
+                        'Nedoručená zásilka',
+                    actual_km:
+                        'Skutečný kilometr',
+                };
+
+                root.dataset.driverPriceListBound =
+                    '1';
+
+                if (!validFrom.value) {
+                    const today =
+                        new Date();
+
+                    const localDate =
+                        new Date(
+                            today.getTime()
+                            - today.getTimezoneOffset()
+                                * 60000
+                        )
+                            .toISOString()
+                            .slice(0, 10);
+
+                    validFrom.value =
+                        localDate;
+                }
+
+                assignment.addEventListener(
+                    'change',
+                    () => {
+                        loadFinanceDriverPriceLists();
+                    }
+                );
+
+                save.addEventListener(
+                    'click',
+                    async () => {
+                        const assignmentId =
+                            Number(
+                                assignment.value
+                            );
+
+                        if (
+                            !Number.isInteger(
+                                assignmentId
+                            )
+                            || assignmentId < 1
+                        ) {
+                            message.hidden = false;
+                            message.textContent =
+                                'Vyberte řidiče.';
+                            return;
+                        }
+
+                        if (
+                            name.value.trim() === ''
+                            || validFrom.value === ''
+                        ) {
+                            message.hidden = false;
+                            message.textContent =
+                                'Vyplňte název ceníku a platnost od.';
+                            return;
+                        }
+
+                        if (
+                            validUntil.value !== ''
+                            && validUntil.value <
+                                validFrom.value
+                        ) {
+                            message.hidden = false;
+                            message.textContent =
+                                'Platnost do nesmí být před platností od.';
+                            return;
+                        }
+
+                        const rateMap =
+                            new Map(
+                                rateInputs.map(
+                                    (input) => [
+                                        input.dataset
+                                            .driverPriceListRate,
+                                        input,
+                                    ]
+                                )
+                            );
+
+                        const items =
+                            canonicalCodes.map(
+                                (code) => {
+                                    const input =
+                                        rateMap.get(
+                                            code
+                                        );
+
+                                    return {
+                                        code,
+                                        description:
+                                            descriptions[
+                                                code
+                                            ],
+                                        unit_rate:
+                                            input?.value
+                                                ?.trim()
+                                            ?? '',
+                                    };
+                                }
+                            );
+
+                        if (
+                            items.some(
+                                (item) =>
+                                    item.unit_rate === ''
+                                    || !Number.isFinite(
+                                        Number(
+                                            item.unit_rate
+                                        )
+                                    )
+                                    || Number(
+                                        item.unit_rate
+                                    ) < 0
+                            )
+                        ) {
+                            message.hidden = false;
+                            message.textContent =
+                                'Vyplňte všechny čtyři nezáporné sazby.';
+                            return;
+                        }
+
+                        const code =
+                            [
+                                'DPL',
+                                String(
+                                    assignmentId
+                                ).slice(-8),
+                                Date.now()
+                                    .toString(36)
+                                    .slice(-8)
+                                    .toUpperCase(),
+                            ].join('-');
+
+                        let createdPublicId =
+                            null;
+
+                        let phase =
+                            'vytvoření ceníku';
+
+                        save.disabled = true;
+                        message.hidden = false;
+                        message.textContent =
+                            'Ukládám ceník řidiče…';
+
+                        try {
+                            const createBody =
+                                await api(
+                                    '/api/v1/driver-price-lists',
+                                    {
+                                        method: 'POST',
+                                        body: JSON.stringify({
+                                            driver_organization_assignment_id:
+                                                assignmentId,
+                                            code,
+                                            name:
+                                                name.value.trim(),
+                                            description:
+                                                null,
+                                            currency:
+                                                'CZK',
+                                            valid_from:
+                                                validFrom.value,
+                                            valid_until:
+                                                validUntil.value
+                                                || null,
+                                            change_reason:
+                                                'První nastavení ceníku přes webové MVP.',
+                                            items,
+                                        }),
+                                    }
+                                );
+
+                            const created =
+                                getPayload(
+                                    createBody
+                                ) || {};
+
+                            createdPublicId =
+                                created?.public_id
+                                || null;
+
+                            if (!createdPublicId) {
+                                throw new Error(
+                                    'API nevrátilo identifikátor vytvořeného ceníku.'
+                                );
+                            }
+
+                            phase =
+                                'schválení ceníku';
+
+                            message.textContent =
+                                'Ceník uložen. Schvaluji první verzi…';
+
+                            await api(
+                                `/api/v1/driver-price-lists/${encodeURIComponent(createdPublicId)}/versions/1/approve`,
+                                {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        expected_lock_version:
+                                            1,
+                                    }),
+                                }
+                            );
+
+                            phase =
+                                'aktivace ceníku';
+
+                            message.textContent =
+                                'Ceník schválen. Aktivuji ho…';
+
+                            await api(
+                                `/api/v1/driver-price-lists/${encodeURIComponent(createdPublicId)}/versions/1/activate`,
+                                {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        expected_lock_version:
+                                            1,
+                                    }),
+                                }
+                            );
+
+                            message.textContent =
+                                'Ceník řidiče je uložený, schválený a aktivní.';
+
+                            rateInputs.forEach(
+                                (input) => {
+                                    if (
+                                        input.dataset
+                                            .driverPriceListRate
+                                        === 'undelivered_parcels'
+                                    ) {
+                                        input.value =
+                                            '0';
+                                    }
+                                    else {
+                                        input.value =
+                                            '';
+                                    }
+                                }
+                            );
+
+                            await loadFinanceDriverPriceLists();
+                        }
+                        catch (error) {
+                            if (createdPublicId) {
+                                message.textContent =
+                                    `Draft ceníku ${createdPublicId} byl vytvořen, ale selhalo ${phase}: ${error.message}`;
+                            }
+                            else {
+                                message.textContent =
+                                    `Ceník řidiče se nepodařilo uložit: ${error.message}`;
+                            }
+
+                            await loadFinanceDriverPriceLists();
+                        }
+                        finally {
+                            save.disabled = false;
+                        }
+                    }
+                );
+            };
 const loadFinanceCustomers = async () => {
                 const root =
                     document.querySelector(
@@ -13577,6 +14512,9 @@ const loadFinanceCustomers = async () => {
 if (page === 'finance') {
             bindFinanceCustomerCreate();
             bindFinanceBillingPriceListCreate();
+            bindFinanceDriverPriceListCreate();
+            loadFinanceDriverAssignments();
+            loadFinanceDriverPriceLists();
             loadFinanceCustomers();
         }
 

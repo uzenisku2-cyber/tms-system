@@ -6,6 +6,7 @@ namespace App\Modules\Drivers\Services;
 
 use App\Models\User;
 use App\Modules\Drivers\Models\Driver;
+use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Drivers\Models\DriverSupervisoryScope;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
@@ -131,6 +132,120 @@ final class DriverSupervisoryAuthorizationService
         }
 
         return $organization;
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function visibleDriverOrganizationAssignmentIds(
+        User $actor,
+        int $organizationId,
+        string $requiredPermission,
+        ?Carbon $moment = null,
+    ): array {
+        $moment ??= now();
+
+        if (
+            $requiredPermission === ''
+            || ! $actor->can($requiredPermission)
+        ) {
+            abort(
+                403,
+                'Driver visibility permission is required.',
+            );
+        }
+
+        $this->assertActiveMembership(
+            $actor,
+            $organizationId,
+            $moment,
+        );
+
+        $date = $moment->toDateString();
+        $assignmentIds = [];
+
+        $organizationIds = $this->activeTargetOrganizationIds(
+            $actor,
+            $organizationId,
+            $moment,
+        );
+
+        if ($organizationIds !== []) {
+            $ids = DriverOrganizationAssignment::query()
+                ->whereIn('organization_id', $organizationIds)
+                ->whereDate('valid_from', '<=', $date)
+                ->where(
+                    static function (Builder $query) use ($date): void {
+                        $query
+                            ->whereNull('valid_until')
+                            ->orWhereDate('valid_until', '>=', $date);
+                    },
+                )
+                ->pluck('id');
+
+            foreach ($ids as $assignmentId) {
+                $assignmentIds[] = (int) $assignmentId;
+            }
+        }
+
+        $driverScopes = $this->activeScopeQuery(
+            actor: $actor,
+            organizationId: $organizationId,
+            scopeType: DriverSupervisoryScope::TYPE_DRIVER,
+            moment: $moment,
+        )->get();
+
+        foreach ($driverScopes as $scope) {
+            $driverId = (int) $scope->getAttribute(
+                'target_driver_id',
+            );
+
+            if ($driverId < 1) {
+                continue;
+            }
+
+            $relationshipId = $scope->getAttribute(
+                'organization_relationship_id',
+            );
+
+            $targetOrganizationId = $organizationId;
+
+            if ($relationshipId !== null) {
+                $targetOrganizationId =
+                    $this->activeRelationshipTargetOrganizationId(
+                        relationshipId: (int) $relationshipId,
+                        organizationId: $organizationId,
+                        moment: $moment,
+                    );
+
+                if ($targetOrganizationId === null) {
+                    continue;
+                }
+            }
+
+            $assignment = DriverOrganizationAssignment::query()
+                ->where('driver_id', $driverId)
+                ->where('organization_id', $targetOrganizationId)
+                ->whereDate('valid_from', '<=', $date)
+                ->where(
+                    static function (Builder $query) use ($date): void {
+                        $query
+                            ->whereNull('valid_until')
+                            ->orWhereDate('valid_until', '>=', $date);
+                    },
+                )
+                ->first();
+
+            if ($assignment instanceof DriverOrganizationAssignment) {
+                $assignmentIds[] = (int) $assignment->getKey();
+            }
+        }
+
+        sort($assignmentIds);
+
+        return array_values(
+            array_unique($assignmentIds),
+        );
     }
 
     private function assertManagePermission(
@@ -335,6 +450,53 @@ final class DriverSupervisoryAuthorizationService
                         );
                 },
             );
+    }
+
+    private function activeRelationshipTargetOrganizationId(
+        int $relationshipId,
+        int $organizationId,
+        Carbon $moment,
+    ): ?int {
+        $date = $moment->toDateString();
+
+        $relationship = OrganizationRelationship::query()
+            ->whereKey($relationshipId)
+            ->where('source_organization_id', $organizationId)
+            ->where(
+                'relationship_type',
+                OrganizationRelationship::TYPE_SUBCONTRACTING,
+            )
+            ->where(
+                'status',
+                OrganizationRelationship::STATUS_ACTIVE,
+            )
+            ->where(
+                static function (Builder $query) use ($date): void {
+                    $query
+                        ->whereNull('valid_from')
+                        ->orWhereDate('valid_from', '<=', $date);
+                },
+            )
+            ->where(
+                static function (Builder $query) use ($date): void {
+                    $query
+                        ->whereNull('valid_until')
+                        ->orWhereDate('valid_until', '>=', $date);
+                },
+            )
+            ->first();
+
+        if (! $relationship instanceof OrganizationRelationship) {
+            return null;
+        }
+
+        $targetOrganizationId = (int) $relationship->getAttribute(
+            'target_organization_id',
+        );
+
+        return $targetOrganizationId > 0
+            ? $targetOrganizationId
+            : null;
     }
 
     private function relationshipIsActive(
