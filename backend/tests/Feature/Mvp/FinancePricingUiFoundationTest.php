@@ -242,9 +242,32 @@ final class FinancePricingUiFoundationTest extends TestCase
             $source,
         );
 
+        self::assertIsInt(
+            $billingFunctionStart = strpos(
+                $source,
+                'const bindFinanceBillingPriceListCreate = () => {',
+            ),
+        );
+
+        self::assertIsInt(
+            $billingFunctionEnd = strpos(
+                $source,
+                "\n            };",
+                $billingFunctionStart,
+            ),
+        );
+
+        $billingFunctionSource = substr(
+            $source,
+            $billingFunctionStart,
+            $billingFunctionEnd
+                + strlen("\n            };")
+                - $billingFunctionStart,
+        );
+
         self::assertStringNotContainsString(
             '/versions/1',
-            $source,
+            $billingFunctionSource,
         );
     }
 
@@ -291,6 +314,55 @@ final class FinancePricingUiFoundationTest extends TestCase
         self::assertStringContainsString(
             "Hrub\u{00E1} mar\u{017E}e K\u{010D}",
             $source,
+        );
+    }
+
+    public function test_driver_price_list_web_ui_creates_and_activates_first_tariff(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'S022-MVP-01 DRIVER PRICE LIST WEB UI',
+            'data-driver-price-list-root',
+            'data-driver-price-list-assignment',
+            'data-driver-price-list-name',
+            'data-driver-price-list-valid-from',
+            'data-driver-price-list-valid-until',
+            'data-driver-price-list-rate="delivered_parcels"',
+            'data-driver-price-list-rate="redirected_parcels"',
+            'data-driver-price-list-rate="undelivered_parcels"',
+            'data-driver-price-list-rate="actual_km"',
+            'data-driver-price-list-save',
+            'data-driver-price-list-message',
+            'data-driver-price-list-list',
+            'const loadFinanceDriverAssignments = async () => {',
+            'const loadFinanceDriverPriceLists = async () => {',
+            'const bindFinanceDriverPriceListCreate = () => {',
+            "'/api/v1/driver-price-lists'",
+            '/versions/1/approve',
+            '/versions/1/activate',
+            'expected_lock_version:',
+            'bindFinanceDriverPriceListCreate();',
+            'loadFinanceDriverAssignments();',
+            'loadFinanceDriverPriceLists();',
+            'Uložit a aktivovat ceník',
+        ] as $marker) {
+            self::assertStringContainsString(
+                $marker,
+                $source,
+            );
+        }
+
+        self::assertSame(
+            4,
+            substr_count(
+                $source,
+                'data-driver-price-list-rate="',
+            ),
         );
     }
 }

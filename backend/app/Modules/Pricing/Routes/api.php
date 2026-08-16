@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use Illuminate\Support\Facades\Route;
@@ -91,6 +92,89 @@ Route::middleware([
                     [PriceListController::class, 'show'],
                 )
                     ->whereUuid('priceList')
+                    ->name('show');
+            });
+    });
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+])
+    ->prefix('driver-price-lists')
+    ->name('driver-price-lists.')
+    ->group(function (): void {
+        Route::middleware('perm:compensation.manage')
+            ->group(function (): void {
+                Route::post(
+                    '/',
+                    [DriverPriceListController::class, 'store'],
+                )->name('store');
+                Route::post(
+                    '/{driverPriceList}/versions',
+                    [DriverPriceListController::class, 'storeVersion'],
+                )
+                    ->whereUuid('driverPriceList')
+                    ->name('versions.store');
+
+                Route::put(
+                    '/{driverPriceList}/versions/{version}',
+                    [DriverPriceListController::class, 'updateVersion'],
+                )
+                    ->whereUuid('driverPriceList')
+                    ->whereNumber('version')
+                    ->name('versions.update');
+                Route::post(
+                    '/{driverPriceList}/versions/{version}/approve',
+                    [DriverPriceListController::class, 'approveVersion'],
+                )
+                    ->whereUuid('driverPriceList')
+                    ->whereNumber('version')
+                    ->name('versions.approve');
+
+                Route::post(
+                    '/{driverPriceList}/versions/{version}/activate',
+                    [DriverPriceListController::class, 'activateVersion'],
+                )
+                    ->whereUuid('driverPriceList')
+                    ->whereNumber('version')
+                    ->name('versions.activate');
+
+                Route::post(
+                    '/{driverPriceList}/versions/{version}/expire',
+                    [DriverPriceListController::class, 'expireVersion'],
+                )
+                    ->whereUuid('driverPriceList')
+                    ->whereNumber('version')
+                    ->name('versions.expire');
+            });
+
+        Route::middleware('perm:compensation.view')
+            ->group(function (): void {
+                Route::get(
+                    '/',
+                    [DriverPriceListController::class, 'index'],
+                )->name('index');
+
+                Route::get(
+                    '/{driverPriceList}/versions',
+                    [DriverPriceListController::class, 'versions'],
+                )
+                    ->whereUuid('driverPriceList')
+                    ->name('versions.index');
+
+                Route::get(
+                    '/{driverPriceList}/versions/{version}',
+                    [DriverPriceListController::class, 'version'],
+                )
+                    ->whereUuid('driverPriceList')
+                    ->whereNumber('version')
+                    ->name('versions.show');
+
+                Route::get(
+                    '/{driverPriceList}',
+                    [DriverPriceListController::class, 'show'],
+                )
+                    ->whereUuid('driverPriceList')
                     ->name('show');
             });
     });
