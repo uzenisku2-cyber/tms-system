@@ -92,6 +92,16 @@ class PriceListVersion extends Model
         )->orderBy('position');
     }
 
+    /**
+     * @return HasMany<PriceListConditionalRule, $this>
+     */
+    public function conditionalRules(): HasMany
+    {
+        return $this->hasMany(
+            PriceListConditionalRule::class,
+        )->orderBy('position');
+    }
+
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;

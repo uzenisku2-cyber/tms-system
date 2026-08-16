@@ -15,6 +15,7 @@ final class PriceListConditionalPricingFoundationContractTest extends TestCase
             [
                 'per_route',
                 'monthly_driver',
+                'monthly_price_list',
             ],
             PriceListConditionalRule::EVALUATION_SCOPES,
         );

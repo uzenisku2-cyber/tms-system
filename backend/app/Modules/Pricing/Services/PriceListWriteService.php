@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationRelationship;
 use App\Modules\Pricing\Models\PriceList;
+use App\Modules\Pricing\Models\PriceListConditionalRule;
+use App\Modules\Pricing\Models\PriceListConditionalRuleMetricComponent;
 use App\Modules\Pricing\Models\PriceListItem;
 use App\Modules\Pricing\Models\PriceListVersion;
 use Carbon\CarbonImmutable;
@@ -22,6 +24,7 @@ final class PriceListWriteService
 {
     public function __construct(
         private readonly OrganizationContext $organizationContext,
+        private readonly ConditionalPriceListRulePayload $conditionalRulePayload,
     ) {}
 
     /**
@@ -291,6 +294,9 @@ final class PriceListWriteService
         $items =
             $this->pricingItems($input);
 
+        $conditionalRules =
+            $this->conditionalRulePayload->fromInput($input);
+
         return DB::transaction(
             function () use (
                 $organizationId,
@@ -303,6 +309,7 @@ final class PriceListWriteService
                 $validUntil,
                 $changeReason,
                 $items,
+                $conditionalRules,
             ): PriceList {
                 $relationship =
                     OrganizationRelationship::query()
@@ -453,6 +460,11 @@ final class PriceListWriteService
                     ]);
                 }
 
+                $this->persistConditionalRules(
+                    $version,
+                    $conditionalRules,
+                );
+
                 return $priceList->refresh();
             },
             3,
@@ -593,9 +605,14 @@ final class PriceListWriteService
 
                 $priceList->saveOrFail();
 
-                return $version->fresh([
-                    'items',
-                ]) ?? throw new LogicException(
+                $this->copyConditionalRules(
+                    $current,
+                    $version,
+                );
+
+                return $version->fresh(
+                    $this->versionRelations(),
+                ) ?? throw new LogicException(
                     'The created price-list version could not be reloaded.',
                 );
             },
@@ -657,6 +674,14 @@ final class PriceListWriteService
 
         $items = $this->pricingItems($input);
 
+        $replaceConditionalRules = array_key_exists(
+            'conditional_rules',
+            $input,
+        );
+
+        $conditionalRules =
+            $this->conditionalRulePayload->fromInput($input);
+
         return DB::transaction(
             function () use (
                 $organizationId,
@@ -667,6 +692,8 @@ final class PriceListWriteService
                 $validUntil,
                 $changeReason,
                 $items,
+                $replaceConditionalRules,
+                $conditionalRules,
             ): PriceListVersion {
                 $priceList = PriceList::query()
                     ->where(
@@ -762,9 +789,16 @@ final class PriceListWriteService
                     ]);
                 }
 
-                return $version->fresh([
-                    'items',
-                ]) ?? throw new LogicException(
+                if ($replaceConditionalRules) {
+                    $this->replaceConditionalRules(
+                        $version,
+                        $conditionalRules,
+                    );
+                }
+
+                return $version->fresh(
+                    $this->versionRelations(),
+                ) ?? throw new LogicException(
                     'The updated price-list version could not be reloaded.',
                 );
             },
@@ -889,6 +923,10 @@ final class PriceListWriteService
                     $version,
                 );
 
+                $this->assertApprovableConditionalRules(
+                    $version,
+                );
+
                 $version->fill([
                     'status' => PriceListVersion::STATUS_APPROVED,
                     'approved_by_user_id' => $actorId,
@@ -898,9 +936,9 @@ final class PriceListWriteService
 
                 $version->saveOrFail();
 
-                return $version->fresh([
-                    'items',
-                ]) ?? throw new LogicException(
+                return $version->fresh(
+                    $this->versionRelations(),
+                ) ?? throw new LogicException(
                     'The approved price-list version could not be reloaded.',
                 );
             },
@@ -1152,9 +1190,9 @@ final class PriceListWriteService
 
                 $priceList->saveOrFail();
 
-                return $version->fresh([
-                    'items',
-                ]) ?? throw new LogicException(
+                return $version->fresh(
+                    $this->versionRelations(),
+                ) ?? throw new LogicException(
                     'The activated price-list version could not be reloaded.',
                 );
             },
@@ -1370,14 +1408,247 @@ final class PriceListWriteService
 
                 $version->saveOrFail();
 
-                return $version->fresh([
-                    'items',
-                ]) ?? throw new LogicException(
+                return $version->fresh(
+                    $this->versionRelations(),
+                ) ?? throw new LogicException(
                     'The expired price-list version could not be reloaded.',
                 );
             },
             3,
         );
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rules
+     */
+    private function persistConditionalRules(
+        PriceListVersion $version,
+        array $rules,
+    ): void {
+        foreach ($rules as $ruleIndex => $payload) {
+            $numeratorSources = $payload[
+                'metric_numerator_sources'
+            ];
+            $denominatorSources = $payload[
+                'metric_denominator_sources'
+            ];
+
+            if (
+                ! is_array($numeratorSources)
+                || $numeratorSources === []
+                || ! is_array($denominatorSources)
+            ) {
+                throw new LogicException(
+                    'Normalized conditional metric components are invalid.',
+                );
+            }
+
+            $rule = $version->conditionalRules()->create([
+                'code' => $payload['code'],
+                'name' => $payload['name'],
+                'description' => $payload['description'],
+                'metric_type' => $payload['metric_type'],
+                'metric_numerator_source' => $numeratorSources[0],
+                'metric_denominator_source' => $denominatorSources[0] ?? null,
+                'evaluation_scope' => $payload['evaluation_scope'],
+                'reward_method' => $payload['reward_method'],
+                'reward_quantity_source' => $payload['reward_quantity_source'],
+                'reward_target_item_code' => $payload['reward_target_item_code'],
+                'rounding_scale' => $payload['rounding_scale'],
+                'rounding_method' => PriceListConditionalRule::ROUNDING_METHOD_HALF_UP,
+                'position' => $ruleIndex + 1,
+            ]);
+
+            foreach ($numeratorSources as $index => $source) {
+                $rule->metricComponents()->create([
+                    'component_role' => PriceListConditionalRuleMetricComponent::ROLE_NUMERATOR,
+                    'metric_source' => $source,
+                    'position' => $index + 1,
+                ]);
+            }
+
+            foreach ($denominatorSources as $index => $source) {
+                $rule->metricComponents()->create([
+                    'component_role' => PriceListConditionalRuleMetricComponent::ROLE_DENOMINATOR,
+                    'metric_source' => $source,
+                    'position' => $index + 1,
+                ]);
+            }
+
+            $bands = $payload['bands'];
+
+            if (! is_array($bands) || $bands === []) {
+                throw new LogicException(
+                    'Normalized conditional pricing bands are invalid.',
+                );
+            }
+
+            foreach ($bands as $bandIndex => $band) {
+                if (! is_array($band)) {
+                    throw new LogicException(
+                        'A normalized conditional pricing band is invalid.',
+                    );
+                }
+
+                $rule->bands()->create([
+                    'minimum_value' => $band['minimum_value'],
+                    'maximum_value' => $band['maximum_value'],
+                    'minimum_inclusive' => $band['minimum_inclusive'],
+                    'maximum_inclusive' => $band['maximum_inclusive'],
+                    'adjustment_value' => $band['adjustment_value'],
+                    'position' => $bandIndex + 1,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rules
+     */
+    private function replaceConditionalRules(
+        PriceListVersion $version,
+        array $rules,
+    ): void {
+        $existingRules = $version->conditionalRules()
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($existingRules as $rule) {
+            $rule->bands()->delete();
+            $rule->metricComponents()->delete();
+            $rule->delete();
+        }
+
+        $this->persistConditionalRules($version, $rules);
+    }
+
+    private function copyConditionalRules(
+        PriceListVersion $source,
+        PriceListVersion $target,
+    ): void {
+
+        $rules = $this->conditionalRulePayload->fromInput([
+            'conditional_rules' => $this->conditionalRuleInputFromVersion($source),
+        ]);
+
+        $this->persistConditionalRules($target, $rules);
+    }
+
+    private function assertApprovableConditionalRules(
+        PriceListVersion $version,
+    ): void {
+        try {
+            $input = $this->conditionalRuleInputFromVersion(
+                $version,
+            );
+
+            $this->conditionalRulePayload->fromInput([
+                'conditional_rules' => $input,
+            ]);
+        } catch (ValidationException|LogicException) {
+            throw new ConflictHttpException(
+                'The conditional pricing configuration is incomplete or invalid.',
+            );
+        }
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function conditionalRuleInputFromVersion(
+        PriceListVersion $version,
+    ): array {
+        $rules = [];
+
+        foreach (
+            $version->conditionalRules()->orderBy('position')->get() as $rule
+        ) {
+            $components = $rule->metricComponents()
+                ->orderBy('position')
+                ->get();
+            $numeratorSources = [];
+            $denominatorSources = [];
+
+            foreach ($components as $component) {
+                $source = (string) $component->getAttribute(
+                    'metric_source',
+                );
+
+                if (
+                    $component->getAttribute('component_role') ===
+                        PriceListConditionalRuleMetricComponent::ROLE_NUMERATOR
+                ) {
+                    $numeratorSources[] = $source;
+
+                    continue;
+                }
+
+                if (
+                    $component->getAttribute('component_role') ===
+                        PriceListConditionalRuleMetricComponent::ROLE_DENOMINATOR
+                ) {
+                    $denominatorSources[] = $source;
+                }
+            }
+
+            if ($components->isEmpty()) {
+                $legacyNumerator = $rule->getAttribute(
+                    'metric_numerator_source',
+                );
+                $legacyDenominator = $rule->getAttribute(
+                    'metric_denominator_source',
+                );
+
+                if (is_string($legacyNumerator)) {
+                    $numeratorSources[] = $legacyNumerator;
+                }
+
+                if (is_string($legacyDenominator)) {
+                    $denominatorSources[] = $legacyDenominator;
+                }
+            }
+
+            $bands = [];
+
+            foreach ($rule->bands()->orderBy('position')->get() as $band) {
+                $bands[] = [
+                    'minimum_value' => $band->getAttribute('minimum_value'),
+                    'maximum_value' => $band->getAttribute('maximum_value'),
+                    'minimum_inclusive' => (bool) $band->getAttribute(
+                        'minimum_inclusive',
+                    ),
+                    'maximum_inclusive' => (bool) $band->getAttribute(
+                        'maximum_inclusive',
+                    ),
+                    'adjustment_value' => $band->getAttribute('adjustment_value'),
+                ];
+            }
+
+            $rules[] = [
+                'code' => $rule->getAttribute('code'),
+                'name' => $rule->getAttribute('name'),
+                'description' => $rule->getAttribute('description'),
+                'metric_type' => $rule->getAttribute('metric_type'),
+                'metric_numerator_sources' => $numeratorSources,
+                'metric_denominator_sources' => $denominatorSources,
+                'evaluation_scope' => $rule->getAttribute('evaluation_scope'),
+                'reward_method' => $rule->getAttribute('reward_method'),
+                'reward_quantity_source' => $rule->getAttribute('reward_quantity_source'),
+                'reward_target_item_code' => $rule->getAttribute('reward_target_item_code'),
+                'rounding_scale' => $rule->getAttribute('rounding_scale'),
+                'bands' => $bands,
+            ];
+        }
+
+        return $rules;
+    }
+
+    /** @return list<string> */
+    private function versionRelations(): array
+    {
+        return [
+            'items',
+            'conditionalRules.metricComponents',
+            'conditionalRules.bands',
+        ];
     }
 
     private function assertApprovableItems(
