@@ -6,20 +6,25 @@ namespace App\Modules\Drivers\Controllers;
 
 use App\Core\Organizations\OrganizationContext;
 use App\Models\User;
-use App\Modules\Drivers\Models\Driver;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
+use App\Modules\Drivers\Services\DriverSupervisoryAuthorizationService;
 use App\Modules\Organizations\Models\Organization;
-use App\Modules\Organizations\Models\OrganizationRelationship;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class DriverOrganizationAssignmentController
 {
+    public function __construct(
+        private readonly DriverSupervisoryAuthorizationService $authorizationService,
+    ) {}
+
     public function index(
+        Request $request,
         OrganizationContext $context,
         int $driver,
     ): JsonResponse {
@@ -29,9 +34,14 @@ final class DriverOrganizationAssignmentController
             $masterOrganizationId,
         );
 
-        $driverModel = $this->findVisibleDriver(
-            $masterOrganizationId,
-            $driver,
+        $actor = $this->actor(
+            $request,
+        );
+
+        $driverModel = $this->authorizationService->findVisibleDriver(
+            actor: $actor,
+            organizationId: $masterOrganizationId,
+            driverId: $driver,
         );
 
         $items = DriverOrganizationAssignment::query()
@@ -123,16 +133,22 @@ final class DriverOrganizationAssignmentController
             $masterOrganizationId,
         );
 
-        $driverModel = $this->findVisibleDriver(
-            $masterOrganizationId,
-            $driver,
+        $actor = $this->actor(
+            $request,
+        );
+
+        $driverModel = $this->authorizationService->findVisibleDriver(
+            actor: $actor,
+            organizationId: $masterOrganizationId,
+            driverId: $driver,
         );
 
         $organizationId = (int) $validated['organization_id'];
 
-        $this->assertAllowedOrganization(
-            $masterOrganizationId,
-            $organizationId,
+        $this->authorizationService->findManageableOrganization(
+            actor: $actor,
+            organizationId: $masterOrganizationId,
+            targetOrganizationId: $organizationId,
         );
 
         $validFrom = (string) $validated['valid_from'];
@@ -146,10 +162,6 @@ final class DriverOrganizationAssignmentController
             $validFrom,
             $validUntil,
             null,
-        );
-
-        $actor = $this->actor(
-            $request,
         );
 
         $assignment = DB::transaction(
@@ -179,7 +191,7 @@ final class DriverOrganizationAssignmentController
         );
 
         return response()->json([
-            'message' => 'Období spolupráce bylo přidáno.',
+            'message' => 'ObdobĂ­ spoluprĂˇce bylo pĹ™idĂˇno.',
             'data' => $this->resource(
                 $assignment->load('organization'),
             ),
@@ -210,9 +222,14 @@ final class DriverOrganizationAssignmentController
             $masterOrganizationId,
         );
 
-        $driverModel = $this->findVisibleDriver(
-            $masterOrganizationId,
-            $driver,
+        $actor = $this->actor(
+            $request,
+        );
+
+        $driverModel = $this->authorizationService->findVisibleDriver(
+            actor: $actor,
+            organizationId: $masterOrganizationId,
+            driverId: $driver,
         );
 
         $target = DriverOrganizationAssignment::query()
@@ -226,7 +243,7 @@ final class DriverOrganizationAssignmentController
         if ($target->getAttribute('valid_until') !== null) {
             throw ValidationException::withMessages([
                 'valid_until' => [
-                    'Toto období už je ukončeno.',
+                    'Toto obdobĂ­ uĹľ je ukonÄŤeno.',
                 ],
             ]);
         }
@@ -237,7 +254,7 @@ final class DriverOrganizationAssignmentController
         if ($validUntil < $validFrom) {
             throw ValidationException::withMessages([
                 'valid_until' => [
-                    'Datum ukončení nesmí být před začátkem spolupráce.',
+                    'Datum ukonÄŤenĂ­ nesmĂ­ bĂ˝t pĹ™ed zaÄŤĂˇtkem spoluprĂˇce.',
                 ],
             ]);
         }
@@ -247,10 +264,6 @@ final class DriverOrganizationAssignmentController
             $validFrom,
             $validUntil,
             (int) $target->getKey(),
-        );
-
-        $actor = $this->actor(
-            $request,
         );
 
         DB::transaction(
@@ -273,7 +286,7 @@ final class DriverOrganizationAssignmentController
         );
 
         return response()->json([
-            'message' => 'Období spolupráce bylo ukončeno.',
+            'message' => 'ObdobĂ­ spoluprĂˇce bylo ukonÄŤeno.',
             'data' => $this->resource(
                 $target->refresh()->load('organization'),
             ),
@@ -313,17 +326,17 @@ final class DriverOrganizationAssignmentController
             $masterOrganizationId,
         );
 
-        $driverModel = $this->findVisibleDriver(
-            $masterOrganizationId,
-            $driver,
+        $actor = $this->actor(
+            $request,
+        );
+
+        $driverModel = $this->authorizationService->findVisibleDriver(
+            actor: $actor,
+            organizationId: $masterOrganizationId,
+            driverId: $driver,
         );
 
         $organizationId = (int) $validated['organization_id'];
-
-        $this->assertAllowedOrganization(
-            $masterOrganizationId,
-            $organizationId,
-        );
 
         $employmentType = $validated['employment_type'] ?? null;
 
@@ -349,57 +362,14 @@ final class DriverOrganizationAssignmentController
 
         $effectiveDate = $effectiveFrom->toDateString();
 
-        if ($organizationId !== $masterOrganizationId) {
-            $relationshipExists = OrganizationRelationship::query()
-                ->where(
-                    'source_organization_id',
-                    $masterOrganizationId,
-                )
-                ->where(
-                    'target_organization_id',
-                    $organizationId,
-                )
-                ->where(
-                    'relationship_type',
-                    OrganizationRelationship::TYPE_SUBCONTRACTING,
-                )
-                ->where(
-                    'status',
-                    'active',
-                )
-                ->whereDate(
-                    'valid_from',
-                    '<=',
-                    $effectiveDate,
-                )
-                ->where(
-                    static function (Builder $query) use (
-                        $effectiveDate,
-                    ): void {
-                        $query
-                            ->whereNull('valid_until')
-                            ->orWhereDate(
-                                'valid_until',
-                                '>=',
-                                $effectiveDate,
-                            );
-                    },
-                )
-                ->exists();
-
-            if (! $relationshipExists) {
-                throw ValidationException::withMessages([
-                    'organization_id' => [
-                        'Vybraný dopravce nemá k datu změny platný vztah s hlavní organizací.',
-                    ],
-                ]);
-            }
-        }
-
-        $actor = $this->actor(
-            $request,
+        $this->authorizationService->findManageableOrganization(
+            actor: $actor,
+            organizationId: $masterOrganizationId,
+            targetOrganizationId: $organizationId,
+            moment: Carbon::parse(
+                $effectiveDate,
+            ),
         );
-
         [$previousAssignment, $newAssignment] = DB::transaction(
             function () use (
                 $driverModel,
@@ -589,111 +559,10 @@ final class DriverOrganizationAssignmentController
         if ($query->exists()) {
             throw ValidationException::withMessages([
                 'valid_from' => [
-                    'Období spolupráce se překrývá s již uloženým obdobím tohoto řidiče.',
+                    'ObdobĂ­ spoluprĂˇce se pĹ™ekrĂ˝vĂˇ s jiĹľ uloĹľenĂ˝m obdobĂ­m tohoto Ĺ™idiÄŤe.',
                 ],
             ]);
         }
-    }
-
-    private function findVisibleDriver(
-        int $masterOrganizationId,
-        int $driverId,
-    ): Driver {
-        $allowedOrganizationIds = $this->allowedOrganizationIds(
-            $masterOrganizationId,
-        );
-
-        return Driver::query()
-            ->whereKey($driverId)
-            ->where(
-                static function (Builder $query) use (
-                    $masterOrganizationId,
-                    $allowedOrganizationIds,
-                ): void {
-                    $query
-                        ->whereHas(
-                            'user.organizationMemberships',
-                            static function (Builder $membership) use (
-                                $masterOrganizationId,
-                            ): void {
-                                $membership->where(
-                                    'organization_id',
-                                    $masterOrganizationId,
-                                );
-                            },
-                        )
-                        ->orWhereHas(
-                            'organizationAssignments',
-                            static function (Builder $assignment) use (
-                                $allowedOrganizationIds,
-                            ): void {
-                                $assignment->whereIn(
-                                    'organization_id',
-                                    $allowedOrganizationIds,
-                                );
-                            },
-                        );
-                },
-            )
-            ->firstOrFail();
-    }
-
-    /**
-     * @return list<int>
-     */
-    private function allowedOrganizationIds(
-        int $masterOrganizationId,
-    ): array {
-        $ids = [
-            $masterOrganizationId,
-        ];
-
-        $related = OrganizationRelationship::query()
-            ->where(
-                'source_organization_id',
-                $masterOrganizationId,
-            )
-            ->where(
-                'relationship_type',
-                OrganizationRelationship::TYPE_SUBCONTRACTING,
-            )
-            ->pluck(
-                'target_organization_id',
-            )
-            ->map(
-                static fn (mixed $value): int => (int) $value,
-            )
-            ->all();
-
-        return array_values(
-            array_unique(
-                array_merge(
-                    $ids,
-                    $related,
-                ),
-            ),
-        );
-    }
-
-    private function assertAllowedOrganization(
-        int $masterOrganizationId,
-        int $organizationId,
-    ): void {
-        if (
-            ! in_array(
-                $organizationId,
-                $this->allowedOrganizationIds(
-                    $masterOrganizationId,
-                ),
-                true,
-            )
-        ) {
-            abort(404);
-        }
-
-        Organization::query()
-            ->whereKey($organizationId)
-            ->firstOrFail();
     }
 
     private function assertMasterOrganization(

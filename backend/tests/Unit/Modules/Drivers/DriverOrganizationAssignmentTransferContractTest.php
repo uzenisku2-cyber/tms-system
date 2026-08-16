@@ -83,19 +83,19 @@ final class DriverOrganizationAssignmentTransferContractTest extends TestCase
 
         self::assertIsString($controller);
         self::assertStringContainsString(
-            "'source_organization_id'",
+            '$this->authorizationService->findManageableOrganization(',
             $controller,
         );
         self::assertStringContainsString(
-            "'target_organization_id'",
+            'targetOrganizationId: $organizationId',
             $controller,
         );
         self::assertStringContainsString(
-            "'relationship_type'",
+            'moment: Carbon::parse(',
             $controller,
         );
         self::assertStringContainsString(
-            'Vybraný dopravce nemá k datu změny platný vztah',
+            '$effectiveDate',
             $controller,
         );
     }
