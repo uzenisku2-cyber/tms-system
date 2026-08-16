@@ -30,10 +30,14 @@ final class PriceListConditionalRule extends Model
     public const EVALUATION_SCOPE_MONTHLY_DRIVER =
         'monthly_driver';
 
+    public const EVALUATION_SCOPE_MONTHLY_PRICE_LIST =
+        'monthly_price_list';
+
     /** @var list<string> */
     public const EVALUATION_SCOPES = [
         self::EVALUATION_SCOPE_PER_ROUTE,
         self::EVALUATION_SCOPE_MONTHLY_DRIVER,
+        self::EVALUATION_SCOPE_MONTHLY_PRICE_LIST,
     ];
 
     public const SOURCE_LOADED_PARCELS =
@@ -136,6 +140,39 @@ final class PriceListConditionalRule extends Model
             PriceListConditionalBand::class,
             'price_list_conditional_rule_id',
         )->orderBy('position');
+    }
+
+    /**
+     * @return HasMany<PriceListConditionalRuleMetricComponent, $this>
+     */
+    public function metricComponents(): HasMany
+    {
+        return $this->hasMany(
+            PriceListConditionalRuleMetricComponent::class,
+            'price_list_conditional_rule_id',
+        )->orderBy('position');
+    }
+
+    /**
+     * @return HasMany<PriceListConditionalRuleMetricComponent, $this>
+     */
+    public function numeratorComponents(): HasMany
+    {
+        return $this->metricComponents()->where(
+            'component_role',
+            PriceListConditionalRuleMetricComponent::ROLE_NUMERATOR,
+        );
+    }
+
+    /**
+     * @return HasMany<PriceListConditionalRuleMetricComponent, $this>
+     */
+    public function denominatorComponents(): HasMany
+    {
+        return $this->metricComponents()->where(
+            'component_role',
+            PriceListConditionalRuleMetricComponent::ROLE_DENOMINATOR,
+        );
     }
 
     /** @return array<string, string> */

@@ -25,6 +25,11 @@ final class PriceListVersionResource extends JsonResource
 
         $version = $this->resource;
 
+        $version->loadMissing([
+            'conditionalRules.metricComponents',
+            'conditionalRules.bands',
+        ]);
+
         return [
             'version_number' => (int) $version->getAttribute(
                 'version_number',
@@ -55,6 +60,9 @@ final class PriceListVersionResource extends JsonResource
             ),
             'items' => PriceListItemResource::collection(
                 $version->items,
+            ),
+            'conditional_rules' => PriceListConditionalRuleResource::collection(
+                $version->conditionalRules,
             ),
         ];
     }

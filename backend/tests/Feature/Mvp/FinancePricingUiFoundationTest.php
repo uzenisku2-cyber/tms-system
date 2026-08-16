@@ -223,7 +223,7 @@ final class FinancePricingUiFoundationTest extends TestCase
             "'actual_km'",
             'change_reason:',
             'items,',
-            'kompletní draft v1 se čtyřmi sazbami',
+            'conditionalRules.length',
             'bindFinanceBillingPriceListCreate();',
         ] as $marker) {
             self::assertStringContainsString(
@@ -268,6 +268,65 @@ final class FinancePricingUiFoundationTest extends TestCase
         self::assertStringNotContainsString(
             '/versions/1',
             $billingFunctionSource,
+        );
+    }
+
+    public function test_billing_ui_administers_unlimited_conditional_surcharges(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'S023-04B UNLIMITED CONDITIONAL SURCHARGE UI',
+            'data-conditional-rule-root',
+            'data-conditional-rule-preset',
+            'data-conditional-rule-add',
+            'data-conditional-rule-list',
+            'data-conditional-rule-code',
+            'data-conditional-rule-name',
+            'data-conditional-rule-metric-type',
+            'data-conditional-rule-scope',
+            'data-conditional-rule-reward-method',
+            'data-conditional-numerator-source',
+            'data-conditional-denominator-source',
+            'data-conditional-band-add',
+            'data-conditional-band-list',
+            'data-conditional-band-adjustment',
+            'const financeConditionalMetricSources = [',
+            'const financeConditionalRulePresets = {',
+            'const addFinanceConditionalRule = (',
+            'const addFinanceConditionalBand = (',
+            'const collectFinanceConditionalRules = (panel) => {',
+            "addFinanceConditionalRule(panel, 'quality');",
+            "addFinanceConditionalRule(panel, 'redirected');",
+            'value="monthly_price_list"',
+            "'customer_rejected_parcels'",
+            "'not_delivered_parcels'",
+            "'processed_parcels'",
+            'metric_numerator_sources: numeratorSources,',
+            'metric_denominator_sources: denominatorSources,',
+            'reward_quantity_source:',
+            'reward_target_item_code:',
+            'conditional_rules:',
+            'Odm&#237;tnuto z&#225;kazn&#237;kem',
+        ] as $marker) {
+            self::assertStringContainsString(
+                $marker,
+                $source,
+            );
+        }
+
+        self::assertStringNotContainsString(
+            'conditionalRules.slice(',
+            $source,
+        );
+
+        self::assertStringNotContainsString(
+            'conditionalRules.length >',
+            $source,
         );
     }
 
