@@ -11715,6 +11715,188 @@ const fuel = () => `
                         border-radius: 8px;
                         padding: 9px 10px;
                     }
+                    /*
+                     * S024-02A PRICE-LIST ADMINISTRATION LAYOUT
+                     *
+                     * Existing price lists are the primary view. Creation is
+                     * intentionally kept in a separate secondary workflow.
+                     */
+                    .drayvia-price-admin {
+                        display: grid;
+                        gap: 16px;
+                    }
+
+                    .drayvia-price-admin-header,
+                    .drayvia-price-admin-toolbar,
+                    .drayvia-price-admin-actions {
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 10px;
+                    }
+
+                    .drayvia-price-admin-header h4,
+                    .drayvia-price-admin-header p {
+                        margin: 0;
+                    }
+
+                    .drayvia-price-admin-heading {
+                        display: grid;
+                        gap: 5px;
+                    }
+
+                    .drayvia-price-admin-primary,
+                    .drayvia-price-admin-secondary,
+                    .drayvia-price-admin-filter {
+                        border: 1px solid #cbd5e1;
+                        border-radius: 9px;
+                        padding: 9px 13px;
+                        font-weight: 800;
+                        cursor: pointer;
+                    }
+
+                    .drayvia-price-admin-primary,
+                    .drayvia-price-admin-filter.is-active {
+                        border-color: #0f172a;
+                        color: #fff;
+                        background: #0f172a;
+                    }
+
+                    .drayvia-price-admin-secondary,
+                    .drayvia-price-admin-filter {
+                        color: #1f2937;
+                        background: #fff;
+                    }
+
+                    .drayvia-price-admin-summary {
+                        display: grid;
+                        grid-template-columns:
+                            repeat(auto-fit, minmax(150px, 1fr));
+                        gap: 10px;
+                    }
+
+                    .drayvia-price-admin-stat {
+                        display: grid;
+                        gap: 4px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 10px;
+                        padding: 12px;
+                        background: #f8fafc;
+                    }
+
+                    .drayvia-price-admin-stat span {
+                        color: #64748b;
+                        font-size: 12px;
+                        font-weight: 700;
+                    }
+
+                    .drayvia-price-admin-stat strong {
+                        color: #0f172a;
+                        font-size: 21px;
+                    }
+
+                    .drayvia-price-admin-table-wrap {
+                        overflow-x: auto;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 12px;
+                    }
+
+                    .drayvia-price-admin-table {
+                        width: 100%;
+                        min-width: 760px;
+                        border-collapse: collapse;
+                    }
+
+                    .drayvia-price-admin-table th,
+                    .drayvia-price-admin-table td {
+                        padding: 12px;
+                        text-align: left;
+                        border-bottom: 1px solid #e5e7eb;
+                        vertical-align: middle;
+                    }
+
+                    .drayvia-price-admin-table th {
+                        color: #475569;
+                        background: #f8fafc;
+                        font-size: 12px;
+                    }
+
+                    .drayvia-price-admin-table tbody tr:last-child td {
+                        border-bottom: 0;
+                    }
+
+                    .drayvia-price-admin-detail {
+                        display: grid;
+                        gap: 14px;
+                        border: 1px solid #cbd5e1;
+                        border-radius: 12px;
+                        padding: 16px;
+                        background: #fff;
+                    }
+
+                    .drayvia-price-admin-detail-header {
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: flex-start;
+                        justify-content: space-between;
+                        gap: 12px;
+                    }
+
+                    .drayvia-price-admin-detail-header h4,
+                    .drayvia-price-admin-detail-header p {
+                        margin: 0;
+                    }
+
+                    .drayvia-price-admin-detail-heading {
+                        display: grid;
+                        gap: 6px;
+                    }
+
+                    .drayvia-price-admin-detail-actions {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                    }
+
+                    .drayvia-price-admin-editor {
+                        display: grid;
+                        gap: 16px;
+                        border: 0;
+                        padding: 0;
+                    }
+
+                    .drayvia-price-admin-editor textarea {
+                        width: 100%;
+                        box-sizing: border-box;
+                        border: 1px solid #cfd5dd;
+                        border-radius: 8px;
+                        padding: 10px 11px;
+                        background: #fff;
+                    }
+
+                    .drayvia-price-admin-message {
+                        border-left: 4px solid #2563eb;
+                        padding: 10px 12px;
+                        background: #eff6ff;
+                    }
+
+                    .drayvia-price-admin-message[data-state="error"] {
+                        border-left-color: #dc2626;
+                        color: #991b1b;
+                        background: #fef2f2;
+                    }
+                    .drayvia-price-admin-empty {
+                        padding: 22px;
+                        color: #64748b;
+                        text-align: center;
+                    }
+
+                    .drayvia-price-create-card[hidden],
+                    .drayvia-price-admin[hidden],
+                    .drayvia-price-admin-detail[hidden] {
+                        display: none;
+                    }
                     .drayvia-conditional-rules {
                         margin-top: 20px;
                         border: 1px solid #d7dce3;
@@ -12038,7 +12220,134 @@ const fuel = () => `
                                             data-price-list-panel="billing"
                                             data-provider-managed-price-list-endpoint="/api/v1/customers/{relationship}/price-lists"
                                         >
-                                            <div class="drayvia-finance-card">
+                                                                                        <div
+                                                class="drayvia-finance-card drayvia-price-admin"
+                                                data-billing-price-list-admin
+                                            >
+                                                <div class="drayvia-price-admin-header">
+                                                    <div class="drayvia-price-admin-heading">
+                                                        <h4>Spr&#225;va faktura&#269;n&#237;ch cen&#237;k&#367;</h4>
+                                                        <p>
+                                                            Aktu&#225;ln&#237;, rozpracovan&#233; a historick&#233;
+                                                            cen&#237;ky na jednom m&#237;st&#283;.
+                                                        </p>
+                                                    </div>
+
+                                                    <button
+                                                        class="drayvia-price-admin-primary"
+                                                        type="button"
+                                                        data-billing-price-list-create-open
+                                                    >
+                                                        Nov&#253; faktura&#269;n&#237; cen&#237;k
+                                                    </button>
+                                                </div>
+
+                                                <div class="drayvia-price-admin-summary">
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>V&#353;echny cen&#237;ky</span>
+                                                        <strong data-billing-price-list-count="all">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Aktu&#225;ln&#237;</span>
+                                                        <strong data-billing-price-list-count="current">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Koncepty</span>
+                                                        <strong data-billing-price-list-count="draft">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Historie</span>
+                                                        <strong data-billing-price-list-count="history">0</strong>
+                                                    </div>
+                                                </div>
+
+                                                <div class="drayvia-price-admin-toolbar">
+                                                    <div class="drayvia-price-admin-actions">
+                                                        <button
+                                                            class="drayvia-price-admin-filter is-active"
+                                                            type="button"
+                                                            data-billing-price-list-filter="all"
+                                                        >
+                                                            V&#353;e
+                                                        </button>
+                                                        <button
+                                                            class="drayvia-price-admin-filter"
+                                                            type="button"
+                                                            data-billing-price-list-filter="current"
+                                                        >
+                                                            Aktu&#225;ln&#237;
+                                                        </button>
+                                                        <button
+                                                            class="drayvia-price-admin-filter"
+                                                            type="button"
+                                                            data-billing-price-list-filter="draft"
+                                                        >
+                                                            Koncepty
+                                                        </button>
+                                                        <button
+                                                            class="drayvia-price-admin-filter"
+                                                            type="button"
+                                                            data-billing-price-list-filter="history"
+                                                        >
+                                                            Historie
+                                                        </button>
+                                                    </div>
+
+                                                    <button
+                                                        class="drayvia-price-admin-secondary"
+                                                        type="button"
+                                                        data-billing-price-list-reload
+                                                    >
+                                                        Obnovit p&#345;ehled
+                                                    </button>
+                                                </div>
+
+                                                <div class="drayvia-price-admin-table-wrap">
+                                                    <table class="drayvia-price-admin-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Odb&#283;ratel</th>
+                                                                <th>Cen&#237;k</th>
+                                                                <th>Platnost</th>
+                                                                <th>Stav</th>
+                                                                <th>Verze</th>
+                                                                <th>Akce</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody data-billing-price-list-admin-list>
+                                                            <tr>
+                                                                <td
+                                                                    class="drayvia-price-admin-empty"
+                                                                    colspan="6"
+                                                                >
+                                                                    Na&#269;&#237;t&#225;m faktura&#269;n&#237; cen&#237;ky&#8230;
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                <section
+                                                    class="drayvia-price-admin-detail"
+                                                    data-billing-price-list-admin-detail
+                                                    hidden
+                                                ></section>
+                                            </div>
+
+                                            <div
+                                                class="drayvia-finance-card drayvia-price-create-card"
+                                                data-billing-price-list-create-card
+                                                hidden
+                                            >
+                                                <div class="drayvia-price-admin-toolbar">
+                                                    <button
+                                                        class="drayvia-price-admin-secondary"
+                                                        type="button"
+                                                        data-billing-price-list-create-close
+                                                    >
+                                                        Zp&#283;t na p&#345;ehled
+                                                    </button>
+                                                </div>
                                                 <h4>Nový fakturační ceník odběratele</h4>
 
                                                 <div class="drayvia-finance-grid">
@@ -14095,6 +14404,1360 @@ const templates = {
                 });
             };
 
+            /*
+             * S024-03A BILLING PRICE-LIST ADMINISTRATION DATA
+             *
+             * Customer relationships remain the source of customer identity.
+             * Public price-list UUIDs remain the only identifiers used by UI.
+             */
+            let financeBillingPriceLists = [];
+            let financeBillingPriceListFilter = 'all';
+
+            const financeBillingPriceListCategory = (priceList) => {
+                if (priceList?.status === 'active') {
+                    return 'current';
+                }
+
+                if (
+                    priceList?.status === 'draft'
+                    || priceList?.status === 'approved'
+                ) {
+                    return 'draft';
+                }
+
+                return 'history';
+            };
+
+            const financeBillingPriceListPeriod = (version) => {
+                if (!version) {
+                    return '\u2014';
+                }
+
+                return `${
+                    financeCustomerDate(version.valid_from)
+                } \u2013 ${
+                    financeCustomerDate(version.valid_until)
+                }`;
+            };
+
+            const financeBillingPriceListCell = (value) => {
+                const cell = document.createElement('td');
+
+                cell.textContent = String(value ?? '\u2014');
+
+                return cell;
+            };
+
+            const financeBillingCurrentVersion = (record) => {
+                const versions = Array.isArray(record?.versions)
+                    ? record.versions
+                    : [];
+
+                return versions.find(
+                    (version) =>
+                        Number(version?.version_number)
+                        === Number(record?.current_version)
+                ) || versions[0] || null;
+            };
+
+            const renderFinanceBillingPriceListIndex = () => {
+                const root = document.querySelector(
+                    '[data-finance-root]'
+                );
+
+                const list = root?.querySelector(
+                    '[data-billing-price-list-admin-list]'
+                );
+
+                if (!root || !list) {
+                    return;
+                }
+
+                const counts = {
+                    all: financeBillingPriceLists.length,
+                    current: 0,
+                    draft: 0,
+                    history: 0,
+                };
+
+                financeBillingPriceLists.forEach((record) => {
+                    counts[
+                        financeBillingPriceListCategory(record)
+                    ] += 1;
+                });
+
+                Object.entries(counts).forEach(
+                    ([category, count]) => {
+                        const output = root.querySelector(
+                            `[data-billing-price-list-count="${category}"]`
+                        );
+
+                        if (output) {
+                            output.textContent = String(count);
+                        }
+                    }
+                );
+
+                root.querySelectorAll(
+                    '[data-billing-price-list-filter]'
+                ).forEach((button) => {
+                    button.classList.toggle(
+                        'is-active',
+                        button.dataset.billingPriceListFilter
+                            === financeBillingPriceListFilter
+                    );
+                });
+
+                const records = financeBillingPriceLists.filter(
+                    (record) =>
+                        financeBillingPriceListFilter === 'all'
+                        || financeBillingPriceListCategory(record)
+                            === financeBillingPriceListFilter
+                );
+
+                list.replaceChildren();
+
+                if (records.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+
+                    cell.colSpan = 6;
+                    cell.className = 'drayvia-price-admin-empty';
+                    cell.textContent =
+                        financeBillingPriceLists.length === 0
+                            ? 'Zat\u00edm nen\u00ed evidov\u00e1n \u017e\u00e1dn\u00fd faktura\u010dn\u00ed cen\u00edk.'
+                            : 'Vybran\u00e9mu filtru neodpov\u00edd\u00e1 \u017e\u00e1dn\u00fd cen\u00edk.';
+
+                    row.appendChild(cell);
+                    list.appendChild(row);
+
+                    return;
+                }
+
+                records.forEach((record) => {
+                    const version =
+                        financeBillingCurrentVersion(record);
+
+                    const row = document.createElement('tr');
+
+                    row.append(
+                        financeBillingPriceListCell(
+                            record.customer_name
+                        ),
+                        financeBillingPriceListCell(
+                            record.name
+                        ),
+                        financeBillingPriceListCell(
+                            financeBillingPriceListPeriod(version)
+                        ),
+                        financeBillingPriceListCell(
+                            financeCustomerStatus(record.status)
+                        ),
+                        financeBillingPriceListCell(
+                            record.current_version
+                        )
+                    );
+
+                    const actionCell =
+                        document.createElement('td');
+
+                    const detailButton =
+                        document.createElement('button');
+
+                    detailButton.type = 'button';
+                    detailButton.className =
+                        'drayvia-price-admin-secondary';
+                    detailButton.textContent = 'Otev\u0159\u00edt';
+
+                    detailButton.addEventListener(
+                        'click',
+                        () => {
+                            renderFinanceBillingPriceListDetail(
+                                record
+                            );
+                        }
+                    );
+
+                    actionCell.appendChild(detailButton);
+                    row.appendChild(actionCell);
+                    list.appendChild(row);
+                });
+            };
+
+            const financeBillingDetailTable = (
+                titleText,
+                headers,
+                rows
+            ) => {
+                const section = document.createElement('section');
+                const title = document.createElement('h5');
+                const wrapper = document.createElement('div');
+                const table = document.createElement('table');
+                const head = document.createElement('thead');
+                const headRow = document.createElement('tr');
+                const body = document.createElement('tbody');
+
+                title.textContent = titleText;
+                wrapper.className =
+                    'drayvia-price-admin-table-wrap';
+                table.className =
+                    'drayvia-price-admin-table';
+
+                headers.forEach((header) => {
+                    const cell = document.createElement('th');
+
+                    cell.textContent = header;
+                    headRow.appendChild(cell);
+                });
+
+                head.appendChild(headRow);
+                table.appendChild(head);
+
+                if (rows.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+
+                    cell.colSpan = headers.length;
+                    cell.className = 'drayvia-price-admin-empty';
+                    cell.textContent = '\u017d\u00e1dn\u00e9 z\u00e1znamy.';
+
+                    row.appendChild(cell);
+                    body.appendChild(row);
+                }
+                else {
+                    rows.forEach((values) => {
+                        const row = document.createElement('tr');
+
+                        values.forEach((value) => {
+                            row.appendChild(
+                                financeBillingPriceListCell(value)
+                            );
+                        });
+
+                        body.appendChild(row);
+                    });
+                }
+
+                table.appendChild(body);
+                wrapper.appendChild(table);
+                section.append(title, wrapper);
+
+                return section;
+            };
+
+            /*
+             * S024-04B BILLING DRAFT EDITOR
+             *
+             * Draft editing sends the complete version tree through one
+             * optimistic-locking PUT request. Immutable versions remain
+             * read-only.
+             */
+            const financeBillingMoney = (
+                value,
+                currency = 'CZK'
+            ) => {
+                const amount = Number(value);
+
+                if (!Number.isFinite(amount)) {
+                    return '\u2014';
+                }
+
+                return new Intl.NumberFormat('cs-CZ', {
+                    style: 'currency',
+                    currency: currency || 'CZK',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                }).format(amount);
+            };
+
+            const financeBillingNumber = (value) => {
+                const number = Number(value);
+
+                if (!Number.isFinite(number)) {
+                    return '\u2014';
+                }
+
+                return new Intl.NumberFormat('cs-CZ', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 4,
+                }).format(number);
+            };
+
+            const financeBillingItemLabel = (code) => ({
+                delivered_parcels:
+                    'Doru\u010den\u00e1 z\u00e1silka',
+                redirected_parcels:
+                    'P\u0159esm\u011brovan\u00e1 z\u00e1silka',
+                undelivered_parcels:
+                    'Odm\u00edtnuto z\u00e1kazn\u00edkem',
+                actual_km:
+                    'Skute\u010dn\u00fd kilometr',
+            }[code] || code || '\u2014');
+
+            const financeBillingUnitLabel = (unit) => ({
+                parcel: 'z\u00e1silka',
+                km: 'km',
+            }[unit] || unit || '\u2014');
+
+            const financeBillingMetricSourceLabel = (source) => {
+                const option = financeConditionalMetricSources.find(
+                    (item) => item.value === source
+                );
+
+                return option?.label || source || '\u2014';
+            };
+
+            const financeBillingEvaluationScopeLabel = (scope) => ({
+                per_route:
+                    'Za danou trasu',
+                monthly_price_list:
+                    'M\u011bs\u00ed\u010dn\u011b za faktura\u010dn\u00ed cen\u00edk',
+                monthly_driver:
+                    'M\u011bs\u00ed\u010dn\u011b za \u0159idi\u010de',
+            }[scope] || scope || '\u2014');
+
+            const financeBillingRewardLabel = (rule) => {
+                if (rule?.reward_method === 'fixed_amount') {
+                    return 'Pevn\u00e1 \u010d\u00e1stka za spln\u011bn\u00e9 p\u00e1smo';
+                }
+
+                if (rule?.reward_method === 'amount_per_unit') {
+                    return `\u010c\u00e1stka \u00d7 ${
+                        financeBillingMetricSourceLabel(
+                            rule?.reward_quantity_source
+                        )
+                    }`;
+                }
+
+                if (rule?.reward_method === 'percentage_of_item') {
+                    return `Procento z ${
+                        financeBillingItemLabel(
+                            rule?.reward_target_item_code
+                        )
+                    }`;
+                }
+
+                return rule?.reward_method || '\u2014';
+            };
+
+            const financeBillingRuleFormula = (rule) => {
+                const numerator = Array.isArray(
+                    rule?.metric_numerator_sources
+                )
+                    ? rule.metric_numerator_sources.map(
+                        financeBillingMetricSourceLabel
+                    )
+                    : [];
+
+                const denominator = Array.isArray(
+                    rule?.metric_denominator_sources
+                )
+                    ? rule.metric_denominator_sources.map(
+                        financeBillingMetricSourceLabel
+                    )
+                    : [];
+
+                const numeratorText =
+                    numerator.join(' + ') || '\u2014';
+
+                if (rule?.metric_type === 'quantity') {
+                    return numeratorText;
+                }
+
+                return `(${numeratorText}) / (${
+                    denominator.join(' + ') || '\u2014'
+                }) \u00d7 100 %`;
+            };
+
+            const financeBillingBandLabel = (
+                rule,
+                band,
+                currency
+            ) => {
+                const percentage =
+                    rule?.metric_type === 'ratio_percentage';
+
+                const boundary = (
+                    value,
+                    inclusive,
+                    emptyText
+                ) => {
+                    if (
+                        value === null
+                        || value === undefined
+                        || value === ''
+                    ) {
+                        return emptyText;
+                    }
+
+                    return `${
+                        financeBillingNumber(value)
+                    }${percentage ? ' %' : ''}${
+                        inclusive ? ' v\u010detn\u011b' : ''
+                    }`;
+                };
+
+                const adjustment =
+                    rule?.reward_method === 'percentage_of_item'
+                        ? `${financeBillingNumber(
+                            band?.adjustment_value
+                        )} %`
+                        : financeBillingMoney(
+                            band?.adjustment_value,
+                            currency
+                        );
+
+                return `${
+                    boundary(
+                        band?.minimum_value,
+                        band?.minimum_inclusive,
+                        'bez minima'
+                    )
+                } a\u017e ${
+                    boundary(
+                        band?.maximum_value,
+                        band?.maximum_inclusive,
+                        'bez maxima'
+                    )
+                } \u2192 ${adjustment}`;
+            };
+
+            const financeBillingAdminNotice = (
+                detail,
+                text,
+                state = 'success'
+            ) => {
+                const notice = document.createElement('p');
+
+                notice.className = 'drayvia-price-admin-message';
+                notice.dataset.state = state;
+                notice.textContent = text;
+
+                detail.prepend(notice);
+            };
+
+            const hydrateFinanceConditionalRule = (
+                panel,
+                value
+            ) => {
+                addFinanceConditionalRule(panel, 'custom');
+
+                const rules = panel.querySelectorAll(
+                    '[data-conditional-rule]'
+                );
+
+                const rule = rules.item(rules.length - 1);
+
+                if (!rule) {
+                    return;
+                }
+
+                const setValue = (selector, fieldValue) => {
+                    const input = rule.querySelector(selector);
+
+                    if (input) {
+                        input.value = fieldValue ?? '';
+                    }
+                };
+
+                setValue(
+                    '[data-conditional-rule-code]',
+                    value?.code
+                );
+
+                setValue(
+                    '[data-conditional-rule-name]',
+                    value?.name
+                );
+
+                setValue(
+                    '[data-conditional-rule-description]',
+                    value?.description
+                );
+
+                setValue(
+                    '[data-conditional-rule-metric-type]',
+                    value?.metric_type
+                );
+
+                setValue(
+                    '[data-conditional-rule-scope]',
+                    value?.evaluation_scope
+                );
+
+                setValue(
+                    '[data-conditional-rule-reward-method]',
+                    value?.reward_method
+                );
+
+                syncFinanceConditionalRuleFields(rule);
+
+                setValue(
+                    '[data-conditional-rule-reward-quantity]',
+                    value?.reward_quantity_source
+                );
+
+                setValue(
+                    '[data-conditional-rule-reward-target]',
+                    value?.reward_target_item_code
+                );
+
+                const numerator = Array.isArray(
+                    value?.metric_numerator_sources
+                )
+                    ? value.metric_numerator_sources
+                    : [];
+
+                const denominator = Array.isArray(
+                    value?.metric_denominator_sources
+                )
+                    ? value.metric_denominator_sources
+                    : [];
+
+                rule.querySelectorAll(
+                    '[data-conditional-numerator-source]'
+                ).forEach((input) => {
+                    input.checked = numerator.includes(input.value);
+                });
+
+                rule.querySelectorAll(
+                    '[data-conditional-denominator-source]'
+                ).forEach((input) => {
+                    input.checked = denominator.includes(input.value);
+                });
+
+                const title = rule.querySelector(
+                    '[data-conditional-rule-title]'
+                );
+
+                if (title) {
+                    title.textContent =
+                        value?.name
+                        || 'Vlastn\u00ed podm\u00edn\u011bn\u00fd p\u0159\u00edplatek';
+                }
+
+                const bandList = rule.querySelector(
+                    '[data-conditional-band-list]'
+                );
+
+                bandList?.replaceChildren();
+
+                const bands = Array.isArray(value?.bands)
+                    ? value.bands
+                    : [];
+
+                bands.forEach((bandValue) => {
+                    addFinanceConditionalBand(rule, {
+                        minimumValue:
+                            bandValue?.minimum_value ?? '',
+                        maximumValue:
+                            bandValue?.maximum_value ?? '',
+                        adjustmentValue:
+                            bandValue?.adjustment_value ?? '',
+                    });
+
+                    const bandElements = rule.querySelectorAll(
+                        '[data-conditional-band]'
+                    );
+
+                    const band = bandElements.item(
+                        bandElements.length - 1
+                    );
+
+                    const minimumInclusive = band?.querySelector(
+                        '[data-conditional-band-minimum-inclusive]'
+                    );
+
+                    const maximumInclusive = band?.querySelector(
+                        '[data-conditional-band-maximum-inclusive]'
+                    );
+
+                    if (minimumInclusive) {
+                        minimumInclusive.checked =
+                            Boolean(
+                                bandValue?.minimum_inclusive
+                            );
+                    }
+
+                    if (maximumInclusive) {
+                        maximumInclusive.checked =
+                            Boolean(
+                                bandValue?.maximum_inclusive
+                            );
+                    }
+                });
+
+                if (bands.length === 0) {
+                    addFinanceConditionalBand(rule);
+                }
+
+                syncFinanceConditionalRuleFields(rule);
+                updateFinanceConditionalEmptyState(panel);
+            };
+
+            const renderFinanceBillingPriceListDetail = (record) => {
+                const root = document.querySelector(
+                    '[data-finance-root]'
+                );
+
+                const detail = root?.querySelector(
+                    '[data-billing-price-list-admin-detail]'
+                );
+
+                if (!detail) {
+                    return;
+                }
+
+                const current =
+                    financeBillingCurrentVersion(record);
+
+                const header = document.createElement('div');
+                const heading = document.createElement('div');
+                const title = document.createElement('h4');
+                const meta = document.createElement('p');
+                const actions = document.createElement('div');
+                const close = document.createElement('button');
+
+                header.className =
+                    'drayvia-price-admin-detail-header';
+
+                heading.className =
+                    'drayvia-price-admin-detail-heading';
+
+                actions.className =
+                    'drayvia-price-admin-detail-actions';
+
+                title.textContent =
+                    record?.name || 'Detail cen\u00edku';
+
+                meta.textContent = [
+                    record?.customer_name || '\u2014',
+                    record?.code || '\u2014',
+                    financeCustomerStatus(record?.status),
+                    financeBillingPriceListPeriod(current),
+                ].join(' \u00b7 ');
+
+                close.type = 'button';
+                close.className =
+                    'drayvia-price-admin-secondary';
+                close.textContent = 'Zav\u0159\u00edt detail';
+
+                close.addEventListener('click', () => {
+                    detail.hidden = true;
+                    detail.replaceChildren();
+                });
+
+                if (
+                    record?.status === 'draft'
+                    && current?.status === 'draft'
+                ) {
+                    const edit = document.createElement('button');
+
+                    edit.type = 'button';
+                    edit.className =
+                        'drayvia-price-admin-primary';
+                    edit.textContent = 'Upravit koncept';
+
+                    edit.addEventListener('click', () => {
+                        renderFinanceBillingPriceListEditor(
+                            record
+                        );
+                    });
+
+                    actions.appendChild(edit);
+                }
+
+                actions.appendChild(close);
+                heading.append(title, meta);
+                header.append(heading, actions);
+
+                const items = Array.isArray(current?.items)
+                    ? current.items
+                    : [];
+
+                const rules = Array.isArray(
+                    current?.conditional_rules
+                )
+                    ? current.conditional_rules
+                    : [];
+
+                const versions = Array.isArray(record?.versions)
+                    ? record.versions
+                    : [];
+
+                const itemRows = items.map((item) => [
+                    item?.description
+                        || financeBillingItemLabel(item?.code),
+                    financeBillingUnitLabel(item?.unit),
+                    financeBillingMoney(
+                        item?.unit_rate,
+                        item?.currency || record?.currency
+                    ),
+                ]);
+
+                const ruleRows = rules.map((rule) => [
+                    rule?.name || rule?.code,
+                    financeBillingRuleFormula(rule),
+                    financeBillingEvaluationScopeLabel(
+                        rule?.evaluation_scope
+                    ),
+                    financeBillingRewardLabel(rule),
+                    (
+                        Array.isArray(rule?.bands)
+                            ? rule.bands
+                            : []
+                    ).map(
+                        (band) => financeBillingBandLabel(
+                            rule,
+                            band,
+                            record?.currency
+                        )
+                    ).join('; ') || '\u2014',
+                ]);
+
+                const versionRows = versions.map((version) => [
+                    version?.version_number,
+                    financeCustomerStatus(version?.status),
+                    financeBillingPriceListPeriod(version),
+                    version?.lock_version,
+                ]);
+
+                const children = [header];
+
+                if (record?.description) {
+                    const description =
+                        document.createElement('p');
+
+                    description.className =
+                        'drayvia-finance-note';
+
+                    description.textContent =
+                        record.description;
+
+                    children.push(description);
+                }
+
+                if (record?.version_error) {
+                    const error = document.createElement('p');
+
+                    error.className =
+                        'drayvia-price-admin-message';
+
+                    error.dataset.state = 'error';
+                    error.textContent = record.version_error;
+                    children.push(error);
+                }
+
+                children.push(
+                    financeBillingDetailTable(
+                        'Z\u00e1kladn\u00ed sazby',
+                        [
+                            'Polo\u017eka',
+                            'Jednotka',
+                            'Sazba',
+                        ],
+                        itemRows
+                    ),
+                    financeBillingDetailTable(
+                        'Podm\u00edn\u011bn\u00e9 p\u0159\u00edplatky',
+                        [
+                            'P\u0159\u00edplatek',
+                            'Vzorec',
+                            'Vyhodnocen\u00ed',
+                            'Zp\u016fsob',
+                            'P\u00e1sma a ceny',
+                        ],
+                        ruleRows
+                    ),
+                    financeBillingDetailTable(
+                        'Historie verz\u00ed',
+                        [
+                            'Verze',
+                            'Stav',
+                            'Platnost',
+                            'Revize',
+                        ],
+                        versionRows
+                    )
+                );
+
+                detail.replaceChildren(...children);
+                detail.hidden = false;
+
+                detail.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                });
+            };
+
+            const renderFinanceBillingPriceListEditor = (record) => {
+                const root = document.querySelector(
+                    '[data-finance-root]'
+                );
+
+                const detail = root?.querySelector(
+                    '[data-billing-price-list-admin-detail]'
+                );
+
+                const template = root?.querySelector(
+                    '[data-billing-price-list-create-card]'
+                );
+
+                const current =
+                    financeBillingCurrentVersion(record);
+
+                if (
+                    !root
+                    || !detail
+                    || !template
+                    || record?.status !== 'draft'
+                    || current?.status !== 'draft'
+                ) {
+                    return;
+                }
+
+                const editor = template.cloneNode(true);
+
+                editor.hidden = false;
+                editor.classList.add(
+                    'drayvia-price-admin-editor'
+                );
+
+                editor.removeAttribute(
+                    'data-billing-price-list-create-card'
+                );
+
+                editor.removeAttribute(
+                    'data-provider-managed-price-list-endpoint'
+                );
+
+                editor.dataset.billingPriceListEditor = '1';
+
+                const title = editor.querySelector('h4');
+                const customer = editor.querySelector(
+                    '[data-billing-price-list-customer]'
+                );
+                const name = editor.querySelector(
+                    '[data-billing-price-list-name]'
+                );
+                const currency = editor.querySelector(
+                    '[data-billing-price-list-currency]'
+                );
+                const validFrom = editor.querySelector(
+                    '[data-billing-price-list-valid-from]'
+                );
+                const validUntil = editor.querySelector(
+                    '[data-billing-price-list-valid-until]'
+                );
+                const save = editor.querySelector(
+                    '[data-billing-price-list-save]'
+                );
+                const cancel = editor.querySelector(
+                    '[data-billing-price-list-create-close]'
+                );
+                const message = editor.querySelector(
+                    '[data-billing-price-list-message]'
+                );
+                const addRule = editor.querySelector(
+                    '[data-conditional-rule-add]'
+                );
+                const preset = editor.querySelector(
+                    '[data-conditional-rule-preset]'
+                );
+                const conditionalList = editor.querySelector(
+                    '[data-conditional-rule-list]'
+                );
+                const rateInputs = Array.from(
+                    editor.querySelectorAll(
+                        '[data-price-list-rate]'
+                    )
+                );
+
+                if (
+                    !name
+                    || !currency
+                    || !validFrom
+                    || !validUntil
+                    || !save
+                    || !cancel
+                    || !message
+                    || !addRule
+                    || !preset
+                    || !conditionalList
+                    || rateInputs.length !== 4
+                ) {
+                    renderFinanceBillingPriceListDetail(record);
+                    financeBillingAdminNotice(
+                        detail,
+                        'Editor konceptu se nepoda\u0159ilo p\u0159ipravit.',
+                        'error'
+                    );
+                    return;
+                }
+
+                if (title) {
+                    title.textContent =
+                        `Upravit koncept: ${record?.name || ''}`;
+                }
+
+                const customerField = customer?.closest(
+                    '.drayvia-finance-field'
+                );
+
+                if (customerField) {
+                    customerField.hidden = true;
+                }
+
+                if (customer) {
+                    customer.disabled = true;
+                }
+
+                name.value = record?.name || '';
+                currency.value = record?.currency || 'CZK';
+                currency.disabled = true;
+                validFrom.value = current?.valid_from || '';
+                validUntil.value = current?.valid_until || '';
+
+                save.textContent = 'Ulo\u017eit zm\u011bny konceptu';
+                cancel.textContent = 'Zru\u0161it \u00fapravy';
+
+                const notes = editor.querySelectorAll(
+                    '.drayvia-finance-note'
+                );
+
+                const note = notes.item(notes.length - 1);
+
+                if (note) {
+                    note.textContent =
+                        'Ulo\u017een\u00ed atomicky nahrad\u00ed cel\u00fd koncept v\u010detn\u011b sazeb a p\u0159\u00edplatk\u016f. Aktivn\u00ed ani historick\u00e9 verze nelze upravovat.';
+                }
+
+                const items = Array.isArray(current?.items)
+                    ? current.items
+                    : [];
+
+                const itemMap = new Map(
+                    items.map((item) => [item?.code, item])
+                );
+
+                rateInputs.forEach((input) => {
+                    const item = itemMap.get(
+                        input.dataset.priceListRate
+                    );
+
+                    input.value = item?.unit_rate ?? '';
+                });
+
+                conditionalList.replaceChildren();
+
+                const rules = Array.isArray(
+                    current?.conditional_rules
+                )
+                    ? current.conditional_rules
+                    : [];
+
+                rules.forEach((rule) => {
+                    hydrateFinanceConditionalRule(
+                        editor,
+                        rule
+                    );
+                });
+
+                updateFinanceConditionalEmptyState(editor);
+
+                addRule.addEventListener('click', () => {
+                    addFinanceConditionalRule(
+                        editor,
+                        preset.value
+                    );
+                });
+
+                cancel.addEventListener('click', () => {
+                    renderFinanceBillingPriceListDetail(record);
+                });
+
+                save.addEventListener('click', async () => {
+                    message.hidden = true;
+                    message.dataset.state = '';
+
+                    const normalizedName = name.value.trim();
+
+                    if (normalizedName === '') {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Dopl\u0148te n\u00e1zev cen\u00edku.';
+                        return;
+                    }
+
+                    if (validFrom.value === '') {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Dopl\u0148te datum platnosti od.';
+                        return;
+                    }
+
+                    if (
+                        validUntil.value !== ''
+                        && validUntil.value < validFrom.value
+                    ) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Platnost do nesm\u00ed b\u00fdt p\u0159ed platnost\u00ed od.';
+                        return;
+                    }
+
+                    const itemDescriptions = {
+                        delivered_parcels:
+                            'Doru\u010den\u00e1 z\u00e1silka',
+                        redirected_parcels:
+                            'P\u0159esm\u011brovan\u00e1 z\u00e1silka',
+                        undelivered_parcels:
+                            'Odm\u00edtnuto z\u00e1kazn\u00edkem',
+                        actual_km:
+                            'Skute\u010dn\u00fd kilometr',
+                    };
+
+                    const canonicalCodes = [
+                        'delivered_parcels',
+                        'redirected_parcels',
+                        'undelivered_parcels',
+                        'actual_km',
+                    ];
+
+                    const rateMap = new Map(
+                        rateInputs.map((input) => [
+                            input.dataset.priceListRate,
+                            input,
+                        ])
+                    );
+
+                    const updatedItems = canonicalCodes.map(
+                        (code) => {
+                            const input = rateMap.get(code);
+                            const existing = itemMap.get(code);
+
+                            return {
+                                code,
+                                description:
+                                    existing?.description
+                                    || itemDescriptions[code],
+                                unit_rate:
+                                    input?.value?.trim() || '',
+                            };
+                        }
+                    );
+
+                    if (
+                        updatedItems.some(
+                            (item) =>
+                                item.unit_rate === ''
+                                || !Number.isFinite(
+                                    Number(item.unit_rate)
+                                )
+                                || Number(item.unit_rate) < 0
+                        )
+                    ) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Vypl\u0148te v\u0161echny \u010dty\u0159i nez\u00e1porn\u00e9 sazby.';
+                        return;
+                    }
+
+                    let conditionalRules;
+
+                    try {
+                        conditionalRules =
+                            collectFinanceConditionalRules(
+                                editor
+                            );
+                    }
+                    catch (error) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent = error.message;
+                        return;
+                    }
+
+                    const endpoint =
+                        `/api/v1/price-lists/${
+                            encodeURIComponent(
+                                record.public_id
+                            )
+                        }/versions/${
+                            encodeURIComponent(
+                                String(current.version_number)
+                            )
+                        }`;
+
+                    save.disabled = true;
+                    cancel.disabled = true;
+                    message.hidden = false;
+                    message.dataset.state = '';
+                    message.textContent =
+                        'Ukl\u00e1d\u00e1m cel\u00fd koncept\u2026';
+
+                    try {
+                        await api(endpoint, {
+                            method: 'PUT',
+                            body: JSON.stringify({
+                                name: normalizedName,
+                                description:
+                                    record?.description || null,
+                                expected_lock_version:
+                                    Number(current.lock_version),
+                                valid_from: validFrom.value,
+                                valid_until:
+                                    validUntil.value || null,
+                                change_reason:
+                                    'Ru\u010dn\u00ed \u00faprava faktura\u010dn\u00edho cen\u00edku p\u0159es Finance UI.',
+                                items: updatedItems,
+                                conditional_rules:
+                                    conditionalRules,
+                            }),
+                        });
+
+                        const nextRevision =
+                            Number(current.lock_version) + 1;
+
+                        await loadFinanceCustomers();
+
+                        const refreshed =
+                            financeBillingPriceLists.find(
+                                (priceList) =>
+                                    priceList.public_id
+                                    === record.public_id
+                            );
+
+                        if (refreshed) {
+                            renderFinanceBillingPriceListDetail(
+                                refreshed
+                            );
+
+                            financeBillingAdminNotice(
+                                detail,
+                                `Koncept byl ulo\u017een. Aktu\u00e1ln\u00ed revize: ${nextRevision}.`
+                            );
+                        }
+                    }
+                    catch (error) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            `Koncept se nepoda\u0159ilo ulo\u017eit: ${error.message}`;
+                    }
+                    finally {
+                        save.disabled = false;
+                        cancel.disabled = false;
+                    }
+                });
+
+                detail.replaceChildren(editor);
+                detail.hidden = false;
+
+                detail.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                });
+            };
+            const loadFinanceBillingPriceLists = async (
+                customers
+            ) => {
+                const root = document.querySelector(
+                    '[data-finance-root]'
+                );
+
+                const list = root?.querySelector(
+                    '[data-billing-price-list-admin-list]'
+                );
+
+                if (!root || !list) {
+                    return;
+                }
+
+                const loadingRow =
+                    document.createElement('tr');
+
+                const loadingCell =
+                    document.createElement('td');
+
+                loadingCell.colSpan = 6;
+                loadingCell.className =
+                    'drayvia-price-admin-empty';
+                loadingCell.textContent =
+                    'Na\u010d\u00edt\u00e1m faktura\u010dn\u00ed cen\u00edky\u2026';
+
+                loadingRow.appendChild(loadingCell);
+                list.replaceChildren(loadingRow);
+
+                const records = [];
+
+                customers.forEach((customerRecord) => {
+                    const customer =
+                        customerRecord?.customer || {};
+
+                    const priceLists = Array.isArray(
+                        customerRecord?.price_lists
+                    )
+                        ? customerRecord.price_lists
+                        : [];
+
+                    priceLists.forEach((priceList) => {
+                        records.push({
+                            ...priceList,
+                            customer_name:
+                                customer.name || '\u2014',
+                            relationship_id:
+                                customerRecord.relationship_id,
+                        });
+                    });
+                });
+
+                financeBillingPriceLists =
+                    await Promise.all(
+                        records.map(async (record) => {
+                            if (!record?.public_id) {
+                                return {
+                                    ...record,
+                                    versions: [],
+                                    version_error:
+                                        'Chyb\u00ed ve\u0159ejn\u00fd identifik\u00e1tor.',
+                                };
+                            }
+
+                            try {
+                                const body = await api(
+                                    `/api/v1/price-lists/${
+                                        encodeURIComponent(
+                                            record.public_id
+                                        )
+                                    }/versions`
+                                );
+
+                                const payload =
+                                    getPayload(body);
+
+                                const versions =
+                                    Array.isArray(payload?.items)
+                                        ? payload.items
+                                        : (
+                                            Array.isArray(payload)
+                                                ? payload
+                                                : []
+                                        );
+
+                                return {
+                                    ...record,
+                                    versions,
+                                    version_error: null,
+                                };
+                            }
+                            catch (error) {
+                                return {
+                                    ...record,
+                                    versions: [],
+                                    version_error: error.message,
+                                };
+                            }
+                        })
+                    );
+
+                financeBillingPriceLists.sort(
+                    (left, right) => {
+                        const leftVersion =
+                            financeBillingCurrentVersion(left);
+
+                        const rightVersion =
+                            financeBillingCurrentVersion(right);
+
+                        return String(
+                            rightVersion?.valid_from || ''
+                        ).localeCompare(
+                            String(
+                                leftVersion?.valid_from || ''
+                            )
+                        );
+                    }
+                );
+
+                renderFinanceBillingPriceListIndex();
+            };
+
+            const bindFinanceBillingPriceListAdministration = () => {
+                const root = document.querySelector(
+                    '[data-finance-root]'
+                );
+
+                const panel = root?.querySelector(
+                    '[data-price-list-panel="billing"]'
+                );
+
+                const administration = panel?.querySelector(
+                    '[data-billing-price-list-admin]'
+                );
+
+                const createCard = panel?.querySelector(
+                    '[data-billing-price-list-create-card]'
+                );
+
+                if (
+                    !panel
+                    || !administration
+                    || !createCard
+                    || panel.dataset.billingAdministrationBound
+                        === '1'
+                ) {
+                    return;
+                }
+
+                panel.dataset.billingAdministrationBound = '1';
+
+                panel.querySelector(
+                    '[data-billing-price-list-create-open]'
+                )?.addEventListener('click', () => {
+                    administration.hidden = true;
+                    createCard.hidden = false;
+                });
+
+                panel.querySelector(
+                    '[data-billing-price-list-create-close]'
+                )?.addEventListener('click', () => {
+                    createCard.hidden = true;
+                    administration.hidden = false;
+                });
+
+                panel.querySelectorAll(
+                    '[data-billing-price-list-filter]'
+                ).forEach((button) => {
+                    button.addEventListener('click', () => {
+                        financeBillingPriceListFilter =
+                            button.dataset
+                                .billingPriceListFilter
+                            || 'all';
+
+                        renderFinanceBillingPriceListIndex();
+                    });
+                });
+
+                panel.querySelector(
+                    '[data-billing-price-list-reload]'
+                )?.addEventListener('click', async (event) => {
+                    const button = event.currentTarget;
+
+                    button.disabled = true;
+
+                    try {
+                        await loadFinanceCustomers();
+                    }
+                    finally {
+                        button.disabled = false;
+                    }
+                });
+            };
+
             const bindFinanceBillingPriceListCreate = () => {
                 const root = document.querySelector(
                     '[data-finance-root]'
@@ -15138,6 +16801,10 @@ const loadFinanceCustomers = async () => {
                             ? payload
                             : [];
 
+                    await loadFinanceBillingPriceLists(
+                        customers
+                    );
+
                     list.replaceChildren();
 
                     if (customers.length === 0) {
@@ -15347,6 +17014,7 @@ const loadFinanceCustomers = async () => {
 
 if (page === 'finance') {
             bindFinanceCustomerCreate();
+            bindFinanceBillingPriceListAdministration();
             bindFinanceBillingPriceListCreate();
             bindFinanceDriverPriceListCreate();
             loadFinanceDriverAssignments();

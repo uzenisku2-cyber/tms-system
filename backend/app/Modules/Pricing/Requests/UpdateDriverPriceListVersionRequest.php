@@ -19,6 +19,30 @@ final class UpdateDriverPriceListVersionRequest extends FormRequest
     {
         $normalized = [];
 
+        foreach ([
+            'name',
+            'description',
+        ] as $field) {
+            if (! $this->exists($field)) {
+                continue;
+            }
+
+            $value = $this->input($field);
+
+            if (! is_string($value)) {
+                continue;
+            }
+
+            $value = trim($value);
+
+            $normalized[$field] = (
+                $field === 'description'
+                && $value === ''
+            )
+                ? null
+                : $value;
+        }
+
         $reason = $this->input('change_reason');
 
         if (is_string($reason)) {
@@ -69,6 +93,18 @@ final class UpdateDriverPriceListVersionRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:150',
+            ],
+            'description' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:5000',
+            ],
             'expected_lock_version' => [
                 'required',
                 'integer',
