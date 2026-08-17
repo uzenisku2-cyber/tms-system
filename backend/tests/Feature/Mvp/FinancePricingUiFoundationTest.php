@@ -271,6 +271,150 @@ final class FinancePricingUiFoundationTest extends TestCase
         );
     }
 
+    public function test_billing_price_list_administration_is_primary_and_creation_is_separate(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'S024-02A PRICE-LIST ADMINISTRATION LAYOUT',
+            'data-billing-price-list-admin',
+            'data-billing-price-list-admin-list',
+            'data-billing-price-list-admin-detail',
+            'data-billing-price-list-create-open',
+            'data-billing-price-list-create-card',
+            'data-billing-price-list-create-close',
+            'data-billing-price-list-reload',
+            'data-billing-price-list-filter="all"',
+            'data-billing-price-list-filter="current"',
+            'data-billing-price-list-filter="draft"',
+            'data-billing-price-list-filter="history"',
+            'data-billing-price-list-count="all"',
+            'data-billing-price-list-count="current"',
+            'data-billing-price-list-count="draft"',
+            'data-billing-price-list-count="history"',
+            'Spr&#225;va faktura&#269;n&#237;ch cen&#237;k&#367;',
+            'Zp&#283;t na p&#345;ehled',
+        ] as $marker) {
+            self::assertStringContainsString(
+                $marker,
+                $source,
+            );
+        }
+
+        self::assertMatchesRegularExpression(
+            '/data-billing-price-list-create-card\s+hidden/',
+            $source,
+        );
+    }
+
+    public function test_billing_price_list_administration_loads_real_records_and_versions(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'S024-03A BILLING PRICE-LIST ADMINISTRATION DATA',
+            'let financeBillingPriceLists = [];',
+            'const financeBillingPriceListCategory = (priceList) => {',
+            'const renderFinanceBillingPriceListIndex = () => {',
+            'const renderFinanceBillingPriceListDetail = (record) => {',
+            'const loadFinanceBillingPriceLists = async (',
+            'const bindFinanceBillingPriceListAdministration = () => {',
+            'await loadFinanceBillingPriceLists(',
+            'bindFinanceBillingPriceListAdministration();',
+            '/api/v1/price-lists/${',
+            '}/versions`',
+            'data-billing-price-list-admin-list',
+            'data-billing-price-list-admin-detail',
+            'document.createElement',
+            'financeBillingPriceListFilter',
+        ] as $marker) {
+            self::assertStringContainsString(
+                $marker,
+                $source,
+            );
+        }
+
+        $start = strpos(
+            $source,
+            'S024-03A BILLING PRICE-LIST ADMINISTRATION DATA',
+        );
+
+        $end = strpos(
+            $source,
+            'const bindFinanceBillingPriceListCreate = () => {',
+            $start,
+        );
+
+        self::assertIsInt($start);
+        self::assertIsInt($end);
+
+        $administrationSource = substr(
+            $source,
+            $start,
+            $end - $start,
+        );
+
+        self::assertStringNotContainsString(
+            '.innerHTML',
+            $administrationSource,
+        );
+    }
+
+    public function test_billing_draft_detail_is_localized_and_editable_atomically(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'S024-04B BILLING DRAFT EDITOR',
+            'const financeBillingMoney = (',
+            'const financeBillingUnitLabel = (unit) => ({',
+            'const financeBillingEvaluationScopeLabel = (scope) => ({',
+            'const financeBillingRuleFormula = (rule) => {',
+            'const financeBillingBandLabel = (',
+            'const hydrateFinanceConditionalRule = (',
+            'const renderFinanceBillingPriceListEditor = (record) => {',
+            "edit.textContent = 'Upravit koncept';",
+            "save.textContent = 'Ulo\\u017eit zm\\u011bny konceptu';",
+            "method: 'PUT'",
+            'expected_lock_version:',
+            'Number(current.lock_version)',
+            'collectFinanceConditionalRules(',
+            'await loadFinanceCustomers();',
+            "'Revize'",
+            "editor.dataset.billingPriceListEditor = '1';",
+        ] as $marker) {
+            self::assertStringContainsString(
+                $marker,
+                $source,
+            );
+        }
+
+        self::assertSame(
+            1,
+            substr_count(
+                $source,
+                'S024-04B BILLING DRAFT EDITOR',
+            ),
+        );
+
+        self::assertStringNotContainsString(
+            'data.internal_organization_id',
+            $source,
+        );
+    }
+
     public function test_billing_ui_administers_unlimited_conditional_surcharges(): void
     {
         $source = file_get_contents(

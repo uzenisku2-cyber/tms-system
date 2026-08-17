@@ -657,6 +657,30 @@ final class PriceListWriteService
             'expected_lock_version',
         );
 
+        $updateName = array_key_exists(
+            'name',
+            $input,
+        );
+
+        $name = $updateName
+            ? $this->requiredString(
+                $input,
+                'name',
+            )
+            : null;
+
+        $updateDescription = array_key_exists(
+            'description',
+            $input,
+        );
+
+        $description = $updateDescription
+            ? $this->nullableString(
+                $input,
+                'description',
+            )
+            : null;
+
         $validFrom = $this->nullableString(
             $input,
             'valid_from',
@@ -688,6 +712,10 @@ final class PriceListWriteService
                 $publicId,
                 $versionNumber,
                 $expectedLockVersion,
+                $updateName,
+                $name,
+                $updateDescription,
+                $description,
                 $validFrom,
                 $validUntil,
                 $changeReason,
@@ -744,6 +772,21 @@ final class PriceListWriteService
                     throw new ConflictHttpException(
                         'The price-list draft version has changed.',
                     );
+                }
+
+                $metadata = [];
+
+                if ($updateName && is_string($name)) {
+                    $metadata['name'] = $name;
+                }
+
+                if ($updateDescription) {
+                    $metadata['description'] = $description;
+                }
+
+                if ($metadata !== []) {
+                    $priceList->fill($metadata);
+                    $priceList->saveOrFail();
                 }
 
                 $currency = $priceList->getAttribute('currency');

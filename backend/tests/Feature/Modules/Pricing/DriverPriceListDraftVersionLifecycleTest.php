@@ -135,6 +135,8 @@ final class DriverPriceListDraftVersionLifecycleTest extends TestCase
                     2,
                 ),
                 [
+                    'name' => '  Updated driver compensation  ',
+                    'description' => '  Edited through price-list administration  ',
                     'expected_lock_version' => 1,
                     'valid_from' => '2026-09-05',
                     'valid_until' => null,
@@ -150,6 +152,17 @@ final class DriverPriceListDraftVersionLifecycleTest extends TestCase
             ->assertJsonPath('data.status', 'draft');
 
         $draft->refresh();
+        $priceList->refresh();
+
+        $this->assertSame(
+            'Updated driver compensation',
+            $priceList->getAttribute('name'),
+        );
+
+        $this->assertSame(
+            'Edited through price-list administration',
+            $priceList->getAttribute('description'),
+        );
 
         $this->assertSame(
             2,

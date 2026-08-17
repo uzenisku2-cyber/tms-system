@@ -264,6 +264,16 @@ final class PriceListVersionWriteApiTest extends TestCase
             $priceList->getAttribute('current_version'),
         );
 
+        self::assertSame(
+            'Updated billing tariff',
+            $priceList->getAttribute('name'),
+        );
+
+        self::assertSame(
+            'Edited through price-list administration',
+            $priceList->getAttribute('description'),
+        );
+
         $this->assertDatabaseHas('price_list_versions', [
             'id' => $version->getKey(),
             'version_number' => 1,
@@ -692,6 +702,8 @@ final class PriceListVersionWriteApiTest extends TestCase
         int $expectedLockVersion = 1,
     ): array {
         return [
+            'name' => '  Updated billing tariff  ',
+            'description' => '  Edited through price-list administration  ',
             'expected_lock_version' => $expectedLockVersion,
             'valid_from' => '2026-08-01',
             'valid_until' => '2026-12-31',

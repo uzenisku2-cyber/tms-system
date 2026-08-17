@@ -399,6 +399,25 @@ final class DriverPriceListWriteService
                     abort(409, 'The driver price-list draft version has changed.');
                 }
 
+                $metadata = [];
+
+                if (array_key_exists('name', $data)) {
+                    $metadata['name'] = $this->requiredString(
+                        $data,
+                        'name',
+                    );
+                }
+
+                if (array_key_exists('description', $data)) {
+                    $metadata['description'] = $this->nullableString(
+                        $data['description'],
+                    );
+                }
+
+                if ($metadata !== []) {
+                    $priceList->forceFill($metadata)->saveOrFail();
+                }
+
                 $version->forceFill([
                     'valid_from' => $data['valid_from'] ?? null,
                     'valid_until' => $data['valid_until'] ?? null,
