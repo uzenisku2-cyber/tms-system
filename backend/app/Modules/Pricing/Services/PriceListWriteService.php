@@ -471,6 +471,463 @@ final class PriceListWriteService
         );
     }
 
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function createCustomerManagedDraft(
+        User $actor,
+        int $relationshipId,
+        array $input,
+    ): PriceList {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        $actorId = (int) $actor->getKey();
+
+        if ($actorId < 1) {
+            throw new LogicException(
+                'The authenticated user has no valid identifier.',
+            );
+        }
+
+        if ($relationshipId < 1) {
+            throw new LogicException(
+                'The commercial relationship identifier must be positive.',
+            );
+        }
+
+        $name = $this->requiredString(
+            $input,
+            'name',
+        );
+
+        $description = $this->nullableString(
+            $input,
+            'description',
+        );
+
+        $currency = $this->requiredString(
+            $input,
+            'currency',
+        );
+
+        $validFrom = $this->nullableString(
+            $input,
+            'valid_from',
+        );
+
+        $validUntil = $this->nullableString(
+            $input,
+            'valid_until',
+        );
+
+        $changeReason = $this->nullableString(
+            $input,
+            'change_reason',
+        );
+        $items =
+            $this->pricingItems($input);
+
+        $conditionalRules =
+            $this->conditionalRulePayload->fromInput($input);
+
+        return DB::transaction(
+            function () use (
+                $organizationId,
+                $actorId,
+                $relationshipId,
+                $name,
+                $description,
+                $currency,
+                $validFrom,
+                $validUntil,
+                $changeReason,
+                $items,
+                $conditionalRules,
+            ): PriceList {
+                $relationship =
+                    OrganizationRelationship::query()
+                        ->with([
+                            'sourceOrganization',
+                            'targetOrganization',
+                        ])
+                        ->whereKey($relationshipId)
+                        ->where(
+                            'source_organization_id',
+                            $organizationId,
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                if (
+                    $relationship->getAttribute(
+                        'relationship_type',
+                    ) !==
+                    OrganizationRelationship::TYPE_SUBCONTRACTING
+                ) {
+                    $this->validationFailure(
+                        'organization_relationship_id',
+                        (
+                            'The selected relationship does not support '
+                            .'customer-managed external-carrier price lists.'
+                        ),
+                    );
+                }
+
+                if (! $relationship->isActiveAt(now())) {
+                    $this->validationFailure(
+                        'organization_relationship_id',
+                        (
+                            'The selected external-carrier relationship is not '
+                            .'currently active.'
+                        ),
+                    );
+                }
+
+                $customer =
+                    $relationship->sourceOrganization;
+
+                $provider =
+                    $relationship->targetOrganization;
+
+                if (
+                    ! $customer instanceof Organization
+                    || ! $provider instanceof Organization
+                ) {
+                    throw new LogicException(
+                        (
+                            'The selected external-carrier relationship has '
+                            .'incomplete organization data.'
+                        ),
+                    );
+                }
+
+                if (
+                    ! $customer->isActive()
+                    || ! $provider->isActive()
+                ) {
+                    $this->validationFailure(
+                        'organization_relationship_id',
+                        (
+                            'Both organizations in the external-carrier relationship '
+                            .'must be active.'
+                        ),
+                    );
+                }
+
+                $customerId =
+                    (int) $customer->getKey();
+
+                $providerId =
+                    (int) $provider->getKey();
+
+                if (
+                    $customerId < 1
+                    || $providerId < 1
+                    || $customerId === $providerId
+                ) {
+                    $this->validationFailure(
+                        'organization_relationship_id',
+                        (
+                            'The selected external-carrier relationship does not '
+                            .'contain two distinct organizations.'
+                        ),
+                    );
+                }
+
+                if ($customerId !== $organizationId) {
+                    throw new LogicException(
+                        (
+                            'The verified organization does not match '
+                            .'the relationship customer.'
+                        ),
+                    );
+                }
+
+                $priceList = PriceList::query()->create([
+                    'organization_relationship_id' => $relationship->getKey(),
+
+                    'owner_organization_id' => $customerId,
+
+                    'customer_organization_id' => $customerId,
+
+                    'provider_organization_id' => $providerId,
+
+                    'managed_by_organization_id' => $customerId,
+
+                    'name' => $name,
+                    'description' => $description,
+                    'currency' => $currency,
+                    'status' => PriceList::STATUS_DRAFT,
+                    'current_version' => 1,
+                    'created_by_user_id' => $actorId,
+                ]);
+
+                $version = $priceList->versions()->create([
+                    'version_number' => 1,
+                    'lock_version' => 1,
+                    'status' => PriceListVersion::STATUS_DRAFT,
+                    'valid_from' => $validFrom,
+                    'valid_until' => $validUntil,
+                    'change_reason' => $changeReason,
+                    'created_by_user_id' => $actorId,
+                ]);
+
+                foreach ($items as $item) {
+                    $code = $item['code'];
+
+                    $version->items()->create([
+                        'code' => $code,
+                        'description' => $item['description'],
+                        'calculation_method' => (
+                            PriceListItem::CALCULATION_METHOD_QUANTITY_TIMES_RATE
+                        ),
+                        'unit' => $this->unitForCode($code),
+                        'unit_rate' => $item['unit_rate'],
+                        'currency' => $currency,
+                        'quantity_source' => $code,
+                        'rounding_scale' => 2,
+                        'rounding_method' => (
+                            PriceListItem::ROUNDING_METHOD_HALF_UP
+                        ),
+                        'position' => $this->positionForCode($code),
+                    ]);
+                }
+
+                $this->persistConditionalRules(
+                    $version,
+                    $conditionalRules,
+                );
+
+                return $priceList->refresh();
+            },
+            3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function createCustomerManagedDraftVersion(
+        User $actor,
+        int $relationshipId,
+        string $publicId,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        return DB::transaction(
+            function () use (
+                $actor,
+                $organizationId,
+                $relationshipId,
+                $publicId,
+                $input,
+            ): PriceListVersion {
+                $priceList = $this->lockCustomerManagedPriceList(
+                    $organizationId,
+                    $relationshipId,
+                    $publicId,
+                );
+
+                $currency = $this->requiredString(
+                    $input,
+                    'currency',
+                );
+
+                if (
+                    $currency !==
+                    (string) $priceList->getAttribute('currency')
+                ) {
+                    $this->validationFailure(
+                        'currency',
+                        'A new version must keep the price-list currency.',
+                    );
+                }
+
+                $draft = $this->createDraftVersion(
+                    $actor,
+                    $publicId,
+                    $input,
+                );
+
+                $replacement = $input;
+                $replacement['expected_lock_version'] =
+                    (int) $draft->getAttribute('lock_version');
+
+                unset(
+                    $replacement['expected_current_version'],
+                    $replacement['currency'],
+                );
+
+                return $this->updateDraftVersion(
+                    $actor,
+                    $publicId,
+                    (int) $draft->getAttribute('version_number'),
+                    $replacement,
+                );
+            },
+            3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function updateCustomerManagedDraftVersion(
+        User $actor,
+        int $relationshipId,
+        string $publicId,
+        int $versionNumber,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        return DB::transaction(
+            function () use (
+                $actor,
+                $organizationId,
+                $relationshipId,
+                $publicId,
+                $versionNumber,
+                $input,
+            ): PriceListVersion {
+                $this->lockCustomerManagedPriceList(
+                    $organizationId,
+                    $relationshipId,
+                    $publicId,
+                );
+
+                return $this->updateDraftVersion(
+                    $actor,
+                    $publicId,
+                    $versionNumber,
+                    $input,
+                );
+            },
+            3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function approveCustomerManagedDraftVersion(
+        User $actor,
+        int $relationshipId,
+        string $publicId,
+        int $versionNumber,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        return DB::transaction(
+            function () use (
+                $actor,
+                $organizationId,
+                $relationshipId,
+                $publicId,
+                $versionNumber,
+                $input,
+            ): PriceListVersion {
+                $this->lockCustomerManagedPriceList(
+                    $organizationId,
+                    $relationshipId,
+                    $publicId,
+                );
+
+                return $this->approveDraftVersion(
+                    $actor,
+                    $publicId,
+                    $versionNumber,
+                    $input,
+                );
+            },
+            3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function activateCustomerManagedApprovedVersion(
+        User $actor,
+        int $relationshipId,
+        string $publicId,
+        int $versionNumber,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        return DB::transaction(
+            function () use (
+                $actor,
+                $organizationId,
+                $relationshipId,
+                $publicId,
+                $versionNumber,
+                $input,
+            ): PriceListVersion {
+                $this->lockCustomerManagedPriceList(
+                    $organizationId,
+                    $relationshipId,
+                    $publicId,
+                );
+
+                return $this->activateApprovedVersion(
+                    $actor,
+                    $publicId,
+                    $versionNumber,
+                    $input,
+                );
+            },
+            3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    public function expireCustomerManagedActiveVersion(
+        User $actor,
+        int $relationshipId,
+        string $publicId,
+        int $versionNumber,
+        array $input,
+    ): PriceListVersion {
+        $organizationId =
+            $this->organizationContext->requireId();
+
+        return DB::transaction(
+            function () use (
+                $actor,
+                $organizationId,
+                $relationshipId,
+                $publicId,
+                $versionNumber,
+                $input,
+            ): PriceListVersion {
+                $this->lockCustomerManagedPriceList(
+                    $organizationId,
+                    $relationshipId,
+                    $publicId,
+                );
+
+                return $this->expireActiveVersion(
+                    $actor,
+                    $publicId,
+                    $versionNumber,
+                    $input,
+                );
+            },
+            3,
+        );
+    }
+
     public function createDraftVersion(
         User $actor,
         string $publicId,
@@ -1563,6 +2020,78 @@ final class PriceListWriteService
         }
 
         $this->persistConditionalRules($version, $rules);
+    }
+
+    private function lockCustomerManagedPriceList(
+        int $organizationId,
+        int $relationshipId,
+        string $publicId,
+    ): PriceList {
+        if ($organizationId < 1 || $relationshipId < 1) {
+            throw new LogicException(
+                'The external-carrier management scope is invalid.',
+            );
+        }
+
+        if ($publicId === '') {
+            throw new LogicException(
+                'The price-list public identifier is required.',
+            );
+        }
+
+        $relationship = OrganizationRelationship::query()
+            ->with('targetOrganization')
+            ->whereKey($relationshipId)
+            ->where(
+                'source_organization_id',
+                $organizationId,
+            )
+            ->where(
+                'relationship_type',
+                OrganizationRelationship::TYPE_SUBCONTRACTING,
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        abort_unless(
+            $relationship->isActiveAt(now()),
+            404,
+        );
+
+        $provider = $relationship->targetOrganization;
+
+        abort_unless(
+            $provider instanceof Organization
+                && $provider->isActive()
+                && $provider->getAttribute('type') ===
+                    Organization::TYPE_SUBCONTRACTOR,
+            404,
+        );
+
+        return PriceList::query()
+            ->where(
+                'organization_relationship_id',
+                $relationshipId,
+            )
+            ->where('public_id', $publicId)
+            ->where(
+                'owner_organization_id',
+                $organizationId,
+            )
+            ->where(
+                'customer_organization_id',
+                $organizationId,
+            )
+            ->where(
+                'provider_organization_id',
+                (int) $provider->getKey(),
+            )
+            ->where(
+                'managed_by_organization_id',
+                $organizationId,
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 
     private function copyConditionalRules(

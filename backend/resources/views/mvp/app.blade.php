@@ -11613,7 +11613,10 @@ const fuel = () => `
                         label[for="price-list-tab-billing"],
                     #price-list-tab-drivers:checked
                         ~ .drayvia-price-list-tabs
-                        label[for="price-list-tab-drivers"] {
+                        label[for="price-list-tab-drivers"],
+                    #price-list-tab-external-carriers:checked
+                        ~ .drayvia-price-list-tabs
+                        label[for="price-list-tab-external-carriers"] {
                         border-color: #1f2937;
                         background: #f3f4f6;
                     }
@@ -11638,7 +11641,10 @@ const fuel = () => `
                         .drayvia-price-list-panel-billing,
                     #price-list-tab-drivers:checked
                         ~ .drayvia-price-list-panels
-                        .drayvia-price-list-panel-drivers {
+                        .drayvia-price-list-panel-drivers,
+                    #price-list-tab-external-carriers:checked
+                        ~ .drayvia-price-list-panels
+                        .drayvia-price-list-panel-external-carriers {
                         display: block;
                     }
 
@@ -12180,8 +12186,9 @@ const fuel = () => `
                             <div class="drayvia-finance-card">
                                 <h3>Ceníky</h3>
                                 <p>
-                                    Fakturační ceníky a ceníky řidičů jsou vedené
-                                    jako dva samostatné finanční vztahy.
+                                    Fakturační ceníky, ceníky řidičů a ceníky
+                                    externích dopravců jsou vedené jako tři
+                                    samostatné finanční vztahy.
                                 </p>
 
                                 <div class="drayvia-finance-shell">
@@ -12199,6 +12206,13 @@ const fuel = () => `
                                         type="radio"
                                     >
 
+                                    <input
+                                        class="drayvia-price-list-tab-input"
+                                        id="price-list-tab-external-carriers"
+                                        name="price-list-tab"
+                                        type="radio"
+                                    >
+
                                     <nav class="drayvia-price-list-tabs">
                                         <label
                                             class="drayvia-price-list-tab"
@@ -12212,6 +12226,12 @@ const fuel = () => `
                                         >
                                             Ceníky řidičů
                                         </label>
+                                        <label
+                                            class="drayvia-price-list-tab"
+                                            for="price-list-tab-external-carriers"
+                                        >
+                                            Ceníky externích dopravců
+                                        </label>
                                     </nav>
 
                                     <div class="drayvia-price-list-panels">
@@ -12223,6 +12243,7 @@ const fuel = () => `
                                                                                         <div
                                                 class="drayvia-finance-card drayvia-price-admin"
                                                 data-billing-price-list-admin
+                                                data-unified-price-list-domain="billing"
                                             >
                                                 <div class="drayvia-price-admin-header">
                                                     <div class="drayvia-price-admin-heading">
@@ -12267,6 +12288,7 @@ const fuel = () => `
                                                             class="drayvia-price-admin-filter is-active"
                                                             type="button"
                                                             data-billing-price-list-filter="all"
+                                                            data-unified-price-list-filter="all"
                                                         >
                                                             V&#353;e
                                                         </button>
@@ -12274,6 +12296,7 @@ const fuel = () => `
                                                             class="drayvia-price-admin-filter"
                                                             type="button"
                                                             data-billing-price-list-filter="current"
+                                                            data-unified-price-list-filter="current"
                                                         >
                                                             Aktu&#225;ln&#237;
                                                         </button>
@@ -12281,6 +12304,7 @@ const fuel = () => `
                                                             class="drayvia-price-admin-filter"
                                                             type="button"
                                                             data-billing-price-list-filter="draft"
+                                                            data-unified-price-list-filter="draft"
                                                         >
                                                             Koncepty
                                                         </button>
@@ -12288,6 +12312,7 @@ const fuel = () => `
                                                             class="drayvia-price-admin-filter"
                                                             type="button"
                                                             data-billing-price-list-filter="history"
+                                                            data-unified-price-list-filter="history"
                                                         >
                                                             Historie
                                                         </button>
@@ -12297,6 +12322,7 @@ const fuel = () => `
                                                         class="drayvia-price-admin-secondary"
                                                         type="button"
                                                         data-billing-price-list-reload
+                                                        data-unified-price-list-reload
                                                     >
                                                         Obnovit p&#345;ehled
                                                     </button>
@@ -12557,15 +12583,62 @@ const fuel = () => `
                                             data-price-list-panel="drivers"
                                         >
                                             <div
-                                                class="drayvia-finance-card"
+                                                class="drayvia-finance-card drayvia-price-admin"
                                                 data-driver-price-list-root
+                                                data-unified-price-list-domain="driver"
+                                                data-driver-price-list-index-endpoint="/api/v1/driver-price-lists"
                                             >
-                                                <h4>Ceníky řidičů</h4>
+                                                <div class="drayvia-price-admin-header">
+                                                    <div class="drayvia-price-admin-heading">
+                                                        <h4>Správa ceníků řidičů</h4>
+                                                        <p>
+                                                            Aktuální, rozpracované a historické
+                                                            ceníky řidičů na jednom místě.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="drayvia-price-admin-summary">
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Všechny ceníky</span>
+                                                        <strong data-unified-price-list-count="all">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Aktuální</span>
+                                                        <strong data-unified-price-list-count="current">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Koncepty</span>
+                                                        <strong data-unified-price-list-count="draft">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Historie</span>
+                                                        <strong data-unified-price-list-count="history">0</strong>
+                                                    </div>
+                                                </div>
+
+                                                <div class="drayvia-price-admin-toolbar">
+                                                    <div class="drayvia-price-admin-actions">
+                                                        <button class="drayvia-price-admin-filter is-active" type="button" data-unified-price-list-filter="all">Vše</button>
+                                                        <button class="drayvia-price-admin-filter" type="button" data-unified-price-list-filter="current">Aktuální</button>
+                                                        <button class="drayvia-price-admin-filter" type="button" data-unified-price-list-filter="draft">Koncepty</button>
+                                                        <button class="drayvia-price-admin-filter" type="button" data-unified-price-list-filter="history">Historie</button>
+                                                    </div>
+                                                    <button
+                                                        class="drayvia-price-admin-secondary"
+                                                        type="button"
+                                                        data-driver-price-list-reload
+                                                        data-unified-price-list-reload
+                                                    >
+                                                        Obnovit přehled
+                                                    </button>
+                                                </div>
+
+                                                <h4 style="margin-top: 24px;">Nový ceník řidiče</h4>
                                                 <p>
                                                     Nastavte sazby řidiče přímo v TMS.
-                                                    Po uložení se první verze automaticky
-                                                    schválí a aktivuje, aby byla připravená
-                                                    pro výpočty bez dalšího Excelu.
+                                                    Stávající bezpečný postup vytvoření,
+                                                    schválení a aktivace zůstává zachovaný.
                                                 </p>
 
                                                 <div class="drayvia-finance-grid">
@@ -12737,6 +12810,102 @@ const fuel = () => `
                                                         </table>
                                                     </div>
                                                 </div>
+                                            </div>
+                                        </section>
+
+                                        <section
+                                            class="drayvia-price-list-panel drayvia-price-list-panel-external-carriers"
+                                            data-price-list-panel="external-carriers"
+                                        >
+                                            <div
+                                                class="drayvia-finance-card drayvia-price-admin"
+                                                data-external-carrier-price-list-root
+                                                data-unified-price-list-domain="external-carrier"
+                                                data-external-carrier-index-endpoint="/api/v1/external-carriers"
+                                                data-external-carrier-store-endpoint="/api/v1/external-carriers/{relationship}/price-lists"
+                                            >
+                                                <div class="drayvia-price-admin-header">
+                                                    <div class="drayvia-price-admin-heading">
+                                                        <h4>Správa ceníků externích dopravců</h4>
+                                                        <p>
+                                                            Aktuální, rozpracované a historické
+                                                            ceníky dodavatelů dopravy na jednom místě.
+                                                        </p>
+                                                    </div>
+
+                                                    <button
+                                                        class="drayvia-price-admin-primary"
+                                                        type="button"
+                                                        data-external-carrier-price-list-create-open
+                                                    >
+                                                        Nový ceník externího dopravce
+                                                    </button>
+                                                </div>
+
+                                                <div class="drayvia-price-admin-summary">
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Všechny ceníky</span>
+                                                        <strong data-unified-price-list-count="all">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Aktuální</span>
+                                                        <strong data-unified-price-list-count="current">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Koncepty</span>
+                                                        <strong data-unified-price-list-count="draft">0</strong>
+                                                    </div>
+                                                    <div class="drayvia-price-admin-stat">
+                                                        <span>Historie</span>
+                                                        <strong data-unified-price-list-count="history">0</strong>
+                                                    </div>
+                                                </div>
+
+                                                <div class="drayvia-price-admin-toolbar">
+                                                    <div class="drayvia-price-admin-actions">
+                                                        <button class="drayvia-price-admin-filter is-active" type="button" data-unified-price-list-filter="all">Vše</button>
+                                                        <button class="drayvia-price-admin-filter" type="button" data-unified-price-list-filter="current">Aktuální</button>
+                                                        <button class="drayvia-price-admin-filter" type="button" data-unified-price-list-filter="draft">Koncepty</button>
+                                                        <button class="drayvia-price-admin-filter" type="button" data-unified-price-list-filter="history">Historie</button>
+                                                    </div>
+
+                                                    <button
+                                                        class="drayvia-price-admin-secondary"
+                                                        type="button"
+                                                        data-external-carrier-price-list-reload
+                                                        data-unified-price-list-reload
+                                                    >
+                                                        Obnovit přehled
+                                                    </button>
+                                                </div>
+
+                                                <div class="drayvia-price-admin-table-wrap">
+                                                    <table class="drayvia-price-admin-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Externí dopravce</th>
+                                                                <th>Ceník</th>
+                                                                <th>Platnost</th>
+                                                                <th>Stav</th>
+                                                                <th>Verze</th>
+                                                                <th>Akce</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody data-external-carrier-price-list-list>
+                                                            <tr>
+                                                                <td class="drayvia-price-admin-empty" colspan="6">
+                                                                    Načítání bude připojeno v navazující UI jednotce.
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                <section
+                                                    class="drayvia-price-admin-detail"
+                                                    data-external-carrier-price-list-detail
+                                                    hidden
+                                                ></section>
                                             </div>
                                         </section>
                                     </div>
@@ -15980,7 +16149,8 @@ const templates = {
              *
              * This browser workflow deliberately uses the existing authenticated
              * API helper and verified organization context. It creates the complete
-             * driver compensation draft, then approves and activates version 1.
+             * driver compensation draft with rates and conditional surcharge rules.
+             * Approval and activation remain explicit lifecycle actions.
              */
             let financeDriverAssignments = new Map();
 
@@ -16015,21 +16185,1013 @@ const templates = {
                     : name;
             };
 
+            let financeDriverPriceLists = [];
+
+            const financeUnifiedPriceListCategory = (priceList) => {
+                if (priceList?.status === 'active') {
+                    return 'current';
+                }
+
+                if (
+                    priceList?.status === 'draft'
+                    || priceList?.status === 'approved'
+                ) {
+                    return 'draft';
+                }
+
+                return 'history';
+            };
+
+            const financeUnifiedPriceListCurrentVersion = (priceList) => {
+                const versions = Array.isArray(priceList?.versions)
+                    ? priceList.versions
+                    : [];
+
+                return versions.find(
+                    (version) => Number(version?.version_number)
+                        === Number(priceList?.current_version)
+                ) || versions[0] || null;
+            };
+
+            const financeUnifiedPriceListPeriod = (priceList) => {
+                const version = financeUnifiedPriceListCurrentVersion(
+                    priceList
+                );
+
+                if (!version) {
+                    return '\u2014';
+                }
+
+                return `${financeCustomerDate(version.valid_from)} \u2013 ${financeCustomerDate(version.valid_until)}`;
+            };
+
+            const updateFinanceUnifiedPriceListCounts = (
+                root,
+                records
+            ) => {
+                const counts = {
+                    all: records.length,
+                    current: 0,
+                    draft: 0,
+                    history: 0,
+                };
+
+                records.forEach((record) => {
+                    counts[financeUnifiedPriceListCategory(record)] += 1;
+                });
+
+                Object.entries(counts).forEach(([category, count]) => {
+                    const output = root.querySelector(
+                        `[data-unified-price-list-count="${category}"]`
+                    );
+
+                    if (output) {
+                        output.textContent = String(count);
+                    }
+                });
+            };
+
+            const ensureFinanceDriverPriceListDetail = () => {
+                const root = document.querySelector(
+                    '[data-driver-price-list-root]'
+                );
+
+                if (!root) {
+                    return null;
+                }
+
+                const existing = root.querySelector(
+                    '[data-driver-price-list-detail]'
+                );
+
+                if (existing) {
+                    return existing;
+                }
+
+                const detail = document.createElement('section');
+
+                detail.className = 'drayvia-price-admin-detail';
+                detail.setAttribute(
+                    'data-driver-price-list-detail',
+                    ''
+                );
+                detail.hidden = true;
+                root.appendChild(detail);
+
+                return detail;
+            };
+
+            const renderFinanceDriverPriceListEditor = (
+                record,
+                createVersion = false
+            ) => {
+                const detail = ensureFinanceDriverPriceListDetail();
+                const template =
+                    ensureFinanceDriverPriceListCreateCard();
+                const current =
+                    financeUnifiedPriceListCurrentVersion(record);
+
+                if (
+                    !detail
+                    || !template
+                    || (
+                        !createVersion
+                        && current?.status !== 'draft'
+                    )
+                    || (
+                        createVersion
+                        && current?.status === 'draft'
+                    )
+                ) {
+                    return;
+                }
+
+                const editor = template.cloneNode(true);
+
+                editor.hidden = false;
+                editor.classList.add('drayvia-price-admin-editor');
+                editor.removeAttribute(
+                    'data-driver-price-list-create-card'
+                );
+                delete editor.dataset.driverDraftCreateBound;
+                editor.dataset.driverPriceListEditor = '1';
+                editor.dataset.driverPriceListEditorMode =
+                    createVersion ? 'create-version' : 'update';
+
+                Array.from(editor.querySelectorAll('[id]')).forEach(
+                    (element) => {
+                        const originalId = element.id;
+                        const editorId = originalId.replace(
+                            'driver-draft-price-list',
+                            'driver-edit-price-list'
+                        );
+                        const label = editor.querySelector(
+                            `label[for="${originalId}"]`
+                        );
+
+                        element.id = editorId;
+
+                        if (label) {
+                            label.htmlFor = editorId;
+                        }
+                    }
+                );
+
+                const title = editor.querySelector('h4');
+                const assignment = editor.querySelector(
+                    '[data-driver-draft-price-list-assignment]'
+                );
+                const name = editor.querySelector(
+                    '[data-driver-draft-price-list-name]'
+                );
+                const currency = editor.querySelector(
+                    '[data-driver-draft-price-list-currency]'
+                );
+                const validFrom = editor.querySelector(
+                    '[data-driver-draft-price-list-valid-from]'
+                );
+                const validUntil = editor.querySelector(
+                    '[data-driver-draft-price-list-valid-until]'
+                );
+                const save = editor.querySelector(
+                    '[data-driver-draft-price-list-save]'
+                );
+                const cancel = editor.querySelector(
+                    '[data-driver-price-list-create-close]'
+                );
+                const message = editor.querySelector(
+                    '[data-driver-draft-price-list-message]'
+                );
+                const addRule = editor.querySelector(
+                    '[data-conditional-rule-add]'
+                );
+                const preset = editor.querySelector(
+                    '[data-conditional-rule-preset]'
+                );
+                const conditionalList = editor.querySelector(
+                    '[data-conditional-rule-list]'
+                );
+                const rateInputs = Array.from(
+                    editor.querySelectorAll('[data-price-list-rate]')
+                );
+
+                if (
+                    !name
+                    || !currency
+                    || !validFrom
+                    || !validUntil
+                    || !save
+                    || !cancel
+                    || !message
+                    || !addRule
+                    || !preset
+                    || !conditionalList
+                    || rateInputs.length !== 4
+                ) {
+                    renderFinanceDriverPriceListDetail(record);
+                    financeBillingAdminNotice(
+                        detail,
+                        'Editor konceptu se nepoda\u0159ilo p\u0159ipravit.',
+                        'error'
+                    );
+                    return;
+                }
+
+                if (title) {
+                    title.textContent = createVersion
+                        ? `Nov\u00e1 verze: ${record?.name || ''}`
+                        : `Upravit koncept: ${record?.name || ''}`;
+                }
+
+                const assignmentField = assignment?.closest(
+                    '.drayvia-finance-field'
+                );
+
+                if (assignmentField) {
+                    assignmentField.hidden = true;
+                }
+
+                name.value = record?.name || '';
+                name.disabled = createVersion;
+                currency.value = record?.currency || 'CZK';
+                currency.disabled = true;
+                validFrom.value = createVersion
+                    ? ''
+                    : current?.valid_from || '';
+                validUntil.value = createVersion
+                    ? ''
+                    : current?.valid_until || '';
+                save.textContent = createVersion
+                    ? 'Vytvo\u0159it koncept nov\u00e9 verze'
+                    : 'Ulo\u017eit zm\u011bny konceptu';
+                cancel.textContent = 'Zru\u0161it \u00fapravy';
+
+                const notes = editor.querySelectorAll(
+                    '.drayvia-finance-note'
+                );
+                const note = notes.item(notes.length - 1);
+
+                if (note) {
+                    note.textContent = createVersion
+                        ? 'Nov\u00e1 verze vznikne jako koncept s kompletn\u00ed kopi\u00ed sazeb a p\u0159\u00edplatk\u016f. Schv\u00e1len\u00ed a aktivace z\u016fstanou samostatn\u00e9.'
+                        : 'Ulo\u017een\u00ed atomicky nahrad\u00ed cel\u00fd koncept v\u010detn\u011b sazeb a p\u0159\u00edplatk\u016f. Aktivn\u00ed ani historick\u00e9 verze nelze upravovat.';
+                }
+
+                const items = Array.isArray(current?.items)
+                    ? current.items
+                    : [];
+                const itemMap = new Map(
+                    items.map((item) => [item?.code, item])
+                );
+
+                rateInputs.forEach((input) => {
+                    const item = itemMap.get(
+                        input.dataset.priceListRate
+                    );
+
+                    input.value = item?.unit_rate ?? '';
+                });
+
+                conditionalList.replaceChildren();
+
+                const rules = Array.isArray(
+                    current?.conditional_rules
+                )
+                    ? current.conditional_rules
+                    : [];
+
+                rules.forEach((rule) => {
+                    hydrateFinanceConditionalRule(editor, rule);
+                });
+
+                updateFinanceConditionalEmptyState(editor);
+
+                addRule.addEventListener('click', () => {
+                    addFinanceConditionalRule(
+                        editor,
+                        preset.value
+                    );
+                });
+
+                cancel.addEventListener('click', () => {
+                    renderFinanceDriverPriceListDetail(record);
+                });
+
+                save.addEventListener('click', async () => {
+                    message.hidden = true;
+                    message.dataset.state = '';
+
+                    const normalizedName = name.value.trim();
+
+                    if (normalizedName === '') {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Dopl\u0148te n\u00e1zev cen\u00edku.';
+                        return;
+                    }
+
+                    if (validFrom.value === '') {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Dopl\u0148te datum platnosti od.';
+                        return;
+                    }
+
+                    if (
+                        validUntil.value !== ''
+                        && validUntil.value < validFrom.value
+                    ) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Platnost do nesm\u00ed b\u00fdt p\u0159ed platnost\u00ed od.';
+                        return;
+                    }
+
+                    const itemDescriptions = {
+                        delivered_parcels:
+                            'Doru\u010den\u00e1 z\u00e1silka',
+                        redirected_parcels:
+                            'P\u0159esm\u011brovan\u00e1 z\u00e1silka',
+                        undelivered_parcels:
+                            'Odm\u00edtnuto z\u00e1kazn\u00edkem',
+                        actual_km:
+                            'Skute\u010dn\u00fd kilometr',
+                    };
+                    const canonicalCodes = [
+                        'delivered_parcels',
+                        'redirected_parcels',
+                        'undelivered_parcels',
+                        'actual_km',
+                    ];
+                    const rateMap = new Map(
+                        rateInputs.map((input) => [
+                            input.dataset.priceListRate,
+                            input,
+                        ])
+                    );
+                    const updatedItems = canonicalCodes.map((code) => {
+                        const input = rateMap.get(code);
+                        const existing = itemMap.get(code);
+
+                        return {
+                            code,
+                            description:
+                                existing?.description
+                                || itemDescriptions[code],
+                            unit_rate:
+                                input?.value?.trim() || '',
+                        };
+                    });
+
+                    if (
+                        updatedItems.some(
+                            (item) =>
+                                item.unit_rate === ''
+                                || !Number.isFinite(
+                                    Number(item.unit_rate)
+                                )
+                                || Number(item.unit_rate) < 0
+                        )
+                    ) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Vypl\u0148te v\u0161echny \u010dty\u0159i nez\u00e1porn\u00e9 sazby.';
+                        return;
+                    }
+
+                    let conditionalRules;
+
+                    try {
+                        conditionalRules =
+                            collectFinanceConditionalRules(editor);
+                    }
+                    catch (error) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent = error.message;
+                        return;
+                    }
+
+                    const endpoint = createVersion
+                        ? `/api/v1/driver-price-lists/${
+                            encodeURIComponent(record.public_id)
+                        }/versions`
+                        : `/api/v1/driver-price-lists/${
+                            encodeURIComponent(record.public_id)
+                        }/versions/${
+                            encodeURIComponent(
+                                String(current.version_number)
+                            )
+                        }`;
+                    const payload = createVersion
+                        ? {
+                            expected_current_version:
+                                Number(current.version_number),
+                            valid_from: validFrom.value,
+                            valid_until:
+                                validUntil.value || null,
+                            change_reason:
+                                'Complete driver draft version created through Finance UI.',
+                            items: updatedItems,
+                            conditional_rules:
+                                conditionalRules,
+                        }
+                        : {
+                            name: normalizedName,
+                            description:
+                                record?.description || null,
+                            expected_lock_version:
+                                Number(current.lock_version),
+                            valid_from: validFrom.value,
+                            valid_until:
+                                validUntil.value || null,
+                            change_reason:
+                                'Complete driver draft updated through Finance UI.',
+                            items: updatedItems,
+                            conditional_rules:
+                                conditionalRules,
+                        };
+
+                    save.disabled = true;
+                    cancel.disabled = true;
+                    message.hidden = false;
+                    message.dataset.state = '';
+                    message.textContent = createVersion
+                        ? 'Vytv\u00e1\u0159\u00edm koncept nov\u00e9 verze\u2026'
+                        : 'Ukl\u00e1d\u00e1m cel\u00fd koncept\u2026';
+
+                    try {
+                        await api(endpoint, {
+                            method: createVersion ? 'POST' : 'PUT',
+                            body: JSON.stringify(payload),
+                        });
+
+                        const nextRevision =
+                            Number(current.lock_version) + 1;
+
+                        await loadFinanceDriverPriceLists();
+
+                        const updatedRecord =
+                            financeDriverPriceLists.find(
+                                (priceList) =>
+                                    priceList?.public_id
+                                    === record?.public_id
+                            ) || {
+                                ...record,
+                                name: normalizedName,
+                            };
+
+                        await loadFinanceDriverPriceListDetail(
+                            updatedRecord
+                        );
+                        financeBillingAdminNotice(
+                            detail,
+                            createVersion
+                                ? 'Koncept nov\u00e9 verze byl vytvo\u0159en.'
+                                : `Koncept byl ulo\u017een. Aktu\u00e1ln\u00ed revize: ${nextRevision}.`
+                        );
+                    }
+                    catch (error) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            `Koncept se nepoda\u0159ilo ulo\u017eit: ${error.message}`;
+                    }
+                    finally {
+                        save.disabled = false;
+                        cancel.disabled = false;
+                    }
+                });
+
+                detail.replaceChildren(editor);
+                detail.hidden = false;
+                detail.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                });
+            };
+            const runFinanceDriverPriceListLifecycle = async (
+                record,
+                current,
+                action,
+                validUntil = null
+            ) => {
+                const detail = ensureFinanceDriverPriceListDetail();
+                const publicId = String(record?.public_id || '');
+                const versionNumber = Number(
+                    current?.version_number
+                );
+                const lockVersion = Number(current?.lock_version);
+                const contracts = {
+                    approve: {
+                        requiredStatus: 'draft',
+                        path: 'approve',
+                        question:
+                            'Opravdu chcete schv\u00e1lit tento koncept? Po schv\u00e1len\u00ed ji\u017e nep\u016fjde upravovat.',
+                        pending: 'Schvaluji koncept\u2026',
+                        success: 'Koncept byl schv\u00e1len.',
+                    },
+                    activate: {
+                        requiredStatus: 'approved',
+                        path: 'activate',
+                        question:
+                            'Opravdu chcete tuto verzi aktivovat? P\u0159\u00edpadn\u00e1 p\u0159edchoz\u00ed aktivn\u00ed verze bude dom\u00e9novou slu\u017ebou nahrazena.',
+                        pending: 'Aktivuji schv\u00e1lenou verzi\u2026',
+                        success: 'Verze byla aktivov\u00e1na.',
+                    },
+                    expire: {
+                        requiredStatus: 'active',
+                        path: 'expire',
+                        question:
+                            'Opravdu chcete ukon\u010dit platnost aktivn\u00ed verze k vybran\u00e9mu datu?',
+                        pending: 'Ukon\u010duji platnost verze\u2026',
+                        success: 'Platnost verze byla ukon\u010dena.',
+                    },
+                };
+                const contract = contracts[action];
+
+                if (
+                    !detail
+                    || publicId === ''
+                    || !Number.isInteger(versionNumber)
+                    || versionNumber < 1
+                    || !Number.isInteger(lockVersion)
+                    || lockVersion < 1
+                    || !contract
+                    || current?.status !== contract.requiredStatus
+                ) {
+                    return;
+                }
+
+                if (
+                    action === 'expire'
+                    && (
+                        typeof validUntil !== 'string'
+                        || validUntil === ''
+                    )
+                ) {
+                    financeBillingAdminNotice(
+                        detail,
+                        'Vyberte datum ukon\u010den\u00ed platnosti.',
+                        'error'
+                    );
+                    return;
+                }
+
+                if (!window.confirm(contract.question)) {
+                    return;
+                }
+
+                const payload = {
+                    expected_lock_version: lockVersion,
+                };
+
+                if (action === 'expire') {
+                    payload.valid_until = validUntil;
+                }
+
+                financeBillingAdminNotice(
+                    detail,
+                    contract.pending
+                );
+
+                try {
+                    await api(
+                        `/api/v1/driver-price-lists/${
+                            encodeURIComponent(publicId)
+                        }/versions/${
+                            encodeURIComponent(
+                                String(versionNumber)
+                            )
+                        }/${contract.path}`,
+                        {
+                            method: 'POST',
+                            body: JSON.stringify(payload),
+                        }
+                    );
+
+                    await loadFinanceDriverPriceLists();
+
+                    const updatedRecord =
+                        financeDriverPriceLists.find(
+                            (priceList) =>
+                                priceList?.public_id === publicId
+                        ) || record;
+
+                    await loadFinanceDriverPriceListDetail(
+                        updatedRecord
+                    );
+                    financeBillingAdminNotice(
+                        detail,
+                        contract.success
+                    );
+                }
+                catch (error) {
+                    financeBillingAdminNotice(
+                        detail,
+                        `Zm\u011bna stavu se nepoda\u0159ila: ${error.message}`,
+                        'error'
+                    );
+                }
+            };
+            const renderFinanceDriverPriceListDetail = (record) => {
+                const detail = ensureFinanceDriverPriceListDetail();
+
+                if (!detail) {
+                    return;
+                }
+
+                const current =
+                    financeUnifiedPriceListCurrentVersion(record);
+                const assignmentKey = Number(
+                    record?.driver_organization_assignment_id
+                );
+                const driverInfo = financeDriverAssignments.get(
+                    assignmentKey
+                );
+                const items = Array.isArray(current?.items)
+                    ? current.items
+                    : [];
+                const rules = Array.isArray(
+                    current?.conditional_rules
+                )
+                    ? current.conditional_rules
+                    : [];
+                const versions = Array.isArray(record?.versions)
+                    ? record.versions
+                    : [];
+
+                const header = document.createElement('div');
+                const heading = document.createElement('div');
+                const title = document.createElement('h4');
+                const meta = document.createElement('p');
+                const actions = document.createElement('div');
+                const close = document.createElement('button');
+
+                header.className =
+                    'drayvia-price-admin-detail-header';
+                heading.className =
+                    'drayvia-price-admin-detail-heading';
+                actions.className =
+                    'drayvia-price-admin-detail-actions';
+                title.textContent =
+                    record?.name || 'Detail cen\u00edku \u0159idi\u010de';
+                meta.textContent = [
+                    driverInfo?.label
+                        || `P\u0159i\u0159azen\u00ed ${assignmentKey}`,
+                    record?.code || '\u2014',
+                    financeCustomerStatus(record?.status),
+                    financeBillingPriceListPeriod(current),
+                ].join(' \u00b7 ');
+
+                close.type = 'button';
+                close.className =
+                    'drayvia-price-admin-secondary';
+                close.textContent = 'Zav\u0159\u00edt detail';
+                close.addEventListener('click', () => {
+                    detail.hidden = true;
+                    detail.replaceChildren();
+                });
+
+                if (current?.status === 'draft') {
+                    const edit = document.createElement('button');
+                    const approve = document.createElement('button');
+
+                    edit.type = 'button';
+                    edit.className =
+                        'drayvia-price-admin-primary';
+                    edit.textContent = 'Upravit koncept';
+                    edit.addEventListener('click', () => {
+                        renderFinanceDriverPriceListEditor(record);
+                    });
+
+                    approve.type = 'button';
+                    approve.className =
+                        'drayvia-price-admin-secondary';
+                    approve.textContent = 'Schv\u00e1lit';
+                    approve.addEventListener('click', () => {
+                        runFinanceDriverPriceListLifecycle(
+                            record,
+                            current,
+                            'approve'
+                        );
+                    });
+
+                    actions.append(edit, approve);
+                }
+                else if (current?.status === 'approved') {
+                    const activate = document.createElement('button');
+
+                    activate.type = 'button';
+                    activate.className =
+                        'drayvia-price-admin-primary';
+                    activate.textContent = 'Aktivovat';
+                    activate.addEventListener('click', () => {
+                        runFinanceDriverPriceListLifecycle(
+                            record,
+                            current,
+                            'activate'
+                        );
+                    });
+
+                    actions.appendChild(activate);
+                }
+                else if (current?.status === 'active') {
+                    const expiration = document.createElement('input');
+                    const expire = document.createElement('button');
+                    const now = new Date();
+                    const today = new Date(
+                        now.getTime()
+                        - now.getTimezoneOffset() * 60000
+                    )
+                        .toISOString()
+                        .slice(0, 10);
+
+                    expiration.type = 'date';
+                    expiration.className = 'drayvia-finance-input';
+                    expiration.max = today;
+                    expiration.value = today;
+                    expiration.setAttribute(
+                        'aria-label',
+                        'Datum ukon\u010den\u00ed platnosti'
+                    );
+                    expiration.title =
+                        'Datum ukon\u010den\u00ed platnosti';
+
+                    expire.type = 'button';
+                    expire.className =
+                        'drayvia-price-admin-secondary';
+                    expire.textContent = 'Ukon\u010dit platnost';
+                    expire.addEventListener('click', () => {
+                        runFinanceDriverPriceListLifecycle(
+                            record,
+                            current,
+                            'expire',
+                            expiration.value
+                        );
+                    });
+
+                    actions.append(expiration, expire);
+                }
+
+                if (
+                    current?.status === 'active'
+                    || current?.status === 'expired'
+                ) {
+                    const newVersion =
+                        document.createElement('button');
+
+                    newVersion.type = 'button';
+                    newVersion.className =
+                        'drayvia-price-admin-primary';
+                    newVersion.textContent = 'Nov\u00e1 verze';
+                    newVersion.addEventListener('click', () => {
+                        renderFinanceDriverPriceListEditor(
+                            record,
+                            true
+                        );
+                    });
+                    actions.appendChild(newVersion);
+                }
+
+                actions.appendChild(close);
+                heading.append(title, meta);
+                header.append(heading, actions);
+
+                const itemRows = items.map((item) => [
+                    item?.description
+                        || financeBillingItemLabel(item?.code),
+                    financeBillingUnitLabel(item?.unit),
+                    financeBillingMoney(
+                        item?.unit_rate,
+                        item?.currency || record?.currency
+                    ),
+                ]);
+
+                const ruleRows = rules.map((rule) => [
+                    rule?.name || rule?.code,
+                    financeBillingRuleFormula(rule),
+                    financeBillingEvaluationScopeLabel(
+                        rule?.evaluation_scope
+                    ),
+                    financeBillingRewardLabel(rule),
+                    (
+                        Array.isArray(rule?.bands)
+                            ? rule.bands
+                            : []
+                    ).map(
+                        (band) => financeBillingBandLabel(
+                            rule,
+                            band,
+                            record?.currency
+                        )
+                    ).join('; ') || '\u2014',
+                ]);
+
+                const versionRows = versions.map((version) => [
+                    version?.version_number,
+                    financeCustomerStatus(version?.status),
+                    financeBillingPriceListPeriod(version),
+                    version?.lock_version,
+                ]);
+
+                detail.replaceChildren(
+                    header,
+                    financeBillingDetailTable(
+                        'Z\u00e1kladn\u00ed sazby',
+                        [
+                            'Polo\u017eka',
+                            'Jednotka',
+                            'Sazba',
+                        ],
+                        itemRows
+                    ),
+                    financeBillingDetailTable(
+                        'Podm\u00edn\u011bn\u00e9 p\u0159\u00edplatky',
+                        [
+                            'P\u0159\u00edplatek',
+                            'Vzorec',
+                            'Vyhodnocen\u00ed',
+                            'Zp\u016fsob',
+                            'P\u00e1sma a ceny',
+                        ],
+                        ruleRows
+                    ),
+                    financeBillingDetailTable(
+                        'Historie verz\u00ed',
+                        [
+                            'Verze',
+                            'Stav',
+                            'Platnost',
+                            'Revize',
+                        ],
+                        versionRows
+                    )
+                );
+                detail.hidden = false;
+                detail.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                });
+            };
+
+            const loadFinanceDriverPriceListDetail = async (priceList) => {
+                const detail = ensureFinanceDriverPriceListDetail();
+                const publicId = String(
+                    priceList?.public_id || ''
+                );
+
+                if (!detail || publicId === '') {
+                    return;
+                }
+
+                detail.hidden = false;
+                detail.textContent =
+                    'Na\u010d\u00edt\u00e1m detail cen\u00edku \u0159idi\u010de\u2026';
+
+                try {
+                    const body = await api(
+                        `/api/v1/driver-price-lists/${encodeURIComponent(publicId)}/versions`
+                    );
+                    const payload = getPayload(body) || {};
+                    const versionCollection =
+                        payload?.items?.data
+                        ?? payload?.items
+                        ?? [];
+                    const versions = Array.isArray(versionCollection)
+                        ? versionCollection
+                        : [];
+
+                    renderFinanceDriverPriceListDetail({
+                        ...priceList,
+                        versions,
+                    });
+                }
+                catch (error) {
+                    detail.replaceChildren();
+                    detail.hidden = false;
+
+                    const message = document.createElement('p');
+                    const close = document.createElement('button');
+
+                    message.className =
+                        'drayvia-price-admin-message';
+                    message.dataset.state = 'error';
+                    message.textContent =
+                        `Detail cen\u00edku \u0159idi\u010de se nepoda\u0159ilo na\u010d\u00edst: ${error.message}`;
+                    close.type = 'button';
+                    close.className =
+                        'drayvia-price-admin-secondary';
+                    close.textContent = 'Zav\u0159\u00edt detail';
+                    close.addEventListener('click', () => {
+                        detail.hidden = true;
+                        detail.replaceChildren();
+                    });
+                    detail.append(message, close);
+                }
+            };
+
+            const renderFinanceDriverPriceListIndex = () => {
+                const root = document.querySelector(
+                    '[data-driver-price-list-root]'
+                );
+                const list = root?.querySelector(
+                    '[data-driver-price-list-list]'
+                );
+
+                if (!root || !list) {
+                    return;
+                }
+
+                const headerRow = list.closest('table')
+                    ?.querySelector('thead tr');
+
+                if (headerRow && headerRow.children.length === 5) {
+                    const actionHeader = document.createElement('th');
+
+                    actionHeader.textContent = 'Akce';
+                    headerRow.appendChild(actionHeader);
+                }
+
+                updateFinanceUnifiedPriceListCounts(
+                    root,
+                    financeDriverPriceLists
+                );
+
+                const selectedFilter =
+                    root.dataset.unifiedPriceListFilter || 'all';
+                const records = financeDriverPriceLists.filter(
+                    (record) => selectedFilter === 'all'
+                        || financeUnifiedPriceListCategory(record)
+                            === selectedFilter
+                );
+
+                list.replaceChildren();
+
+                if (records.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+
+                    cell.colSpan = 6;
+                    cell.className = 'drayvia-price-admin-empty';
+                    cell.textContent = financeDriverPriceLists.length === 0
+                        ? '\u017d\u00e1dn\u00fd cen\u00edk \u0159idi\u010de zat\u00edm nen\u00ed evidov\u00e1n.'
+                        : 'Vybran\u00e9mu filtru neodpov\u00edd\u00e1 \u017e\u00e1dn\u00fd cen\u00edk.';
+
+                    row.appendChild(cell);
+                    list.appendChild(row);
+                    return;
+                }
+
+                records.forEach((priceList) => {
+                    const row = document.createElement('tr');
+                    const assignmentKey = Number(
+                        priceList?.driver_organization_assignment_id
+                    );
+                    const driverInfo = financeDriverAssignments.get(
+                        assignmentKey
+                    );
+                    const values = [
+                        driverInfo?.label || `P\u0159i\u0159azen\u00ed ${assignmentKey}`,
+                        priceList?.name || '\u2014',
+                        financeCustomerStatus(priceList?.status),
+                        priceList?.current_version ?? '\u2014',
+                        priceList?.currency || '\u2014',
+                    ];
+
+                    values.forEach((value) => {
+                        const cell = document.createElement('td');
+                        cell.textContent = String(value);
+                        row.appendChild(cell);
+                    });
+
+                    const actionCell = document.createElement('td');
+                    const detailButton = document.createElement('button');
+
+                    detailButton.type = 'button';
+                    detailButton.className =
+                        'drayvia-price-admin-secondary';
+                    detailButton.textContent = 'Otev\u0159\u00edt';
+                    detailButton.addEventListener('click', () => {
+                        loadFinanceDriverPriceListDetail(priceList);
+                    });
+
+                    actionCell.appendChild(detailButton);
+                    row.appendChild(actionCell);
+                    list.appendChild(row);
+                });
+            };
             const loadFinanceDriverPriceLists = async () => {
-                const root =
-                    document.querySelector(
-                        '[data-driver-price-list-root]'
-                    );
-
-                const list =
-                    root?.querySelector(
-                        '[data-driver-price-list-list]'
-                    );
-
-                const assignmentSelect =
-                    root?.querySelector(
-                        '[data-driver-price-list-assignment]'
-                    );
+                const root = document.querySelector(
+                    '[data-driver-price-list-root]'
+                );
+                const list = root?.querySelector(
+                    '[data-driver-price-list-list]'
+                );
 
                 if (!root || !list) {
                     return;
@@ -16037,155 +17199,79 @@ const templates = {
 
                 list.replaceChildren();
 
-                const loadingRow =
-                    document.createElement('tr');
-
-                const loadingCell =
-                    document.createElement('td');
+                const loadingRow = document.createElement('tr');
+                const loadingCell = document.createElement('td');
 
                 loadingCell.colSpan = 5;
                 loadingCell.textContent =
-                    'Načítám ceníky řidičů…';
-
-                loadingRow.appendChild(
-                    loadingCell
-                );
-
-                list.appendChild(
-                    loadingRow
-                );
+                    'Na\u010d\u00edt\u00e1m cen\u00edky \u0159idi\u010d\u016f\u2026';
+                loadingRow.appendChild(loadingCell);
+                list.appendChild(loadingRow);
 
                 try {
-                    const params =
-                        new URLSearchParams();
+                    const params = new URLSearchParams();
 
-                    params.set(
-                        'per_page',
-                        '100'
+                    params.set('per_page', '100');
+                    params.set('sort_by', 'name');
+                    params.set('sort_dir', 'asc');
+
+                    const body = await api(
+                        `/api/v1/driver-price-lists?${params.toString()}`
                     );
 
-                    params.set(
-                        'sort_by',
-                        'name'
-                    );
+                    financeDriverPriceLists =
+                        financeDriverPriceListArray(body);
 
-                    params.set(
-                        'sort_dir',
-                        'asc'
-                    );
-
-                    const assignmentId =
-                        Number(
-                            assignmentSelect?.value
-                            || 0
-                        );
-
-                    if (
-                        Number.isInteger(assignmentId)
-                        && assignmentId > 0
-                    ) {
-                        params.set(
-                            'driver_organization_assignment_id',
-                            String(assignmentId)
-                        );
-                    }
-
-                    const body =
-                        await api(
-                            `/api/v1/driver-price-lists?${params.toString()}`
-                        );
-
-                    const priceLists =
-                        financeDriverPriceListArray(
-                            body
-                        );
-
-                    list.replaceChildren();
-
-                    if (priceLists.length === 0) {
-                        const row =
-                            document.createElement('tr');
-
-                        const cell =
-                            document.createElement('td');
-
-                        cell.colSpan = 5;
-                        cell.textContent =
-                            'Pro vybraného řidiče zatím není evidován žádný ceník.';
-
-                        row.appendChild(cell);
-                        list.appendChild(row);
-                        return;
-                    }
-
-                    priceLists.forEach(
-                        (priceList) => {
-                            const row =
-                                document.createElement('tr');
-
-                            const assignmentKey =
-                                Number(
-                                    priceList
-                                        ?.driver_organization_assignment_id
-                                );
-
-                            const driverInfo =
-                                financeDriverAssignments.get(
-                                    assignmentKey
-                                );
-
-                            const values = [
-                                driverInfo?.label
-                                    || `Přiřazení ${assignmentKey}`,
-                                priceList?.name
-                                    || '—',
-                                financeCustomerStatus(
-                                    priceList?.status
-                                ),
-                                priceList?.current_version
-                                    ?? '—',
-                                priceList?.currency
-                                    || '—',
-                            ];
-
-                            values.forEach(
-                                (value) => {
-                                    const cell =
-                                        document.createElement('td');
-
-                                    cell.textContent =
-                                        String(value);
-
-                                    row.appendChild(
-                                        cell
-                                    );
-                                }
-                            );
-
-                            list.appendChild(
-                                row
-                            );
-                        }
-                    );
+                    renderFinanceDriverPriceListIndex();
                 }
                 catch (error) {
+                    financeDriverPriceLists = [];
+                    updateFinanceUnifiedPriceListCounts(root, []);
                     list.replaceChildren();
 
-                    const row =
-                        document.createElement('tr');
-
-                    const cell =
-                        document.createElement('td');
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
 
                     cell.colSpan = 5;
+                    cell.className = 'drayvia-price-admin-empty';
                     cell.textContent =
-                        `Ceníky řidičů se nepodařilo načíst: ${error.message}`;
+                        `Cen\u00edky \u0159idi\u010d\u016f se nepoda\u0159ilo na\u010d\u00edst: ${error.message}`;
 
                     row.appendChild(cell);
                     list.appendChild(row);
                 }
             };
 
+            const bindFinanceDriverPriceListAdministration = () => {
+                const root = document.querySelector(
+                    '[data-driver-price-list-root]'
+                );
+
+                if (
+                    !root
+                    || root.dataset.driverPriceListAdministrationBound === '1'
+                ) {
+                    return;
+                }
+
+                root.dataset.driverPriceListAdministrationBound = '1';
+
+                root.querySelectorAll(
+                    '[data-unified-price-list-filter]'
+                ).forEach((button) => {
+                    button.addEventListener('click', () => {
+                        root.dataset.unifiedPriceListFilter =
+                            button.dataset.unifiedPriceListFilter || 'all';
+                        renderFinanceDriverPriceListIndex();
+                    });
+                });
+
+                root.querySelector(
+                    '[data-driver-price-list-reload]'
+                )?.addEventListener('click', () => {
+                    loadFinanceDriverPriceLists();
+                });
+            };
             const loadFinanceDriverAssignments = async () => {
                 const root =
                     document.querySelector(
@@ -16377,68 +17463,308 @@ const templates = {
                 }
             };
 
-            const bindFinanceDriverPriceListCreate = () => {
-                const root =
-                    document.querySelector(
-                        '[data-driver-price-list-root]'
+            const ensureFinanceDriverPriceListCreateCard = () => {
+                const root = document.querySelector(
+                    '[data-driver-price-list-root]'
+                );
+                const panel = root?.closest(
+                    '[data-price-list-panel="drivers"]'
+                );
+
+                if (!root || !panel) {
+                    return null;
+                }
+
+                const existing = panel.querySelector(
+                    '[data-driver-price-list-create-card]'
+                );
+
+                if (existing) {
+                    return existing;
+                }
+
+                const template = document.querySelector(
+                    '[data-billing-price-list-create-card]'
+                );
+
+                if (!template) {
+                    return null;
+                }
+
+                const driverCreateCard = template.cloneNode(true);
+                const attributes = {
+                    'data-billing-price-list-create-close':
+                        'data-driver-price-list-create-close',
+                    'data-billing-price-list-customer':
+                        'data-driver-draft-price-list-assignment',
+                    'data-billing-price-list-name':
+                        'data-driver-draft-price-list-name',
+                    'data-billing-price-list-currency':
+                        'data-driver-draft-price-list-currency',
+                    'data-billing-price-list-valid-from':
+                        'data-driver-draft-price-list-valid-from',
+                    'data-billing-price-list-valid-until':
+                        'data-driver-draft-price-list-valid-until',
+                    'data-billing-price-list-save':
+                        'data-driver-draft-price-list-save',
+                    'data-billing-price-list-message':
+                        'data-driver-draft-price-list-message',
+                };
+
+                driverCreateCard.removeAttribute(
+                    'data-billing-price-list-create-card'
+                );
+                driverCreateCard.setAttribute(
+                    'data-driver-price-list-create-card',
+                    ''
+                );
+                driverCreateCard.hidden = true;
+
+                Object.entries(attributes).forEach(([
+                    source,
+                    target,
+                ]) => {
+                    const element = driverCreateCard.querySelector(
+                        `[${source}]`
                     );
 
-                if (
-                    !root
-                    || root.dataset.driverPriceListBound === '1'
-                ) {
+                    if (element) {
+                        element.removeAttribute(source);
+                        element.setAttribute(target, '');
+                    }
+                });
+
+                Array.from(
+                    driverCreateCard.querySelectorAll('[id]')
+                ).forEach((element) => {
+                    const originalId = element.id;
+                    const driverId = originalId.replace(
+                        'billing-price-list',
+                        'driver-draft-price-list'
+                    );
+                    const label = driverCreateCard.querySelector(
+                        `label[for="${originalId}"]`
+                    );
+
+                    element.id = driverId;
+
+                    if (label) {
+                        label.htmlFor = driverId;
+                    }
+                });
+
+                const header = root.querySelector(
+                    '.drayvia-price-admin-header'
+                );
+                const open = document.createElement('button');
+
+                open.type = 'button';
+                open.className = 'drayvia-price-admin-primary';
+                open.setAttribute(
+                    'data-driver-price-list-create-open',
+                    ''
+                );
+                open.textContent = 'Nov\u00fd cen\u00edk \u0159idi\u010de';
+                header?.appendChild(open);
+
+                const legacyAssignment = root.querySelector(
+                    '[data-driver-price-list-assignment]'
+                );
+                const legacyGrid = legacyAssignment?.closest(
+                    '.drayvia-finance-grid'
+                );
+                const legacyDescription = legacyGrid
+                    ?.previousElementSibling;
+                const legacyHeading = legacyDescription
+                    ?.previousElementSibling;
+                const legacyRate = root.querySelector(
+                    '[data-driver-price-list-rate]'
+                );
+                const legacyRateWrapper = legacyRate?.closest(
+                    'div[style*="overflow-x"]'
+                );
+                const legacySave = root.querySelector(
+                    '[data-driver-price-list-save]'
+                );
+                const legacySaveWrapper = legacySave?.closest(
+                    'div[style*="margin-top"]'
+                );
+
+                [
+                    legacyHeading,
+                    legacyDescription,
+                    legacyGrid,
+                    legacyRateWrapper,
+                    legacySaveWrapper,
+                ].forEach((element) => {
+                    if (element) {
+                        element.hidden = true;
+                    }
+                });
+
+                const heading = driverCreateCard.querySelector('h4');
+                const assignment = driverCreateCard.querySelector(
+                    '[data-driver-draft-price-list-assignment]'
+                );
+                const assignmentLabel = assignment
+                    ?.closest('.drayvia-finance-field')
+                    ?.querySelector('label');
+                const conditionalHeading = driverCreateCard.querySelector(
+                    '[data-conditional-rule-root] h5'
+                );
+                const save = driverCreateCard.querySelector(
+                    '[data-driver-draft-price-list-save]'
+                );
+                const note = driverCreateCard.querySelector(
+                    '.drayvia-finance-note:not([data-driver-draft-price-list-message])'
+                );
+
+                if (heading) {
+                    heading.textContent = 'Nov\u00fd cen\u00edk \u0159idi\u010de';
+                }
+
+                if (assignmentLabel) {
+                    assignmentLabel.textContent = '\u0158idi\u010d';
+                }
+
+                if (conditionalHeading) {
+                    conditionalHeading.textContent =
+                        'Podm\u00edn\u011bn\u00e9 p\u0159\u00edplatky \u0159idi\u010de';
+                }
+
+                if (save) {
+                    save.textContent = 'Ulo\u017eit koncept cen\u00edku';
+                }
+
+                if (note) {
+                    note.textContent =
+                        'Cen\u00edk se ulo\u017e\u00ed jako kompletn\u00ed draft v1. Schv\u00e1len\u00ed a aktivace z\u016fst\u00e1vaj\u00ed samostatn\u00e9 kroky.';
+                }
+
+                root.insertAdjacentElement(
+                    'afterend',
+                    driverCreateCard
+                );
+
+                return driverCreateCard;
+            };
+
+            const populateFinanceDriverPriceListSelect = () => {
+                const createCard =
+                    ensureFinanceDriverPriceListCreateCard();
+                const select = createCard?.querySelector(
+                    '[data-driver-draft-price-list-assignment]'
+                );
+
+                if (!select) {
                     return;
                 }
 
-                const assignment =
-                    root.querySelector(
-                        '[data-driver-price-list-assignment]'
-                    );
+                const selected = select.value;
+                const placeholder = document.createElement('option');
 
-                const name =
-                    root.querySelector(
-                        '[data-driver-price-list-name]'
-                    );
+                placeholder.value = '';
+                placeholder.textContent = 'Vyberte \u0159idi\u010de';
+                select.replaceChildren(placeholder);
 
-                const validFrom =
-                    root.querySelector(
-                        '[data-driver-price-list-valid-from]'
-                    );
+                Array.from(financeDriverAssignments.entries())
+                    .sort((left, right) => String(
+                        left[1]?.label || ''
+                    ).localeCompare(
+                        String(right[1]?.label || ''),
+                        'cs'
+                    ))
+                    .forEach(([assignmentId, item]) => {
+                        if (!Number.isInteger(Number(assignmentId))) {
+                            return;
+                        }
 
-                const validUntil =
-                    root.querySelector(
-                        '[data-driver-price-list-valid-until]'
-                    );
+                        const option = document.createElement('option');
 
-                const save =
-                    root.querySelector(
-                        '[data-driver-price-list-save]'
-                    );
-
-                const message =
-                    root.querySelector(
-                        '[data-driver-price-list-message]'
-                    );
-
-                const rateInputs =
-                    Array.from(
-                        root.querySelectorAll(
-                            '[data-driver-price-list-rate]'
-                        )
-                    );
+                        option.value = String(assignmentId);
+                        option.textContent = item?.label
+                            || `\u0158idi\u010d ${assignmentId}`;
+                        select.appendChild(option);
+                    });
 
                 if (
-                    !assignment
+                    Array.from(select.options).some(
+                        (option) => option.value === selected
+                    )
+                ) {
+                    select.value = selected;
+                }
+            };
+
+            const bindFinanceDriverPriceListCreate = () => {
+                const root = document.querySelector(
+                    '[data-driver-price-list-root]'
+                );
+                const createCard =
+                    ensureFinanceDriverPriceListCreateCard();
+                const assignment = createCard?.querySelector(
+                    '[data-driver-draft-price-list-assignment]'
+                );
+                const name = createCard?.querySelector(
+                    '[data-driver-draft-price-list-name]'
+                );
+                const currency = createCard?.querySelector(
+                    '[data-driver-draft-price-list-currency]'
+                );
+                const validFrom = createCard?.querySelector(
+                    '[data-driver-draft-price-list-valid-from]'
+                );
+                const validUntil = createCard?.querySelector(
+                    '[data-driver-draft-price-list-valid-until]'
+                );
+                const save = createCard?.querySelector(
+                    '[data-driver-draft-price-list-save]'
+                );
+                const message = createCard?.querySelector(
+                    '[data-driver-draft-price-list-message]'
+                );
+                const addRule = createCard?.querySelector(
+                    '[data-conditional-rule-add]'
+                );
+                const preset = createCard?.querySelector(
+                    '[data-conditional-rule-preset]'
+                );
+                const rateInputs = createCard
+                    ? Array.from(
+                        createCard.querySelectorAll(
+                            '[data-price-list-rate]'
+                        )
+                    )
+                    : [];
+
+                if (
+                    !root
+                    || !createCard
+                    || !assignment
                     || !name
+                    || !currency
                     || !validFrom
                     || !validUntil
                     || !save
                     || !message
+                    || !addRule
+                    || !preset
                     || rateInputs.length !== 4
+                    || createCard.dataset.driverDraftCreateBound === '1'
                 ) {
                     return;
                 }
 
+                const itemDescriptions = {
+                    delivered_parcels:
+                        'Doru\u010den\u00e1 z\u00e1silka',
+                    redirected_parcels:
+                        'P\u0159esm\u011brovan\u00e1 z\u00e1silka',
+                    undelivered_parcels:
+                        'Odm\u00edtnuto z\u00e1kazn\u00edkem',
+                    actual_km:
+                        'Skute\u010dn\u00fd kilometr',
+                };
                 const canonicalCodes = [
                     'delivered_parcels',
                     'redirected_parcels',
@@ -16446,278 +17772,1761 @@ const templates = {
                     'actual_km',
                 ];
 
-                const descriptions = {
-                    delivered_parcels:
-                        'Doručená zásilka',
-                    redirected_parcels:
-                        'Přesměrovaná zásilka',
-                    undelivered_parcels:
-                        'Nedoručená zásilka',
-                    actual_km:
-                        'Skutečný kilometr',
-                };
+                createCard.dataset.driverDraftCreateBound = '1';
+                resetFinanceConditionalRules(createCard);
 
-                root.dataset.driverPriceListBound =
-                    '1';
+                assignment.addEventListener('focus', () => {
+                    populateFinanceDriverPriceListSelect();
+                });
 
-                if (!validFrom.value) {
-                    const today =
-                        new Date();
+                addRule.addEventListener('click', () => {
+                    addFinanceConditionalRule(
+                        createCard,
+                        preset.value
+                    );
+                });
 
-                    const localDate =
-                        new Date(
-                            today.getTime()
-                            - today.getTimezoneOffset()
-                                * 60000
-                        )
-                            .toISOString()
-                            .slice(0, 10);
+                root.querySelector(
+                    '[data-driver-price-list-create-open]'
+                )?.addEventListener('click', () => {
+                    populateFinanceDriverPriceListSelect();
+                    root.hidden = true;
+                    createCard.hidden = false;
+                });
 
-                    validFrom.value =
-                        localDate;
-                }
+                createCard.querySelector(
+                    '[data-driver-price-list-create-close]'
+                )?.addEventListener('click', () => {
+                    createCard.hidden = true;
+                    root.hidden = false;
+                });
 
-                assignment.addEventListener(
-                    'change',
-                    () => {
-                        loadFinanceDriverPriceLists();
+                save.addEventListener('click', async () => {
+                    const assignmentId = Number(assignment.value);
+
+                    if (
+                        !Number.isInteger(assignmentId)
+                        || assignmentId < 1
+                    ) {
+                        message.hidden = false;
+                        message.textContent = 'Vyberte \u0159idi\u010de.';
+                        return;
                     }
-                );
 
-                save.addEventListener(
-                    'click',
-                    async () => {
-                        const assignmentId =
-                            Number(
-                                assignment.value
-                            );
-
-                        if (
-                            !Number.isInteger(
-                                assignmentId
-                            )
-                            || assignmentId < 1
-                        ) {
-                            message.hidden = false;
-                            message.textContent =
-                                'Vyberte řidiče.';
-                            return;
-                        }
-
-                        if (
-                            name.value.trim() === ''
-                            || validFrom.value === ''
-                        ) {
-                            message.hidden = false;
-                            message.textContent =
-                                'Vyplňte název ceníku a platnost od.';
-                            return;
-                        }
-
-                        if (
-                            validUntil.value !== ''
-                            && validUntil.value <
-                                validFrom.value
-                        ) {
-                            message.hidden = false;
-                            message.textContent =
-                                'Platnost do nesmí být před platností od.';
-                            return;
-                        }
-
-                        const rateMap =
-                            new Map(
-                                rateInputs.map(
-                                    (input) => [
-                                        input.dataset
-                                            .driverPriceListRate,
-                                        input,
-                                    ]
-                                )
-                            );
-
-                        const items =
-                            canonicalCodes.map(
-                                (code) => {
-                                    const input =
-                                        rateMap.get(
-                                            code
-                                        );
-
-                                    return {
-                                        code,
-                                        description:
-                                            descriptions[
-                                                code
-                                            ],
-                                        unit_rate:
-                                            input?.value
-                                                ?.trim()
-                                            ?? '',
-                                    };
-                                }
-                            );
-
-                        if (
-                            items.some(
-                                (item) =>
-                                    item.unit_rate === ''
-                                    || !Number.isFinite(
-                                        Number(
-                                            item.unit_rate
-                                        )
-                                    )
-                                    || Number(
-                                        item.unit_rate
-                                    ) < 0
-                            )
-                        ) {
-                            message.hidden = false;
-                            message.textContent =
-                                'Vyplňte všechny čtyři nezáporné sazby.';
-                            return;
-                        }
-
-                        const code =
-                            [
-                                'DPL',
-                                String(
-                                    assignmentId
-                                ).slice(-8),
-                                Date.now()
-                                    .toString(36)
-                                    .slice(-8)
-                                    .toUpperCase(),
-                            ].join('-');
-
-                        let createdPublicId =
-                            null;
-
-                        let phase =
-                            'vytvoření ceníku';
-
-                        save.disabled = true;
+                    if (
+                        name.value.trim() === ''
+                        || validFrom.value === ''
+                    ) {
                         message.hidden = false;
                         message.textContent =
-                            'Ukládám ceník řidiče…';
+                            'Vypl\u0148te n\u00e1zev cen\u00edku a platnost od.';
+                        return;
+                    }
 
-                        try {
-                            const createBody =
-                                await api(
-                                    '/api/v1/driver-price-lists',
-                                    {
-                                        method: 'POST',
-                                        body: JSON.stringify({
-                                            driver_organization_assignment_id:
-                                                assignmentId,
-                                            code,
-                                            name:
-                                                name.value.trim(),
-                                            description:
-                                                null,
-                                            currency:
-                                                'CZK',
-                                            valid_from:
-                                                validFrom.value,
-                                            valid_until:
-                                                validUntil.value
-                                                || null,
-                                            change_reason:
-                                                'První nastavení ceníku přes webové MVP.',
-                                            items,
-                                        }),
-                                    }
-                                );
+                    if (
+                        validUntil.value !== ''
+                        && validUntil.value < validFrom.value
+                    ) {
+                        message.hidden = false;
+                        message.textContent =
+                            'Platnost do nesm\u00ed b\u00fdt p\u0159ed platnost\u00ed od.';
+                        return;
+                    }
 
-                            const created =
-                                getPayload(
-                                    createBody
-                                ) || {};
+                    const rateMap = new Map(
+                        rateInputs.map((input) => [
+                            input.dataset.priceListRate,
+                            input,
+                        ])
+                    );
+                    const items = canonicalCodes.map((code) => {
+                        const input = rateMap.get(code);
+                        const unitRate = input?.value?.trim() ?? '';
 
-                            createdPublicId =
-                                created?.public_id
-                                || null;
+                        return {
+                            code,
+                            description: itemDescriptions[code],
+                            unit_rate: unitRate,
+                        };
+                    });
 
-                            if (!createdPublicId) {
-                                throw new Error(
-                                    'API nevrátilo identifikátor vytvořeného ceníku.'
-                                );
+                    if (
+                        items.some(
+                            (item) =>
+                                item.unit_rate === ''
+                                || !Number.isFinite(
+                                    Number(item.unit_rate)
+                                )
+                                || Number(item.unit_rate) < 0
+                        )
+                    ) {
+                        message.hidden = false;
+                        message.textContent =
+                            'Vypl\u0148te v\u0161echny \u010dty\u0159i nez\u00e1porn\u00e9 sazby.';
+                        return;
+                    }
+
+                    let conditionalRules;
+
+                    try {
+                        conditionalRules =
+                            collectFinanceConditionalRules(createCard);
+                    }
+                    catch (error) {
+                        message.hidden = false;
+                        message.textContent = error.message;
+                        return;
+                    }
+
+                    const code = [
+                        'DPL',
+                        String(assignmentId).slice(-8),
+                        Date.now()
+                            .toString(36)
+                            .slice(-8)
+                            .toUpperCase(),
+                    ].join('-');
+
+                    save.disabled = true;
+                    message.hidden = false;
+                    message.textContent =
+                        'Ukl\u00e1d\u00e1m koncept, sazby a podm\u00edn\u011bn\u00e9 p\u0159\u00edplatky\u2026';
+
+                    try {
+                        const body = await api(
+                            '/api/v1/driver-price-lists',
+                            {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    driver_organization_assignment_id:
+                                        assignmentId,
+                                    code,
+                                    name: name.value.trim(),
+                                    description: null,
+                                    currency: currency.value,
+                                    valid_from: validFrom.value,
+                                    valid_until:
+                                        validUntil.value || null,
+                                    change_reason:
+                                        'Complete driver price-list draft created through Finance UI.',
+                                    items,
+                                    conditional_rules:
+                                        conditionalRules,
+                                }),
                             }
+                        );
+                        const created = getPayload(body) || {};
+                        const identifier = created?.code || code;
 
-                            phase =
-                                'schválení ceníku';
+                        message.textContent =
+                            `Koncept ${identifier} byl ulo\u017een jako draft v1 s ${conditionalRules.length} podm\u00edn\u011bn\u00fdmi p\u0159\u00edplatky. Schv\u00e1len\u00ed a aktivace nebyly provedeny.`;
+                        name.value = '';
+                        rateInputs.forEach((input) => {
+                            input.value = '';
+                        });
+                        resetFinanceConditionalRules(createCard);
+                        await loadFinanceDriverPriceLists();
+                    }
+                    catch (error) {
+                        message.textContent =
+                            `Koncept cen\u00edku \u0159idi\u010de se nepoda\u0159ilo ulo\u017eit: ${error.message}`;
+                    }
+                    finally {
+                        save.disabled = false;
+                    }
+                });
+            };
+            let financeExternalCarrierRelationships = [];
+            let financeExternalCarrierPriceLists = [];
 
-                            message.textContent =
-                                'Ceník uložen. Schvaluji první verzi…';
+            const renderFinanceExternalCarrierPriceListEditor = (
+                record,
+                createVersion = false
+            ) => {
+                const root = document.querySelector(
+                    '[data-external-carrier-price-list-root]'
+                );
+                const detail = root?.querySelector(
+                    '[data-external-carrier-price-list-detail]'
+                );
+                const template =
+                    ensureFinanceExternalCarrierPriceListCreateCard();
+                const current =
+                    financeUnifiedPriceListCurrentVersion(record);
+                const relationshipId = Number(
+                    record?.relationship_id
+                );
+                const publicId = String(record?.public_id || '');
 
-                            await api(
-                                `/api/v1/driver-price-lists/${encodeURIComponent(createdPublicId)}/versions/1/approve`,
-                                {
-                                    method: 'POST',
-                                    body: JSON.stringify({
-                                        expected_lock_version:
-                                            1,
-                                    }),
-                                }
-                            );
+                if (
+                    !root
+                    || !detail
+                    || !template
+                    || !Number.isInteger(relationshipId)
+                    || relationshipId < 1
+                    || publicId === ''
+                    || !current
+                    || (
+                        !createVersion
+                        && current?.status !== 'draft'
+                    )
+                    || (
+                        createVersion
+                        && current?.status === 'draft'
+                    )
+                ) {
+                    return;
+                }
 
-                            phase =
-                                'aktivace ceníku';
+                const editor = template.cloneNode(true);
 
-                            message.textContent =
-                                'Ceník schválen. Aktivuji ho…';
+                editor.hidden = false;
+                editor.classList.add('drayvia-price-admin-editor');
+                editor.removeAttribute(
+                    'data-external-carrier-price-list-create-card'
+                );
+                delete editor.dataset.externalCarrierCreateBound;
+                editor.dataset.externalCarrierPriceListEditor = '1';
+                editor.dataset.externalCarrierPriceListEditorMode =
+                    createVersion ? 'create-version' : 'update';
 
-                            await api(
-                                `/api/v1/driver-price-lists/${encodeURIComponent(createdPublicId)}/versions/1/activate`,
-                                {
-                                    method: 'POST',
-                                    body: JSON.stringify({
-                                        expected_lock_version:
-                                            1,
-                                    }),
-                                }
-                            );
+                Array.from(editor.querySelectorAll('[id]')).forEach(
+                    (element) => {
+                        const originalId = element.id;
+                        const editorId = originalId.replace(
+                            'external-carrier-price-list',
+                            'external-carrier-edit-price-list'
+                        );
+                        const label = editor.querySelector(
+                            `label[for="${originalId}"]`
+                        );
 
-                            message.textContent =
-                                'Ceník řidiče je uložený, schválený a aktivní.';
+                        element.id = editorId;
 
-                            rateInputs.forEach(
-                                (input) => {
-                                    if (
-                                        input.dataset
-                                            .driverPriceListRate
-                                        === 'undelivered_parcels'
-                                    ) {
-                                        input.value =
-                                            '0';
-                                    }
-                                    else {
-                                        input.value =
-                                            '';
-                                    }
-                                }
-                            );
-
-                            await loadFinanceDriverPriceLists();
-                        }
-                        catch (error) {
-                            if (createdPublicId) {
-                                message.textContent =
-                                    `Draft ceníku ${createdPublicId} byl vytvořen, ale selhalo ${phase}: ${error.message}`;
-                            }
-                            else {
-                                message.textContent =
-                                    `Ceník řidiče se nepodařilo uložit: ${error.message}`;
-                            }
-
-                            await loadFinanceDriverPriceLists();
-                        }
-                        finally {
-                            save.disabled = false;
+                        if (label) {
+                            label.htmlFor = editorId;
                         }
                     }
                 );
+
+                const title = editor.querySelector('h4');
+                const relationship = editor.querySelector(
+                    '[data-external-carrier-price-list-relationship]'
+                );
+                const name = editor.querySelector(
+                    '[data-external-carrier-price-list-name]'
+                );
+                const currency = editor.querySelector(
+                    '[data-external-carrier-price-list-currency]'
+                );
+                const validFrom = editor.querySelector(
+                    '[data-external-carrier-price-list-valid-from]'
+                );
+                const validUntil = editor.querySelector(
+                    '[data-external-carrier-price-list-valid-until]'
+                );
+                const save = editor.querySelector(
+                    '[data-external-carrier-price-list-save]'
+                );
+                const cancel = editor.querySelector(
+                    '[data-external-carrier-price-list-create-close]'
+                );
+                const message = editor.querySelector(
+                    '[data-external-carrier-price-list-message]'
+                );
+                const addRule = editor.querySelector(
+                    '[data-conditional-rule-add]'
+                );
+                const preset = editor.querySelector(
+                    '[data-conditional-rule-preset]'
+                );
+                const conditionalList = editor.querySelector(
+                    '[data-conditional-rule-list]'
+                );
+                const rateInputs = Array.from(
+                    editor.querySelectorAll('[data-price-list-rate]')
+                );
+
+                if (
+                    !relationship
+                    || !name
+                    || !currency
+                    || !validFrom
+                    || !validUntil
+                    || !save
+                    || !cancel
+                    || !message
+                    || !addRule
+                    || !preset
+                    || !conditionalList
+                    || rateInputs.length !== 4
+                ) {
+                    renderFinanceExternalCarrierPriceListDetail(record);
+                    financeBillingAdminNotice(
+                        detail,
+                        'Editor cenĂ­ku externĂ­ho dopravce se nepodaĹ™ilo pĹ™ipravit.',
+                        'error'
+                    );
+                    return;
+                }
+
+                const relationshipField = relationship.closest(
+                    '.drayvia-finance-field'
+                );
+
+                if (relationshipField) {
+                    relationshipField.hidden = true;
+                }
+
+                relationship.value = String(relationshipId);
+                relationship.disabled = true;
+                name.value = record?.name || '';
+                name.disabled = createVersion;
+                currency.value = record?.currency || 'CZK';
+                currency.disabled = true;
+                validFrom.value = createVersion
+                    ? ''
+                    : current?.valid_from || '';
+                validUntil.value = createVersion
+                    ? ''
+                    : current?.valid_until || '';
+                save.textContent = createVersion
+                    ? 'VytvoĹ™it koncept novĂ© verze'
+                    : 'UloĹľit zmÄ›ny konceptu';
+                cancel.textContent = 'ZruĹˇit Ăşpravy';
+
+                if (title) {
+                    title.textContent = createVersion
+                        ? `NovĂˇ verze: ${record?.name || ''}`
+                        : `Upravit koncept: ${record?.name || ''}`;
+                }
+
+                const notes = editor.querySelectorAll(
+                    '.drayvia-finance-note'
+                );
+                const note = notes.item(notes.length - 1);
+
+                if (note) {
+                    note.textContent = createVersion
+                        ? 'NovĂˇ verze vznikne jako koncept s kompletnĂ­ kopiĂ­ sazeb a pĹ™Ă­platkĹŻ. SchvĂˇlenĂ­ a aktivace zĹŻstanou samostatnĂ©.'
+                        : 'UloĹľenĂ­ atomicky nahradĂ­ celĂ˝ koncept vÄŤetnÄ› sazeb a pĹ™Ă­platkĹŻ. AktivnĂ­ ani historickĂ© verze nelze upravovat.';
+                }
+
+                const items = Array.isArray(current?.items)
+                    ? current.items
+                    : [];
+                const itemMap = new Map(
+                    items.map((item) => [item?.code, item])
+                );
+
+                rateInputs.forEach((input) => {
+                    const item = itemMap.get(
+                        input.dataset.priceListRate
+                    );
+
+                    input.value = item?.unit_rate ?? '';
+                });
+
+                conditionalList.replaceChildren();
+
+                const rules = Array.isArray(
+                    current?.conditional_rules
+                )
+                    ? current.conditional_rules
+                    : [];
+
+                rules.forEach((rule) => {
+                    hydrateFinanceConditionalRule(editor, rule);
+                });
+
+                updateFinanceConditionalEmptyState(editor);
+
+                addRule.addEventListener('click', () => {
+                    addFinanceConditionalRule(editor, preset.value);
+                });
+
+                cancel.addEventListener('click', () => {
+                    renderFinanceExternalCarrierPriceListDetail(record);
+                });
+
+                save.addEventListener('click', async () => {
+                    message.hidden = true;
+                    message.dataset.state = '';
+
+                    const normalizedName = name.value.trim();
+
+                    if (normalizedName === '') {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'DoplĹte nĂˇzev cenĂ­ku.';
+                        return;
+                    }
+
+                    if (validFrom.value === '') {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'DoplĹte datum platnosti od.';
+                        return;
+                    }
+
+                    if (
+                        validUntil.value !== ''
+                        && validUntil.value < validFrom.value
+                    ) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'Platnost do nesmĂ­ bĂ˝t pĹ™ed platnostĂ­ od.';
+                        return;
+                    }
+
+                    const itemDescriptions = {
+                        delivered_parcels:
+                            'DoruÄŤenĂˇ zĂˇsilka',
+                        redirected_parcels:
+                            'PĹ™esmÄ›rovanĂˇ zĂˇsilka',
+                        undelivered_parcels:
+                            'OdmĂ­tnuto zĂˇkaznĂ­kem',
+                        actual_km:
+                            'SkuteÄŤnĂ˝ kilometr',
+                    };
+                    const canonicalCodes = [
+                        'delivered_parcels',
+                        'redirected_parcels',
+                        'undelivered_parcels',
+                        'actual_km',
+                    ];
+                    const rateMap = new Map(
+                        rateInputs.map((input) => [
+                            input.dataset.priceListRate,
+                            input,
+                        ])
+                    );
+                    const updatedItems = canonicalCodes.map((code) => {
+                        const input = rateMap.get(code);
+                        const existing = itemMap.get(code);
+
+                        return {
+                            code,
+                            description:
+                                existing?.description
+                                || itemDescriptions[code],
+                            unit_rate:
+                                input?.value?.trim() || '',
+                        };
+                    });
+
+                    if (
+                        updatedItems.some(
+                            (item) =>
+                                item.unit_rate === ''
+                                || !Number.isFinite(
+                                    Number(item.unit_rate)
+                                )
+                                || Number(item.unit_rate) < 0
+                        )
+                    ) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            'VyplĹte vĹˇechny ÄŤtyĹ™i nezĂˇpornĂ© sazby.';
+                        return;
+                    }
+
+                    let conditionalRules;
+
+                    try {
+                        conditionalRules =
+                            collectFinanceConditionalRules(editor);
+                    }
+                    catch (error) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent = error.message;
+                        return;
+                    }
+
+                    const versionBase =
+                        `/api/v1/external-carriers/${
+                            encodeURIComponent(
+                                String(relationshipId)
+                            )
+                        }/price-lists/${
+                            encodeURIComponent(publicId)
+                        }/versions`;
+                    const endpoint = createVersion
+                        ? versionBase
+                        : `${versionBase}/${
+                            encodeURIComponent(
+                                String(current.version_number)
+                            )
+                        }`;
+                    const payload = createVersion
+                        ? {
+                            name: normalizedName,
+                            description:
+                                record?.description || null,
+                            currency: record?.currency || 'CZK',
+                            expected_current_version:
+                                Number(current.version_number),
+                            valid_from: validFrom.value,
+                            valid_until:
+                                validUntil.value || null,
+                            change_reason:
+                                'Complete external-carrier draft version created through Finance UI.',
+                            items: updatedItems,
+                            conditional_rules:
+                                conditionalRules,
+                        }
+                        : {
+                            name: normalizedName,
+                            description:
+                                record?.description || null,
+                            expected_lock_version:
+                                Number(current.lock_version),
+                            valid_from: validFrom.value,
+                            valid_until:
+                                validUntil.value || null,
+                            change_reason:
+                                'Complete external-carrier draft updated through Finance UI.',
+                            items: updatedItems,
+                            conditional_rules:
+                                conditionalRules,
+                        };
+
+                    save.disabled = true;
+                    cancel.disabled = true;
+                    message.hidden = false;
+                    message.dataset.state = '';
+                    message.textContent = createVersion
+                        ? 'VytvĂˇĹ™Ă­m koncept novĂ© verzeâ€¦'
+                        : 'UklĂˇdĂˇm celĂ˝ konceptâ€¦';
+
+                    try {
+                        await api(endpoint, {
+                            method: createVersion ? 'POST' : 'PUT',
+                            body: JSON.stringify(payload),
+                        });
+
+                        const nextRevision =
+                            Number(current.lock_version) + 1;
+
+                        await loadFinanceExternalCarrierPriceLists();
+
+                        const updatedRecord =
+                            financeExternalCarrierPriceLists.find(
+                                (priceList) =>
+                                    priceList?.public_id === publicId
+                                    && Number(
+                                        priceList?.relationship_id
+                                    ) === relationshipId
+                            ) || {
+                                ...record,
+                                name: normalizedName,
+                            };
+
+                        renderFinanceExternalCarrierPriceListDetail(
+                            updatedRecord
+                        );
+                        financeBillingAdminNotice(
+                            detail,
+                            createVersion
+                                ? 'Koncept novĂ© verze byl vytvoĹ™en.'
+                                : `Koncept byl uloĹľen. AktuĂˇlnĂ­ revize: ${nextRevision}.`
+                        );
+                    }
+                    catch (error) {
+                        message.hidden = false;
+                        message.dataset.state = 'error';
+                        message.textContent =
+                            `Koncept se nepodaĹ™ilo uloĹľit: ${error.message}`;
+                    }
+                    finally {
+                        save.disabled = false;
+                        cancel.disabled = false;
+                    }
+                });
+
+                detail.replaceChildren(editor);
+                detail.hidden = false;
+                detail.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                });
             };
+
+            const runFinanceExternalCarrierPriceListLifecycle = async (
+                record,
+                current,
+                action,
+                validUntil = null
+            ) => {
+                const root = document.querySelector(
+                    '[data-external-carrier-price-list-root]'
+                );
+                const detail = root?.querySelector(
+                    '[data-external-carrier-price-list-detail]'
+                );
+                const relationshipId = Number(
+                    record?.relationship_id
+                );
+                const publicId = String(record?.public_id || '');
+                const versionNumber = Number(
+                    current?.version_number
+                );
+                const lockVersion = Number(current?.lock_version);
+                const contracts = {
+                    approve: {
+                        requiredStatus: 'draft',
+                        path: 'approve',
+                        question:
+                            'Opravdu chcete schvĂˇlit tento koncept? Po schvĂˇlenĂ­ jiĹľ nepĹŻjde upravovat.',
+                        pending: 'Schvaluji konceptâ€¦',
+                        success: 'Koncept byl schvĂˇlen.',
+                    },
+                    activate: {
+                        requiredStatus: 'approved',
+                        path: 'activate',
+                        question:
+                            'Opravdu chcete tuto verzi aktivovat? PĹ™Ă­padnĂˇ pĹ™edchozĂ­ aktivnĂ­ verze bude nahrazena.',
+                        pending: 'Aktivuji schvĂˇlenou verziâ€¦',
+                        success: 'Verze byla aktivovĂˇna.',
+                    },
+                    expire: {
+                        requiredStatus: 'active',
+                        path: 'expire',
+                        question:
+                            'Opravdu chcete ukonÄŤit platnost aktivnĂ­ verze k vybranĂ©mu datu?',
+                        pending: 'UkonÄŤuji platnost verzeâ€¦',
+                        success: 'Platnost verze byla ukonÄŤena.',
+                    },
+                };
+                const contract = contracts[action];
+
+                if (
+                    !detail
+                    || !Number.isInteger(relationshipId)
+                    || relationshipId < 1
+                    || publicId === ''
+                    || !Number.isInteger(versionNumber)
+                    || versionNumber < 1
+                    || !Number.isInteger(lockVersion)
+                    || lockVersion < 1
+                    || !contract
+                    || current?.status !== contract.requiredStatus
+                ) {
+                    return;
+                }
+
+                if (
+                    action === 'expire'
+                    && (
+                        typeof validUntil !== 'string'
+                        || validUntil === ''
+                    )
+                ) {
+                    financeBillingAdminNotice(
+                        detail,
+                        'Vyberte datum ukonÄŤenĂ­ platnosti.',
+                        'error'
+                    );
+                    return;
+                }
+
+                if (!window.confirm(contract.question)) {
+                    return;
+                }
+
+                const payload = {
+                    expected_lock_version: lockVersion,
+                };
+
+                if (action === 'expire') {
+                    payload.valid_until = validUntil;
+                }
+
+                financeBillingAdminNotice(detail, contract.pending);
+
+                try {
+                    await api(
+                        `/api/v1/external-carriers/${
+                            encodeURIComponent(
+                                String(relationshipId)
+                            )
+                        }/price-lists/${
+                            encodeURIComponent(publicId)
+                        }/versions/${
+                            encodeURIComponent(
+                                String(versionNumber)
+                            )
+                        }/${contract.path}`,
+                        {
+                            method: 'POST',
+                            body: JSON.stringify(payload),
+                        }
+                    );
+
+                    await loadFinanceExternalCarrierPriceLists();
+
+                    const updatedRecord =
+                        financeExternalCarrierPriceLists.find(
+                            (priceList) =>
+                                priceList?.public_id === publicId
+                                && Number(
+                                    priceList?.relationship_id
+                                ) === relationshipId
+                        ) || record;
+
+                    renderFinanceExternalCarrierPriceListDetail(
+                        updatedRecord
+                    );
+                    financeBillingAdminNotice(
+                        detail,
+                        contract.success
+                    );
+                }
+                catch (error) {
+                    financeBillingAdminNotice(
+                        detail,
+                        `ZmÄ›na stavu se nepodaĹ™ila: ${error.message}`,
+                        'error'
+                    );
+                }
+            };
+
+            const renderFinanceExternalCarrierPriceListDetail = (record) => {
+                const root = document.querySelector(
+                    '[data-external-carrier-price-list-root]'
+                );
+                const detail = root?.querySelector(
+                    '[data-external-carrier-price-list-detail]'
+                );
+
+                if (!detail) {
+                    return;
+                }
+
+                const current =
+                    financeUnifiedPriceListCurrentVersion(record);
+                const versions = Array.isArray(record?.versions)
+                    ? record.versions
+                    : [];
+                const items = Array.isArray(current?.items)
+                    ? current.items
+                    : [];
+                const rules = Array.isArray(
+                    current?.conditional_rules
+                )
+                    ? current.conditional_rules
+                    : [];
+                const itemLabels = {
+                    delivered_parcels: 'DoruÄŤenĂˇ zĂˇsilka',
+                    redirected_parcels: 'PĹ™esmÄ›rovanĂˇ zĂˇsilka',
+                    undelivered_parcels: 'OdmĂ­tnuto zĂˇkaznĂ­kem',
+                    actual_km: 'SkuteÄŤnĂ˝ kilometr',
+                };
+                const sourceLabels = {
+                    delivered_parcels: 'DoruÄŤeno',
+                    redirected_parcels: 'PĹ™esmÄ›rovĂˇno',
+                    customer_rejected_parcels:
+                        'OdmĂ­tnuto zĂˇkaznĂ­kem',
+                    loaded_parcels: 'NaloĹľeno',
+                    actual_km: 'SkuteÄŤnĂ© km',
+                };
+
+                detail.replaceChildren();
+                detail.hidden = false;
+
+                const header = document.createElement('div');
+                header.className = 'drayvia-price-admin-detail-header';
+
+                const heading = document.createElement('div');
+                const title = document.createElement('h4');
+                const meta = document.createElement('p');
+                const actions = document.createElement('div');
+                const close = document.createElement('button');
+
+                actions.className = 'drayvia-price-admin-actions';
+                title.textContent = record?.name || 'Detail cenĂ­ku';
+                meta.textContent = [
+                    record?.external_carrier?.name || 'â€”',
+                    record?.code || 'â€”',
+                    financeCustomerStatus(current?.status || record?.status),
+                    financeBillingPriceListPeriod(current),
+                    `Revize ${current?.lock_version ?? 'â€”'}`,
+                ].join(' Â· ');
+
+                close.type = 'button';
+                close.className = 'drayvia-price-admin-secondary';
+                close.textContent = 'ZavĹ™Ă­t detail';
+                close.addEventListener('click', () => {
+                    detail.hidden = true;
+                    detail.replaceChildren();
+                });
+
+                if (current?.status === 'draft') {
+                    const edit = document.createElement('button');
+                    const approve = document.createElement('button');
+
+                    edit.type = 'button';
+                    edit.className = 'drayvia-price-admin-primary';
+                    edit.textContent = 'Upravit koncept';
+                    edit.addEventListener('click', () => {
+                        renderFinanceExternalCarrierPriceListEditor(
+                            record
+                        );
+                    });
+
+                    approve.type = 'button';
+                    approve.className =
+                        'drayvia-price-admin-secondary';
+                    approve.textContent = 'SchvĂˇlit';
+                    approve.addEventListener('click', () => {
+                        runFinanceExternalCarrierPriceListLifecycle(
+                            record,
+                            current,
+                            'approve'
+                        );
+                    });
+
+                    actions.append(edit, approve);
+                }
+                else if (current?.status === 'approved') {
+                    const activate = document.createElement('button');
+
+                    activate.type = 'button';
+                    activate.className = 'drayvia-price-admin-primary';
+                    activate.textContent = 'Aktivovat';
+                    activate.addEventListener('click', () => {
+                        runFinanceExternalCarrierPriceListLifecycle(
+                            record,
+                            current,
+                            'activate'
+                        );
+                    });
+
+                    actions.appendChild(activate);
+                }
+                else if (current?.status === 'active') {
+                    const expiration = document.createElement('input');
+                    const expire = document.createElement('button');
+                    const now = new Date();
+                    const today = new Date(
+                        now.getTime()
+                        - now.getTimezoneOffset() * 60000
+                    )
+                        .toISOString()
+                        .slice(0, 10);
+
+                    expiration.type = 'date';
+                    expiration.className = 'drayvia-finance-input';
+                    expiration.max = today;
+                    expiration.value = today;
+                    expiration.setAttribute(
+                        'aria-label',
+                        'Datum ukonÄŤenĂ­ platnosti'
+                    );
+                    expiration.title =
+                        'Datum ukonÄŤenĂ­ platnosti';
+
+                    expire.type = 'button';
+                    expire.className =
+                        'drayvia-price-admin-secondary';
+                    expire.textContent = 'UkonÄŤit platnost';
+                    expire.addEventListener('click', () => {
+                        runFinanceExternalCarrierPriceListLifecycle(
+                            record,
+                            current,
+                            'expire',
+                            expiration.value
+                        );
+                    });
+
+                    actions.append(expiration, expire);
+                }
+
+                if (
+                    current?.status === 'active'
+                    || current?.status === 'expired'
+                ) {
+                    const newVersion = document.createElement('button');
+
+                    newVersion.type = 'button';
+                    newVersion.className = 'drayvia-price-admin-primary';
+                    newVersion.textContent = 'NovĂˇ verze';
+                    newVersion.addEventListener('click', () => {
+                        renderFinanceExternalCarrierPriceListEditor(
+                            record,
+                            true
+                        );
+                    });
+                    actions.appendChild(newVersion);
+                }
+
+                actions.appendChild(close);
+                heading.append(title, meta);
+                header.append(heading, actions);
+
+                const ratesTitle = document.createElement('h4');
+                ratesTitle.textContent = 'ZĂˇkladnĂ­ sazby';
+
+                const ratesTable = document.createElement('table');
+                ratesTable.className = 'drayvia-price-admin-table';
+                const ratesHead = document.createElement('thead');
+                const ratesHeadRow = document.createElement('tr');
+
+                ['PoloĹľka', 'Jednotka', 'Sazba'].forEach((label) => {
+                    const cell = document.createElement('th');
+                    cell.textContent = label;
+                    ratesHeadRow.appendChild(cell);
+                });
+                ratesHead.appendChild(ratesHeadRow);
+
+                const ratesBody = document.createElement('tbody');
+
+                if (items.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+                    cell.colSpan = 3;
+                    cell.className = 'drayvia-price-admin-empty';
+                    cell.textContent = 'Verze nemĂˇ evidovanĂ© sazby.';
+                    row.appendChild(cell);
+                    ratesBody.appendChild(row);
+                }
+                else {
+                    items.forEach((item) => {
+                        const row = document.createElement('tr');
+                        const amount = Number(item?.unit_rate);
+                        const unit = item?.unit
+                            || (item?.code === 'actual_km'
+                                ? 'km'
+                                : 'zĂˇsilka');
+                        const rate = Number.isFinite(amount)
+                            ? `${amount.toLocaleString('cs-CZ', {
+                                maximumFractionDigits: 4,
+                            })} ${record?.currency || 'CZK'}`
+                            : 'â€”';
+
+                        [
+                            itemLabels[item?.code]
+                                || item?.description
+                                || item?.code
+                                || 'â€”',
+                            unit,
+                            rate,
+                        ].forEach((value) => {
+                            const cell = document.createElement('td');
+                            cell.textContent = String(value);
+                            row.appendChild(cell);
+                        });
+
+                        ratesBody.appendChild(row);
+                    });
+                }
+
+                ratesTable.append(ratesHead, ratesBody);
+
+                const rulesTitle = document.createElement('h4');
+                rulesTitle.textContent = 'PodmĂ­nÄ›nĂ© pĹ™Ă­platky';
+
+                const rulesTable = document.createElement('table');
+                rulesTable.className = 'drayvia-price-admin-table';
+                const rulesHead = document.createElement('thead');
+                const rulesHeadRow = document.createElement('tr');
+
+                [
+                    'PĹ™Ă­platek',
+                    'Vzorec',
+                    'VyhodnocenĂ­',
+                    'ZpĹŻsob',
+                    'PĂˇsma a ceny',
+                ].forEach((label) => {
+                    const cell = document.createElement('th');
+                    cell.textContent = label;
+                    rulesHeadRow.appendChild(cell);
+                });
+                rulesHead.appendChild(rulesHeadRow);
+
+                const rulesBody = document.createElement('tbody');
+
+                if (rules.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+                    cell.colSpan = 5;
+                    cell.className = 'drayvia-price-admin-empty';
+                    cell.textContent =
+                        'Verze nemĂˇ podmĂ­nÄ›nĂ© pĹ™Ă­platky.';
+                    row.appendChild(cell);
+                    rulesBody.appendChild(row);
+                }
+                else {
+                    rules.forEach((rule) => {
+                        const row = document.createElement('tr');
+                        const numerators = Array.isArray(
+                            rule?.metric_numerator_sources
+                        )
+                            ? rule.metric_numerator_sources
+                            : [];
+                        const denominators = Array.isArray(
+                            rule?.metric_denominator_sources
+                        )
+                            ? rule.metric_denominator_sources
+                            : [];
+                        const formula = `(${numerators.map(
+                            (source) => sourceLabels[source] || source
+                        ).join(' + ') || 'â€”'}) / (${denominators.map(
+                            (source) => sourceLabels[source] || source
+                        ).join(' + ') || 'â€”'}) Ă— 100 %`;
+                        const bands = Array.isArray(rule?.bands)
+                            ? rule.bands
+                            : [];
+                        const bandsText = bands.length === 0
+                            ? 'â€”'
+                            : bands.map((band) => {
+                                const minimum =
+                                    band?.minimum_value ?? 'â’âž';
+                                const maximum =
+                                    band?.maximum_value ?? '+âž';
+                                const left = band?.minimum_inclusive
+                                    ? 'âź¨'
+                                    : '(';
+                                const right = band?.maximum_inclusive
+                                    ? 'âź©'
+                                    : ')';
+
+                                return `${left}${minimum}; ${maximum}${right} â†’ ${band?.adjustment_value ?? 'â€”'} ${record?.currency || 'CZK'}`;
+                            }).join('; ');
+
+                        [
+                            rule?.name || rule?.code || 'â€”',
+                            formula,
+                            rule?.evaluation_scope || 'â€”',
+                            rule?.reward_method || 'â€”',
+                            bandsText,
+                        ].forEach((value) => {
+                            const cell = document.createElement('td');
+                            cell.textContent = String(value);
+                            row.appendChild(cell);
+                        });
+
+                        rulesBody.appendChild(row);
+                    });
+                }
+
+                rulesTable.append(rulesHead, rulesBody);
+
+                const versionsTitle = document.createElement('h4');
+                versionsTitle.textContent = 'Historie verzĂ­';
+
+                const versionsTable = document.createElement('table');
+                versionsTable.className = 'drayvia-price-admin-table';
+                const versionsHead = document.createElement('thead');
+                const versionsHeadRow = document.createElement('tr');
+
+                ['Verze', 'Stav', 'Platnost', 'Revize'].forEach(
+                    (label) => {
+                        const cell = document.createElement('th');
+                        cell.textContent = label;
+                        versionsHeadRow.appendChild(cell);
+                    }
+                );
+                versionsHead.appendChild(versionsHeadRow);
+
+                const versionsBody = document.createElement('tbody');
+
+                if (versions.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+                    cell.colSpan = 4;
+                    cell.className = 'drayvia-price-admin-empty';
+                    cell.textContent =
+                        'CenĂ­k nemĂˇ evidovanou verzi.';
+                    row.appendChild(cell);
+                    versionsBody.appendChild(row);
+                }
+                else {
+                    versions.forEach((version) => {
+                        const row = document.createElement('tr');
+                        const period = `${financeCustomerDate(
+                            version?.valid_from
+                        )} â€“ ${financeCustomerDate(
+                            version?.valid_until
+                        )}`;
+
+                        [
+                            version?.version_number ?? 'â€”',
+                            financeCustomerStatus(version?.status),
+                            period,
+                            version?.lock_version ?? 'â€”',
+                        ].forEach((value) => {
+                            const cell = document.createElement('td');
+                            cell.textContent = String(value);
+                            row.appendChild(cell);
+                        });
+
+                        versionsBody.appendChild(row);
+                    });
+                }
+
+                versionsTable.append(versionsHead, versionsBody);
+                detail.append(
+                    header,
+                    ratesTitle,
+                    ratesTable,
+                    rulesTitle,
+                    rulesTable,
+                    versionsTitle,
+                    versionsTable
+                );
+            };
+
+            const renderFinanceExternalCarrierPriceListIndex = () => {
+                const root = document.querySelector(
+                    '[data-external-carrier-price-list-root]'
+                );
+                const list = root?.querySelector(
+                    '[data-external-carrier-price-list-list]'
+                );
+
+                if (!root || !list) {
+                    return;
+                }
+
+                updateFinanceUnifiedPriceListCounts(
+                    root,
+                    financeExternalCarrierPriceLists
+                );
+
+                const selectedFilter =
+                    root.dataset.unifiedPriceListFilter || 'all';
+                const records = financeExternalCarrierPriceLists.filter(
+                    (record) => selectedFilter === 'all'
+                        || financeUnifiedPriceListCategory(record)
+                            === selectedFilter
+                );
+
+                list.replaceChildren();
+
+                if (records.length === 0) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+
+                    cell.colSpan = 6;
+                    cell.className = 'drayvia-price-admin-empty';
+                    cell.textContent =
+                        financeExternalCarrierPriceLists.length === 0
+                            ? 'Pro extern\u00ed dopravce zat\u00edm nen\u00ed evidov\u00e1n \u017e\u00e1dn\u00fd cen\u00edk.'
+                            : 'Vybran\u00e9mu filtru neodpov\u00edd\u00e1 \u017e\u00e1dn\u00fd cen\u00edk.';
+
+                    row.appendChild(cell);
+                    list.appendChild(row);
+                    return;
+                }
+
+                records.forEach((record) => {
+                    const row = document.createElement('tr');
+
+                    [
+                        record?.external_carrier?.name || '\u2014',
+                        record?.name || '\u2014',
+                        financeUnifiedPriceListPeriod(record),
+                        financeCustomerStatus(record?.status),
+                        record?.current_version ?? '\u2014',
+                    ].forEach((value) => {
+                        const cell = document.createElement('td');
+                        cell.textContent = String(value);
+                        row.appendChild(cell);
+                    });
+
+                    const actionCell = document.createElement('td');
+                    const detailButton = document.createElement('button');
+
+                    detailButton.type = 'button';
+                    detailButton.className = 'drayvia-price-admin-secondary';
+                    detailButton.textContent = 'Otev\u0159\u00edt';
+                    detailButton.addEventListener('click', () => {
+                        renderFinanceExternalCarrierPriceListDetail(record);
+                    });
+
+                    actionCell.appendChild(detailButton);
+                    row.appendChild(actionCell);
+                    list.appendChild(row);
+                });
+            };
+
+            const loadFinanceExternalCarrierPriceLists = async () => {
+                const root = document.querySelector(
+                    '[data-external-carrier-price-list-root]'
+                );
+                const list = root?.querySelector(
+                    '[data-external-carrier-price-list-list]'
+                );
+                const endpoint = root?.dataset
+                    .externalCarrierIndexEndpoint;
+
+                if (!root || !list || !endpoint) {
+                    return;
+                }
+
+                list.replaceChildren();
+
+                const loadingRow = document.createElement('tr');
+                const loadingCell = document.createElement('td');
+
+                loadingCell.colSpan = 6;
+                loadingCell.textContent =
+                    'Na\u010d\u00edt\u00e1m cen\u00edky extern\u00edch dopravc\u016f\u2026';
+                loadingRow.appendChild(loadingCell);
+                list.appendChild(loadingRow);
+
+                try {
+                    const body = await api(endpoint);
+                    const relationships = getPayload(body);
+                    const records = Array.isArray(relationships)
+                        ? relationships
+                        : [];
+
+                    financeExternalCarrierRelationships = records;
+                    populateFinanceExternalCarrierPriceListSelect();
+
+                    financeExternalCarrierPriceLists = records.flatMap(
+                        (relationship) => {
+                            const priceLists = Array.isArray(
+                                relationship?.price_lists
+                            )
+                                ? relationship.price_lists
+                                : [];
+
+                            return priceLists.map((priceList) => ({
+                                ...priceList,
+                                relationship_id:
+                                    relationship?.relationship_id,
+                                external_carrier:
+                                    relationship?.external_carrier || null,
+                            }));
+                        }
+                    );
+
+                    financeExternalCarrierPriceLists.sort(
+                        (left, right) => String(
+                            left?.external_carrier?.name || ''
+                        ).localeCompare(
+                            String(right?.external_carrier?.name || ''),
+                            'cs'
+                        ) || String(left?.name || '').localeCompare(
+                            String(right?.name || ''),
+                            'cs'
+                        )
+                    );
+
+                    renderFinanceExternalCarrierPriceListIndex();
+                }
+                catch (error) {
+                    financeExternalCarrierRelationships = [];
+                    financeExternalCarrierPriceLists = [];
+                    populateFinanceExternalCarrierPriceListSelect();
+                    updateFinanceUnifiedPriceListCounts(root, []);
+                    list.replaceChildren();
+
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+
+                    cell.colSpan = 6;
+                    cell.className = 'drayvia-price-admin-empty';
+                    cell.textContent =
+                        `Cen\u00edky extern\u00edch dopravc\u016f se nepoda\u0159ilo na\u010d\u00edst: ${error.message}`;
+
+                    row.appendChild(cell);
+                    list.appendChild(row);
+                }
+            };
+
+            const ensureFinanceExternalCarrierPriceListCreateCard = () => {
+                const root = document.querySelector(
+                    '[data-external-carrier-price-list-root]'
+                );
+                const panel = root?.closest(
+                    '[data-price-list-panel="external-carriers"]'
+                );
+
+                if (!root || !panel) {
+                    return null;
+                }
+
+                const existing = panel.querySelector(
+                    '[data-external-carrier-price-list-create-card]'
+                );
+
+                if (existing) {
+                    return existing;
+                }
+
+                const template = document.querySelector(
+                    '[data-billing-price-list-create-card]'
+                );
+
+                if (!template) {
+                    return null;
+                }
+
+                const createCard = template.cloneNode(true);
+                const attributes = {
+                    'data-billing-price-list-create-close':
+                        'data-external-carrier-price-list-create-close',
+                    'data-billing-price-list-customer':
+                        'data-external-carrier-price-list-relationship',
+                    'data-billing-price-list-name':
+                        'data-external-carrier-price-list-name',
+                    'data-billing-price-list-currency':
+                        'data-external-carrier-price-list-currency',
+                    'data-billing-price-list-valid-from':
+                        'data-external-carrier-price-list-valid-from',
+                    'data-billing-price-list-valid-until':
+                        'data-external-carrier-price-list-valid-until',
+                    'data-billing-price-list-save':
+                        'data-external-carrier-price-list-save',
+                    'data-billing-price-list-message':
+                        'data-external-carrier-price-list-message',
+                };
+
+                createCard.removeAttribute(
+                    'data-billing-price-list-create-card'
+                );
+                createCard.setAttribute(
+                    'data-external-carrier-price-list-create-card',
+                    ''
+                );
+                createCard.hidden = true;
+
+                Object.entries(attributes).forEach(([
+                    source,
+                    target,
+                ]) => {
+                    const element = createCard.querySelector(
+                        `[${source}]`
+                    );
+
+                    if (element) {
+                        element.removeAttribute(source);
+                        element.setAttribute(target, '');
+                    }
+                });
+
+                Array.from(
+                    createCard.querySelectorAll('[id]')
+                ).forEach((element) => {
+                    const originalId = element.id;
+                    const externalId = originalId.replace(
+                        'billing-price-list',
+                        'external-carrier-price-list'
+                    );
+                    const label = createCard.querySelector(
+                        `label[for="${originalId}"]`
+                    );
+
+                    element.id = externalId;
+
+                    if (label) {
+                        label.htmlFor = externalId;
+                    }
+                });
+
+                const heading = createCard.querySelector('h4');
+                const carrierSelect = createCard.querySelector(
+                    '[data-external-carrier-price-list-relationship]'
+                );
+                const carrierLabel = carrierSelect
+                    ?.closest('.drayvia-finance-field')
+                    ?.querySelector('label');
+                const conditionalHeading = createCard.querySelector(
+                    '[data-conditional-rule-root] h5'
+                );
+                const save = createCard.querySelector(
+                    '[data-external-carrier-price-list-save]'
+                );
+                const note = createCard.querySelector(
+                    '.drayvia-finance-note:not([data-external-carrier-price-list-message])'
+                );
+
+                if (heading) {
+                    heading.textContent =
+                        'Nov\u00fd cen\u00edk extern\u00edho dopravce';
+                }
+
+                if (carrierLabel) {
+                    carrierLabel.textContent = 'Extern\u00ed dopravce';
+                }
+
+                if (conditionalHeading) {
+                    conditionalHeading.textContent =
+                        'P\u0159\u00edplatky extern\u00edho dopravce';
+                }
+
+                if (save) {
+                    save.textContent =
+                        'Ulo\u017eit cen\u00edk extern\u00edho dopravce';
+                }
+
+                if (note) {
+                    note.textContent =
+                        'Cen\u00edk se ulo\u017e\u00ed jako kompletn\u00ed draft v1. Schv\u00e1len\u00ed a aktivace z\u016fst\u00e1vaj\u00ed samostatn\u00e9 kroky.';
+                }
+
+                root.insertAdjacentElement('afterend', createCard);
+
+                return createCard;
+            };
+
+            const populateFinanceExternalCarrierPriceListSelect = () => {
+                const createCard =
+                    ensureFinanceExternalCarrierPriceListCreateCard();
+                const select = createCard?.querySelector(
+                    '[data-external-carrier-price-list-relationship]'
+                );
+
+                if (!select) {
+                    return;
+                }
+
+                const selected = select.value;
+                const placeholder = document.createElement('option');
+
+                placeholder.value = '';
+                placeholder.textContent =
+                    'Vyberte extern\u00edho dopravce';
+                select.replaceChildren(placeholder);
+
+                financeExternalCarrierRelationships
+                    .slice()
+                    .sort((left, right) => String(
+                        left?.external_carrier?.name || ''
+                    ).localeCompare(
+                        String(right?.external_carrier?.name || ''),
+                        'cs'
+                    ))
+                    .forEach((relationship) => {
+                        const relationshipId = Number(
+                            relationship?.relationship_id
+                        );
+
+                        if (!Number.isInteger(relationshipId)) {
+                            return;
+                        }
+
+                        const option = document.createElement('option');
+
+                        option.value = String(relationshipId);
+                        option.textContent =
+                            relationship?.external_carrier?.name
+                            || `Extern\u00ed dopravce ${relationshipId}`;
+                        select.appendChild(option);
+                    });
+
+                if (
+                    Array.from(select.options).some(
+                        (option) => option.value === selected
+                    )
+                ) {
+                    select.value = selected;
+                }
+            };
+
+            const bindFinanceExternalCarrierPriceListCreate = () => {
+                const root = document.querySelector(
+                    '[data-external-carrier-price-list-root]'
+                );
+                const createCard =
+                    ensureFinanceExternalCarrierPriceListCreateCard();
+                const relationship = createCard?.querySelector(
+                    '[data-external-carrier-price-list-relationship]'
+                );
+                const name = createCard?.querySelector(
+                    '[data-external-carrier-price-list-name]'
+                );
+                const currency = createCard?.querySelector(
+                    '[data-external-carrier-price-list-currency]'
+                );
+                const validFrom = createCard?.querySelector(
+                    '[data-external-carrier-price-list-valid-from]'
+                );
+                const validUntil = createCard?.querySelector(
+                    '[data-external-carrier-price-list-valid-until]'
+                );
+                const save = createCard?.querySelector(
+                    '[data-external-carrier-price-list-save]'
+                );
+                const message = createCard?.querySelector(
+                    '[data-external-carrier-price-list-message]'
+                );
+                const addRule = createCard?.querySelector(
+                    '[data-conditional-rule-add]'
+                );
+                const preset = createCard?.querySelector(
+                    '[data-conditional-rule-preset]'
+                );
+                const rateInputs = createCard
+                    ? Array.from(
+                        createCard.querySelectorAll(
+                            '[data-price-list-rate]'
+                        )
+                    )
+                    : [];
+
+                if (
+                    !root
+                    || !createCard
+                    || !relationship
+                    || !name
+                    || !currency
+                    || !validFrom
+                    || !validUntil
+                    || !save
+                    || !message
+                    || !addRule
+                    || !preset
+                    || rateInputs.length !== 4
+                    || createCard.dataset.externalCarrierCreateBound
+                        === '1'
+                ) {
+                    return;
+                }
+
+                const itemDescriptions = {
+                    delivered_parcels:
+                        'Doru\u010den\u00e1 z\u00e1silka',
+                    redirected_parcels:
+                        'P\u0159esm\u011brovan\u00e1 z\u00e1silka',
+                    undelivered_parcels:
+                        'Odm\u00edtnuto z\u00e1kazn\u00edkem',
+                    actual_km:
+                        'Skute\u010dn\u00fd kilometr',
+                };
+                const canonicalCodes = [
+                    'delivered_parcels',
+                    'redirected_parcels',
+                    'undelivered_parcels',
+                    'actual_km',
+                ];
+
+                createCard.dataset.externalCarrierCreateBound = '1';
+                resetFinanceConditionalRules(createCard);
+                populateFinanceExternalCarrierPriceListSelect();
+
+                addRule.addEventListener('click', () => {
+                    addFinanceConditionalRule(
+                        createCard,
+                        preset.value
+                    );
+                });
+
+                root.querySelector(
+                    '[data-external-carrier-price-list-create-open]'
+                )?.addEventListener('click', () => {
+                    populateFinanceExternalCarrierPriceListSelect();
+                    root.hidden = true;
+                    createCard.hidden = false;
+                });
+
+                createCard.querySelector(
+                    '[data-external-carrier-price-list-create-close]'
+                )?.addEventListener('click', () => {
+                    createCard.hidden = true;
+                    root.hidden = false;
+                });
+
+                save.addEventListener('click', async () => {
+                    const relationshipId = Number(relationship.value);
+
+                    if (
+                        !Number.isInteger(relationshipId)
+                        || relationshipId < 1
+                    ) {
+                        message.hidden = false;
+                        message.textContent =
+                            'Vyberte extern\u00edho dopravce.';
+                        return;
+                    }
+
+                    if (
+                        name.value.trim() === ''
+                        || validFrom.value === ''
+                    ) {
+                        message.hidden = false;
+                        message.textContent =
+                            'Vypl\u0148te n\u00e1zev cen\u00edku a platnost od.';
+                        return;
+                    }
+
+                    if (
+                        validUntil.value !== ''
+                        && validUntil.value < validFrom.value
+                    ) {
+                        message.hidden = false;
+                        message.textContent =
+                            'Platnost do nesm\u00ed b\u00fdt p\u0159ed platnost\u00ed od.';
+                        return;
+                    }
+
+                    const rateMap = new Map(
+                        rateInputs.map((input) => [
+                            input.dataset.priceListRate,
+                            input,
+                        ])
+                    );
+                    const items = canonicalCodes.map((code) => {
+                        const input = rateMap.get(code);
+                        const unitRate = input?.value?.trim() ?? '';
+
+                        return {
+                            code,
+                            description: itemDescriptions[code],
+                            unit_rate: unitRate,
+                        };
+                    });
+
+                    if (
+                        items.some(
+                            (item) =>
+                                item.unit_rate === ''
+                                || !Number.isFinite(
+                                    Number(item.unit_rate)
+                                )
+                                || Number(item.unit_rate) < 0
+                        )
+                    ) {
+                        message.hidden = false;
+                        message.textContent =
+                            'Vypl\u0148te v\u0161echny \u010dty\u0159i nez\u00e1porn\u00e9 sazby.';
+                        return;
+                    }
+
+                    let conditionalRules;
+
+                    try {
+                        conditionalRules =
+                            collectFinanceConditionalRules(createCard);
+                    }
+                    catch (error) {
+                        message.hidden = false;
+                        message.textContent = error.message;
+                        return;
+                    }
+
+                    const endpoint = root.dataset
+                        .externalCarrierStoreEndpoint
+                        .replace(
+                            '{relationship}',
+                            encodeURIComponent(String(relationshipId))
+                        );
+
+                    save.disabled = true;
+                    message.hidden = false;
+                    message.textContent =
+                        'Ukl\u00e1d\u00e1m cen\u00edk, sazby a podm\u00edn\u011bn\u00e9 p\u0159\u00edplatky\u2026';
+
+                    try {
+                        await api(endpoint, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                name: name.value.trim(),
+                                currency: currency.value,
+                                valid_from: validFrom.value,
+                                valid_until:
+                                    validUntil.value || null,
+                                change_reason:
+                                    'Customer-managed external-carrier price list created through Finance UI.',
+                                items,
+                                conditional_rules:
+                                    conditionalRules,
+                            }),
+                        });
+
+                        message.textContent =
+                            `Cen\u00edk extern\u00edho dopravce byl ulo\u017een jako draft v1 s ${conditionalRules.length} podm\u00edn\u011bn\u00fdmi p\u0159\u00edplatky.`;
+                        name.value = '';
+                        rateInputs.forEach((input) => {
+                            input.value = '';
+                        });
+                        resetFinanceConditionalRules(createCard);
+                        await loadFinanceExternalCarrierPriceLists();
+                    }
+                    catch (error) {
+                        message.textContent =
+                            `Cen\u00edk extern\u00edho dopravce se nepoda\u0159ilo ulo\u017eit: ${error.message}`;
+                    }
+                    finally {
+                        save.disabled = false;
+                    }
+                });
+            };
+
+            const bindFinanceExternalCarrierPriceListAdministration = () => {
+                const root = document.querySelector(
+                    '[data-external-carrier-price-list-root]'
+                );
+
+                if (
+                    !root
+                    || root.dataset.externalCarrierPriceListBound === '1'
+                ) {
+                    return;
+                }
+
+                root.dataset.externalCarrierPriceListBound = '1';
+
+                root.querySelectorAll(
+                    '[data-unified-price-list-filter]'
+                ).forEach((button) => {
+                    button.addEventListener('click', () => {
+                        root.dataset.unifiedPriceListFilter =
+                            button.dataset.unifiedPriceListFilter || 'all';
+                        renderFinanceExternalCarrierPriceListIndex();
+                    });
+                });
+
+                root.querySelector(
+                    '[data-external-carrier-price-list-reload]'
+                )?.addEventListener('click', () => {
+                    loadFinanceExternalCarrierPriceLists();
+                });
+
+                bindFinanceExternalCarrierPriceListCreate();
+            };
+            const bindFinanceUnifiedPriceListAdministration = () => {
+                document
+                    .querySelectorAll('[data-unified-price-list-domain]')
+                    .forEach((admin) => {
+                        if (admin.dataset.unifiedPriceListBound === '1') {
+                            return;
+                        }
+
+                        admin.dataset.unifiedPriceListBound = '1';
+
+                        const filters = Array.from(
+                            admin.querySelectorAll(
+                                '[data-unified-price-list-filter]'
+                            )
+                        );
+
+                        filters.forEach((filter) => {
+                            filter.addEventListener('click', () => {
+                                filters.forEach((candidate) => {
+                                    candidate.classList.toggle(
+                                        'is-active',
+                                        candidate === filter
+                                    );
+                                });
+
+                                admin.dataset.unifiedPriceListFilter =
+                                    filter.dataset.unifiedPriceListFilter
+                                    || 'all';
+                            });
+                        });
+                    });
+            };
+
 const loadFinanceCustomers = async () => {
                 const root =
                     document.querySelector(
@@ -17014,11 +19823,15 @@ const loadFinanceCustomers = async () => {
 
 if (page === 'finance') {
             bindFinanceCustomerCreate();
+            bindFinanceUnifiedPriceListAdministration();
+            bindFinanceDriverPriceListAdministration();
+            bindFinanceExternalCarrierPriceListAdministration();
             bindFinanceBillingPriceListAdministration();
             bindFinanceBillingPriceListCreate();
             bindFinanceDriverPriceListCreate();
             loadFinanceDriverAssignments();
             loadFinanceDriverPriceLists();
+            loadFinanceExternalCarrierPriceLists();
             loadFinanceCustomers();
         }
 

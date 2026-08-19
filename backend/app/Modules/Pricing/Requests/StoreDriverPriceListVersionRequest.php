@@ -10,6 +10,8 @@ use Illuminate\Validation\Rule;
 
 final class StoreDriverPriceListVersionRequest extends FormRequest
 {
+    use InteractsWithConditionalPriceListRules;
+
     public function authorize(): bool
     {
         return true;
@@ -74,7 +76,7 @@ final class StoreDriverPriceListVersionRequest extends FormRequest
                 'decimal:0,4',
                 'between:0,9999999999.9999',
             ],
-        ];
+        ] + $this->conditionalPriceListRuleRules();
     }
 
     /**
@@ -121,6 +123,17 @@ final class StoreDriverPriceListVersionRequest extends FormRequest
                 },
                 $items,
             );
+        }
+
+        $conditionalRules = $this->input(
+            'conditional_rules',
+        );
+
+        if (is_array($conditionalRules)) {
+            $normalized['conditional_rules'] =
+                $this->normalizeConditionalPriceListRules(
+                    $conditionalRules,
+                );
         }
 
         return $normalized;

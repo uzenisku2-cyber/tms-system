@@ -25,6 +25,11 @@ final class DriverPriceListVersionResource extends JsonResource
 
         $version = $this->resource;
 
+        $version->loadMissing([
+            'conditionalRules.metricComponents',
+            'conditionalRules.bands',
+        ]);
+
         return [
             'version_number' => (int) $version->getAttribute(
                 'version_number',
@@ -51,6 +56,9 @@ final class DriverPriceListVersionResource extends JsonResource
             ),
             'items' => DriverPriceListItemResource::collection(
                 $version->items,
+            ),
+            'conditional_rules' => DriverPriceListConditionalRuleResource::collection(
+                $version->conditionalRules,
             ),
         ];
     }

@@ -65,7 +65,7 @@ SQL
         if ($driver === 'pgsql') {
             DB::unprepared(
                 <<<'SQL'
-    CREATE FUNCTION drayvia_price_list_code_guard()
+    CREATE OR REPLACE FUNCTION drayvia_price_list_code_guard()
     RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -169,7 +169,7 @@ SQL
         if ($driver === 'pgsql') {
             DB::unprepared(
                 <<<'SQL'
-    CREATE FUNCTION drayvia_sync_price_list_version_relationship()
+    CREATE OR REPLACE FUNCTION drayvia_sync_price_list_version_relationship()
     RETURNS trigger
     LANGUAGE plpgsql
     AS $$

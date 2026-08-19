@@ -27,6 +27,17 @@ final class PriceListIndexRequest extends FormRequest
                 ),
             ]);
         }
+
+        $perspective = $this->input('perspective');
+
+        if (is_string($perspective)) {
+            $this->merge([
+                'perspective' => mb_strtolower(
+                    trim($perspective),
+                    'UTF-8',
+                ),
+            ]);
+        }
     }
 
     /**
@@ -45,6 +56,11 @@ final class PriceListIndexRequest extends FormRequest
                 'string',
                 'size:3',
                 'regex:/^[A-Z]{3}$/',
+            ],
+            'perspective' => [
+                'nullable',
+                'string',
+                Rule::in(PriceList::PERSPECTIVES),
             ],
             'sort_by' => [
                 'nullable',

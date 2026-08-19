@@ -27,6 +27,23 @@ final class PriceListQueryService
     ): LengthAwarePaginator {
         $query = $this->visibleQuery();
 
+        $perspective = $filters['perspective'] ?? null;
+
+        if (
+            $perspective === PriceList::PERSPECTIVE_CUSTOMER
+            || $perspective === PriceList::PERSPECTIVE_PROVIDER
+        ) {
+            $organizationId =
+                $this->organizationContext->requireId();
+
+            $query->where(
+                $perspective === PriceList::PERSPECTIVE_CUSTOMER
+                    ? 'customer_organization_id'
+                    : 'provider_organization_id',
+                $organizationId,
+            );
+        }
+
         $status = $filters['status'] ?? null;
 
         if (is_string($status) && $status !== '') {
@@ -127,6 +144,10 @@ final class PriceListQueryService
         $moment = now();
 
         return PriceList::query()
+            ->with([
+                'customerOrganization',
+                'providerOrganization',
+            ])
             ->forParticipatingOrganization(
                 $organizationId,
             )
