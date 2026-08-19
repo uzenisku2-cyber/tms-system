@@ -92,6 +92,17 @@ final class DriverPriceListVersion extends Model
         )->orderBy('position');
     }
 
+    /**
+     * @return HasMany<DriverPriceListConditionalRule, $this>
+     */
+    public function conditionalRules(): HasMany
+    {
+        return $this->hasMany(
+            DriverPriceListConditionalRule::class,
+            'driver_price_list_version_id',
+        )->orderBy('position');
+    }
+
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;

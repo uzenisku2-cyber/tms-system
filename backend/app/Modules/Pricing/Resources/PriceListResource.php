@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Pricing\Resources;
 
+use App\Modules\Organizations\Models\Organization;
 use App\Modules\Pricing\Models\PriceList;
 use DateTimeInterface;
 use Illuminate\Http\Request;
@@ -24,6 +25,11 @@ final class PriceListResource extends JsonResource
         }
 
         $priceList = $this->resource;
+
+        $priceList->loadMissing([
+            'customerOrganization',
+            'providerOrganization',
+        ]);
 
         return [
             'public_id' => (string) $priceList->getAttribute(
@@ -47,11 +53,35 @@ final class PriceListResource extends JsonResource
             'current_version' => (int) $priceList->getAttribute(
                 'current_version',
             ),
+            'customer' => $this->organizationSummary(
+                $priceList->customerOrganization,
+            ),
+            'provider' => $this->organizationSummary(
+                $priceList->providerOrganization,
+            ),
             'created_at' => $this->formatDateTime(
                 $priceList->getAttribute('created_at'),
             ),
             'updated_at' => $this->formatDateTime(
                 $priceList->getAttribute('updated_at'),
+            ),
+        ];
+    }
+
+    /** @return array{name: string, type: string}|null */
+    private function organizationSummary(
+        mixed $organization,
+    ): ?array {
+        if (! $organization instanceof Organization) {
+            return null;
+        }
+
+        return [
+            'name' => (string) $organization->getAttribute(
+                'name',
+            ),
+            'type' => (string) $organization->getAttribute(
+                'type',
             ),
         ];
     }

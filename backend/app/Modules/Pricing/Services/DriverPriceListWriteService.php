@@ -8,11 +8,14 @@ use App\Models\User;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Drivers\Services\DriverSupervisoryAuthorizationService;
 use App\Modules\Pricing\Models\DriverPriceList;
+use App\Modules\Pricing\Models\DriverPriceListConditionalRule;
+use App\Modules\Pricing\Models\DriverPriceListConditionalRuleMetricComponent;
 use App\Modules\Pricing\Models\DriverPriceListItem;
 use App\Modules\Pricing\Models\DriverPriceListVersion;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use LogicException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -20,6 +23,7 @@ final class DriverPriceListWriteService
 {
     public function __construct(
         private readonly DriverSupervisoryAuthorizationService $authorization,
+        private readonly ConditionalPriceListRulePayload $conditionalRulePayload,
     ) {}
 
     /**
@@ -112,6 +116,9 @@ final class DriverPriceListWriteService
 
         $actorId = (int) $actor->getKey();
 
+        $conditionalRules =
+            $this->conditionalRulePayload->fromInput($data);
+
         return DB::transaction(
             function () use (
                 $assignmentId,
@@ -125,6 +132,7 @@ final class DriverPriceListWriteService
                 $changeReason,
                 $items,
                 $actorId,
+                $conditionalRules,
             ): DriverPriceList {
                 $priceList = DriverPriceList::query()->create([
                     'driver_organization_assignment_id' => $assignmentId,
@@ -197,6 +205,11 @@ final class DriverPriceListWriteService
                     $position++;
                 }
 
+                $this->persistConditionalRules(
+                    $version,
+                    $conditionalRules,
+                );
+
                 return $priceList->refresh();
             },
         );
@@ -230,6 +243,14 @@ final class DriverPriceListWriteService
             );
         }
 
+        $replaceConditionalRules = array_key_exists(
+            'conditional_rules',
+            $data,
+        );
+
+        $conditionalRules =
+            $this->conditionalRulePayload->fromInput($data);
+
         return DB::transaction(
             function () use (
                 $actor,
@@ -238,6 +259,8 @@ final class DriverPriceListWriteService
                 $data,
                 $expectedCurrentVersion,
                 $items,
+                $replaceConditionalRules,
+                $conditionalRules,
             ): DriverPriceListVersion {
                 $priceList = $this->findManageablePriceList(
                     actor: $actor,
@@ -295,11 +318,25 @@ final class DriverPriceListWriteService
                     items: $items,
                 );
 
+                if ($replaceConditionalRules) {
+                    $this->persistConditionalRules(
+                        $version,
+                        $conditionalRules,
+                    );
+                } else {
+                    $this->copyConditionalRules(
+                        $current,
+                        $version,
+                    );
+                }
+
                 $priceList->forceFill([
                     'current_version' => $nextVersion,
                 ])->saveOrFail();
 
-                return $version->fresh(['items'])
+                return $version->fresh(
+                    $this->versionRelations(),
+                )
                     ?? throw new LogicException(
                         'Created driver price-list version could not be reloaded.',
                     );
@@ -342,6 +379,14 @@ final class DriverPriceListWriteService
             );
         }
 
+        $replaceConditionalRules = array_key_exists(
+            'conditional_rules',
+            $data,
+        );
+
+        $conditionalRules =
+            $this->conditionalRulePayload->fromInput($data);
+
         return DB::transaction(
             function () use (
                 $actor,
@@ -351,6 +396,8 @@ final class DriverPriceListWriteService
                 $data,
                 $expectedLockVersion,
                 $items,
+                $replaceConditionalRules,
+                $conditionalRules,
             ): DriverPriceListVersion {
                 $priceList = $this->findManageablePriceList(
                     actor: $actor,
@@ -431,7 +478,16 @@ final class DriverPriceListWriteService
                     items: $items,
                 );
 
-                return $version->fresh(['items'])
+                if ($replaceConditionalRules) {
+                    $this->replaceConditionalRules(
+                        $version,
+                        $conditionalRules,
+                    );
+                }
+
+                return $version->fresh(
+                    $this->versionRelations(),
+                )
                     ?? throw new LogicException(
                         'Updated driver price-list version could not be reloaded.',
                     );
@@ -516,6 +572,10 @@ final class DriverPriceListWriteService
                     version: $version,
                 );
 
+                $this->assertApprovableConditionalRules(
+                    $version,
+                );
+
                 $actorId = (int) $actor->getKey();
 
                 if ($actorId < 1) {
@@ -531,7 +591,9 @@ final class DriverPriceListWriteService
                     'activated_at' => null,
                 ])->saveOrFail();
 
-                return $version->fresh(['items'])
+                return $version->fresh(
+                    $this->versionRelations(),
+                )
                     ?? throw new LogicException(
                         'Approved driver price-list version could not be reloaded.',
                     );
@@ -921,6 +983,236 @@ final class DriverPriceListWriteService
             },
             3,
         );
+    }
+
+    private function persistConditionalRules(
+        DriverPriceListVersion $version,
+        array $rules,
+    ): void {
+        foreach ($rules as $ruleIndex => $payload) {
+            $numeratorSources = $payload[
+                'metric_numerator_sources'
+            ];
+            $denominatorSources = $payload[
+                'metric_denominator_sources'
+            ];
+
+            if (
+                ! is_array($numeratorSources)
+                || $numeratorSources === []
+                || ! is_array($denominatorSources)
+            ) {
+                throw new LogicException(
+                    'Normalized conditional metric components are invalid.',
+                );
+            }
+
+            $rule = $version->conditionalRules()->create([
+                'code' => $payload['code'],
+                'name' => $payload['name'],
+                'description' => $payload['description'],
+                'metric_type' => $payload['metric_type'],
+                'metric_numerator_source' => $numeratorSources[0],
+                'metric_denominator_source' => $denominatorSources[0] ?? null,
+                'evaluation_scope' => $payload['evaluation_scope'],
+                'reward_method' => $payload['reward_method'],
+                'reward_quantity_source' => $payload['reward_quantity_source'],
+                'reward_target_item_code' => $payload['reward_target_item_code'],
+                'rounding_scale' => $payload['rounding_scale'],
+                'rounding_method' => DriverPriceListConditionalRule::ROUNDING_METHOD_HALF_UP,
+                'position' => $ruleIndex + 1,
+            ]);
+
+            foreach ($numeratorSources as $index => $source) {
+                $rule->metricComponents()->create([
+                    'component_role' => DriverPriceListConditionalRuleMetricComponent::ROLE_NUMERATOR,
+                    'metric_source' => $source,
+                    'position' => $index + 1,
+                ]);
+            }
+
+            foreach ($denominatorSources as $index => $source) {
+                $rule->metricComponents()->create([
+                    'component_role' => DriverPriceListConditionalRuleMetricComponent::ROLE_DENOMINATOR,
+                    'metric_source' => $source,
+                    'position' => $index + 1,
+                ]);
+            }
+
+            $bands = $payload['bands'];
+
+            if (! is_array($bands) || $bands === []) {
+                throw new LogicException(
+                    'Normalized conditional pricing bands are invalid.',
+                );
+            }
+
+            foreach ($bands as $bandIndex => $band) {
+                if (! is_array($band)) {
+                    throw new LogicException(
+                        'A normalized conditional pricing band is invalid.',
+                    );
+                }
+
+                $rule->bands()->create([
+                    'minimum_value' => $band['minimum_value'],
+                    'maximum_value' => $band['maximum_value'],
+                    'minimum_inclusive' => $band['minimum_inclusive'],
+                    'maximum_inclusive' => $band['maximum_inclusive'],
+                    'adjustment_value' => $band['adjustment_value'],
+                    'position' => $bandIndex + 1,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rules
+     */
+    private function replaceConditionalRules(
+        DriverPriceListVersion $version,
+        array $rules,
+    ): void {
+        $existingRules = $version->conditionalRules()
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($existingRules as $rule) {
+            $rule->bands()->delete();
+            $rule->metricComponents()->delete();
+            $rule->delete();
+        }
+
+        $this->persistConditionalRules($version, $rules);
+    }
+
+    private function copyConditionalRules(
+        DriverPriceListVersion $source,
+        DriverPriceListVersion $target,
+    ): void {
+
+        $rules = $this->conditionalRulePayload->fromInput([
+            'conditional_rules' => $this->conditionalRuleInputFromVersion($source),
+        ]);
+
+        $this->persistConditionalRules($target, $rules);
+    }
+
+    private function assertApprovableConditionalRules(
+        DriverPriceListVersion $version,
+    ): void {
+        try {
+            $input = $this->conditionalRuleInputFromVersion(
+                $version,
+            );
+
+            $this->conditionalRulePayload->fromInput([
+                'conditional_rules' => $input,
+            ]);
+        } catch (ValidationException|LogicException) {
+            throw new ConflictHttpException(
+                'The conditional pricing configuration is incomplete or invalid.',
+            );
+        }
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function conditionalRuleInputFromVersion(
+        DriverPriceListVersion $version,
+    ): array {
+        $rules = [];
+
+        foreach (
+            $version->conditionalRules()->orderBy('position')->get() as $rule
+        ) {
+            $components = $rule->metricComponents()
+                ->orderBy('position')
+                ->get();
+            $numeratorSources = [];
+            $denominatorSources = [];
+
+            foreach ($components as $component) {
+                $source = (string) $component->getAttribute(
+                    'metric_source',
+                );
+
+                if (
+                    $component->getAttribute('component_role') ===
+                        DriverPriceListConditionalRuleMetricComponent::ROLE_NUMERATOR
+                ) {
+                    $numeratorSources[] = $source;
+
+                    continue;
+                }
+
+                if (
+                    $component->getAttribute('component_role') ===
+                        DriverPriceListConditionalRuleMetricComponent::ROLE_DENOMINATOR
+                ) {
+                    $denominatorSources[] = $source;
+                }
+            }
+
+            if ($components->isEmpty()) {
+                $legacyNumerator = $rule->getAttribute(
+                    'metric_numerator_source',
+                );
+                $legacyDenominator = $rule->getAttribute(
+                    'metric_denominator_source',
+                );
+
+                if (is_string($legacyNumerator)) {
+                    $numeratorSources[] = $legacyNumerator;
+                }
+
+                if (is_string($legacyDenominator)) {
+                    $denominatorSources[] = $legacyDenominator;
+                }
+            }
+
+            $bands = [];
+
+            foreach ($rule->bands()->orderBy('position')->get() as $band) {
+                $bands[] = [
+                    'minimum_value' => $band->getAttribute('minimum_value'),
+                    'maximum_value' => $band->getAttribute('maximum_value'),
+                    'minimum_inclusive' => (bool) $band->getAttribute(
+                        'minimum_inclusive',
+                    ),
+                    'maximum_inclusive' => (bool) $band->getAttribute(
+                        'maximum_inclusive',
+                    ),
+                    'adjustment_value' => $band->getAttribute('adjustment_value'),
+                ];
+            }
+
+            $rules[] = [
+                'code' => $rule->getAttribute('code'),
+                'name' => $rule->getAttribute('name'),
+                'description' => $rule->getAttribute('description'),
+                'metric_type' => $rule->getAttribute('metric_type'),
+                'metric_numerator_sources' => $numeratorSources,
+                'metric_denominator_sources' => $denominatorSources,
+                'evaluation_scope' => $rule->getAttribute('evaluation_scope'),
+                'reward_method' => $rule->getAttribute('reward_method'),
+                'reward_quantity_source' => $rule->getAttribute('reward_quantity_source'),
+                'reward_target_item_code' => $rule->getAttribute('reward_target_item_code'),
+                'rounding_scale' => $rule->getAttribute('rounding_scale'),
+                'bands' => $bands,
+            ];
+        }
+
+        return $rules;
+    }
+
+    /** @return list<string> */
+    private function versionRelations(): array
+    {
+        return [
+            'items',
+            'conditionalRules.metricComponents',
+            'conditionalRules.bands',
+        ];
     }
 
     private function assertApprovableItems(

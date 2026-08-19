@@ -173,6 +173,108 @@ final class PriceListReadApiTest extends TestCase
             ]);
     }
 
+    public function test_index_separates_customer_and_provider_perspectives(): void
+    {
+        [$user, $organization] = $this->createContext();
+
+        $this->grantViewPermission(
+            $user,
+            $organization,
+        );
+
+        $externalCarrier = $this->createOrganization(
+            'External carrier',
+        );
+
+        $externalRelationship = $this->createRelationship(
+            $organization,
+            $externalCarrier,
+        );
+
+        $externalPriceList = $this->createPriceList(
+            relationship: $externalRelationship,
+            customer: $organization,
+            provider: $externalCarrier,
+            creator: $user,
+            name: 'External carrier price list',
+        );
+
+        $billingCustomer = $this->createOrganization(
+            'Billing customer',
+        );
+
+        $billingRelationship = $this->createRelationship(
+            $billingCustomer,
+            $organization,
+        );
+
+        $billingPriceList = $this->createPriceList(
+            relationship: $billingRelationship,
+            customer: $billingCustomer,
+            provider: $organization,
+            creator: $user,
+            name: 'Billing price list',
+        );
+
+        Sanctum::actingAs($user);
+
+        $externalResponse = $this->withOrganization(
+            $organization,
+        )->getJson(
+            self::INDEX_URL.'?perspective=customer',
+        );
+
+        $externalResponse
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 1)
+            ->assertJsonPath(
+                'data.items.0.public_id',
+                $externalPriceList->getRouteKey(),
+            )
+            ->assertJsonPath(
+                'data.items.0.customer.name',
+                'Pricing test organization',
+            )
+            ->assertJsonPath(
+                'data.items.0.provider.name',
+                'External carrier',
+            )
+            ->assertJsonMissing([
+                'public_id' => $billingPriceList->getRouteKey(),
+            ]);
+
+        $billingResponse = $this->withOrganization(
+            $organization,
+        )->getJson(
+            self::INDEX_URL.'?perspective=provider',
+        );
+
+        $billingResponse
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 1)
+            ->assertJsonPath(
+                'data.items.0.public_id',
+                $billingPriceList->getRouteKey(),
+            )
+            ->assertJsonPath(
+                'data.items.0.customer.name',
+                'Billing customer',
+            )
+            ->assertJsonPath(
+                'data.items.0.provider.name',
+                'Pricing test organization',
+            )
+            ->assertJsonMissing([
+                'public_id' => $externalPriceList->getRouteKey(),
+            ]);
+
+        $this->withOrganization(
+            $organization,
+        )->getJson(
+            self::INDEX_URL.'?perspective=invalid',
+        )->assertUnprocessable();
+    }
+
     public function test_show_hides_unrelated_price_list_and_internal_ids(): void
     {
         [$user, $organization] = $this->createContext();

@@ -13,6 +13,7 @@ use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\OrganizationRelationship;
 use App\Modules\Pricing\Models\DriverPriceList;
+use App\Modules\Pricing\Models\DriverPriceListConditionalRuleMetricComponent;
 use App\Modules\Pricing\Models\DriverPriceListItem;
 use App\Modules\Pricing\Models\DriverPriceListVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -302,6 +303,123 @@ final class DriverPriceListReadApiTest extends TestCase
         $this->withOrganization($organization)
             ->getJson($base.'/3')
             ->assertNotFound();
+    }
+
+    public function test_version_detail_includes_complete_conditional_rule_tree(): void
+    {
+        $organization = $this->organization('Conditional read master');
+        $actor = $this->actor(
+            $organization,
+            ['compensation.view'],
+            grantOwnScope: true,
+        );
+        $assignment = $this->assignment(
+            $organization,
+            $actor,
+            'READ-CONDITIONAL',
+        );
+        $priceList = $this->priceList(
+            $assignment,
+            $organization,
+            $actor,
+            'Conditional list',
+        );
+        $version = $this->version(
+            $priceList,
+            $actor,
+            1,
+            DriverPriceListVersion::STATUS_ACTIVE,
+            '2026-08-01',
+            null,
+        );
+
+        $rule = $version->conditionalRules()->create([
+            'code' => 'redirected_share',
+            'name' => 'Redirected share bonus',
+            'description' => 'Monthly redirected parcel share.',
+            'metric_type' => 'ratio_percentage',
+            'metric_numerator_source' => 'redirected_parcels',
+            'metric_denominator_source' => 'loaded_parcels',
+            'evaluation_scope' => 'monthly_driver',
+            'reward_method' => 'amount_per_unit',
+            'reward_quantity_source' => 'redirected_parcels',
+            'reward_target_item_code' => null,
+            'rounding_scale' => 4,
+            'rounding_method' => 'half_up',
+            'position' => 1,
+        ]);
+
+        $rule->metricComponents()->createMany([
+            [
+                'component_role' => DriverPriceListConditionalRuleMetricComponent::ROLE_NUMERATOR,
+                'metric_source' => 'redirected_parcels',
+                'position' => 1,
+            ],
+            [
+                'component_role' => DriverPriceListConditionalRuleMetricComponent::ROLE_DENOMINATOR,
+                'metric_source' => 'loaded_parcels',
+                'position' => 1,
+            ],
+        ]);
+
+        $rule->bands()->createMany([
+            [
+                'minimum_value' => '30.0000',
+                'maximum_value' => '40.0000',
+                'minimum_inclusive' => true,
+                'maximum_inclusive' => false,
+                'adjustment_value' => '1.5000',
+                'position' => 1,
+            ],
+            [
+                'minimum_value' => '40.0000',
+                'maximum_value' => '100.0000',
+                'minimum_inclusive' => true,
+                'maximum_inclusive' => true,
+                'adjustment_value' => '3.0000',
+                'position' => 2,
+            ],
+        ]);
+
+        $base = '/api/v1/driver-price-lists/'
+            .$priceList->getAttribute('public_id')
+            .'/versions/1';
+
+        $this->withOrganization($organization)
+            ->getJson($base)
+            ->assertOk()
+            ->assertJsonPath(
+                'data.conditional_rules.0.code',
+                'redirected_share',
+            )
+            ->assertJsonPath(
+                'data.conditional_rules.0.metric_numerator_sources.0',
+                'redirected_parcels',
+            )
+            ->assertJsonPath(
+                'data.conditional_rules.0.metric_denominator_sources.0',
+                'loaded_parcels',
+            )
+            ->assertJsonPath(
+                'data.conditional_rules.0.evaluation_scope',
+                'monthly_driver',
+            )
+            ->assertJsonPath(
+                'data.conditional_rules.0.reward_method',
+                'amount_per_unit',
+            )
+            ->assertJsonCount(
+                2,
+                'data.conditional_rules.0.metric_components',
+            )
+            ->assertJsonCount(
+                2,
+                'data.conditional_rules.0.bands',
+            )
+            ->assertJsonPath(
+                'data.conditional_rules.0.bands.1.adjustment_value',
+                '3.0000',
+            );
     }
 
     private function organization(

@@ -520,7 +520,339 @@ final class FinancePricingUiFoundationTest extends TestCase
         );
     }
 
-    public function test_driver_price_list_web_ui_creates_and_activates_first_tariff(): void
+    public function test_finance_ui_exposes_three_unified_price_list_administrations(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'price-list-tab-billing',
+            'price-list-tab-drivers',
+            'price-list-tab-external-carriers',
+            'Fakturační ceníky',
+            'Ceníky řidičů',
+            'Ceníky externích dopravců',
+            'data-unified-price-list-domain="billing"',
+            'data-unified-price-list-domain="driver"',
+            'data-unified-price-list-domain="external-carrier"',
+            'data-external-carrier-index-endpoint="/api/v1/external-carriers"',
+            'data-external-carrier-store-endpoint="/api/v1/external-carriers/{relationship}/price-lists"',
+            'data-external-carrier-price-list-list',
+            'data-external-carrier-price-list-detail',
+            'const bindFinanceUnifiedPriceListAdministration = () => {',
+            'bindFinanceUnifiedPriceListAdministration();',
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+
+        self::assertSame(
+            3,
+            substr_count($source, 'class="drayvia-price-list-tab-input"'),
+        );
+
+        self::assertSame(
+            3,
+            substr_count(
+                $source,
+                'class="drayvia-price-list-panel drayvia-price-list-panel-',
+            ),
+        );
+
+        self::assertSame(
+            3,
+            substr_count($source, 'data-unified-price-list-domain="'),
+        );
+
+        self::assertSame(
+            12,
+            substr_count($source, 'data-unified-price-list-filter="'),
+        );
+    }
+
+    public function test_unified_price_list_overviews_load_filter_and_render_real_records(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'let financeDriverPriceLists = [];',
+            'const financeUnifiedPriceListCategory = (priceList) => {',
+            'const updateFinanceUnifiedPriceListCounts = (',
+            'const renderFinanceDriverPriceListIndex = () => {',
+            'const bindFinanceDriverPriceListAdministration = () => {',
+            'let financeExternalCarrierPriceLists = [];',
+            'const renderFinanceExternalCarrierPriceListDetail = (record) => {',
+            'const renderFinanceExternalCarrierPriceListIndex = () => {',
+            'const loadFinanceExternalCarrierPriceLists = async () => {',
+            'const bindFinanceExternalCarrierPriceListAdministration = () => {',
+            'root.dataset.unifiedPriceListFilter ||',
+            'data-external-carrier-index-endpoint="/api/v1/external-carriers"',
+            'bindFinanceDriverPriceListAdministration();',
+            'bindFinanceExternalCarrierPriceListAdministration();',
+            'loadFinanceExternalCarrierPriceLists();',
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+
+        self::assertSame(
+            4,
+            substr_count(
+                $source,
+                'updateFinanceUnifiedPriceListCounts(',
+            ),
+        );
+    }
+
+    public function test_external_carrier_editor_reuses_complete_billing_draft_contract(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'let financeExternalCarrierRelationships = [];',
+            'const ensureFinanceExternalCarrierPriceListCreateCard = () => {',
+            'template.cloneNode(true)',
+            'data-external-carrier-price-list-create-card',
+            'const populateFinanceExternalCarrierPriceListSelect = () => {',
+            'const bindFinanceExternalCarrierPriceListCreate = () => {',
+            'collectFinanceConditionalRules(createCard)',
+            'resetFinanceConditionalRules(createCard);',
+            '.externalCarrierStoreEndpoint',
+            "method: 'POST'",
+            'conditional_rules:',
+            'financeExternalCarrierRelationships = records;',
+            'bindFinanceExternalCarrierPriceListCreate();',
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+
+        self::assertSame(
+            1,
+            substr_count(
+                $source,
+                'const bindFinanceExternalCarrierPriceListCreate = () => {',
+            ),
+        );
+    }
+
+    public function test_driver_price_list_overview_renders_complete_version_detail(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'const ensureFinanceDriverPriceListDetail = () => {',
+            'data-driver-price-list-detail',
+            'const renderFinanceDriverPriceListDetail = (record) => {',
+            'const loadFinanceDriverPriceListDetail = async (priceList) => {',
+            '/versions`',
+            'financeBillingDetailTable(',
+            "'Podm\\u00edn\\u011bn\\u00e9 p\\u0159\\u00edplatky'",
+            "'Historie verz\\u00ed'",
+            'loadFinanceDriverPriceListDetail(priceList);',
+            "detailButton.textContent = 'Otev\\u0159\\u00edt';",
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+
+        self::assertSame(
+            1,
+            substr_count(
+                $source,
+                'const loadFinanceDriverPriceListDetail = async (priceList) => {',
+            ),
+        );
+    }
+
+    public function test_driver_active_or_expired_tariff_can_create_complete_draft_version(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'createVersion = false',
+            'editor.dataset.driverPriceListEditorMode =',
+            "createVersion ? 'create-version' : 'update'",
+            "newVersion.textContent = 'Nov\\u00e1 verze';",
+            'renderFinanceDriverPriceListEditor(',
+            'record,',
+            'true',
+            "current?.status === 'active'",
+            "current?.status === 'expired'",
+            'expected_current_version:',
+            'Number(current.version_number)',
+            "method: createVersion ? 'POST' : 'PUT'",
+            'items: updatedItems',
+            'conditional_rules:',
+            'conditionalRules',
+            "? 'Koncept nov\\u00e9 verze byl vytvo\\u0159en.'",
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+
+        self::assertSame(
+            1,
+            substr_count(
+                $source,
+                "newVersion.textContent = 'Nov\\u00e1 verze';",
+            ),
+        );
+    }
+
+    public function test_driver_lifecycle_actions_are_explicit_and_revision_guarded(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'const runFinanceDriverPriceListLifecycle = async (',
+            "approve.textContent = 'Schv\\u00e1lit';",
+            "activate.textContent = 'Aktivovat';",
+            "expire.textContent = 'Ukon\\u010dit platnost';",
+            "requiredStatus: 'draft'",
+            "requiredStatus: 'approved'",
+            "requiredStatus: 'active'",
+            "path: 'approve'",
+            "path: 'activate'",
+            "path: 'expire'",
+            'expected_lock_version: lockVersion',
+            'payload.valid_until = validUntil;',
+            'if (!window.confirm(contract.question)) {',
+            "method: 'POST'",
+            '${contract.path}`',
+            'await loadFinanceDriverPriceLists();',
+            'await loadFinanceDriverPriceListDetail(',
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+
+        self::assertStringNotContainsString(
+            '/versions/1/approve',
+            $source,
+        );
+        self::assertStringNotContainsString(
+            '/versions/1/activate',
+            $source,
+        );
+    }
+
+    public function test_driver_draft_detail_is_editable_atomically(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'const renderFinanceDriverPriceListEditor = (',
+            "edit.textContent = 'Upravit koncept';",
+            'renderFinanceDriverPriceListEditor(record);',
+            "editor.dataset.driverPriceListEditor = '1';",
+            'hydrateFinanceConditionalRule(editor, rule);',
+            'collectFinanceConditionalRules(editor)',
+            "method: 'PUT'",
+            'expected_lock_version:',
+            'Number(current.lock_version)',
+            '/api/v1/driver-price-lists/${',
+            'await loadFinanceDriverPriceLists();',
+            'const updatedRecord =',
+            'await loadFinanceDriverPriceListDetail(',
+            "save.textContent = 'Ulo\\u017eit zm\\u011bny konceptu';",
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+
+        self::assertSame(
+            1,
+            substr_count(
+                $source,
+                'const renderFinanceDriverPriceListEditor = (',
+            ),
+        );
+    }
+
+    public function test_external_carrier_ui_matches_complete_billing_lifecycle(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        foreach ([
+            'const renderFinanceExternalCarrierPriceListEditor = (',
+            'createVersion = false',
+            "editor.dataset.externalCarrierPriceListEditor = '1';",
+            "createVersion ? 'create-version' : 'update'",
+            'hydrateFinanceConditionalRule(editor, rule);',
+            'collectFinanceConditionalRules(editor)',
+            '/api/v1/external-carriers/${',
+            '}/price-lists/${',
+            'expected_current_version:',
+            'expected_lock_version:',
+            "method: createVersion ? 'POST' : 'PUT'",
+            'const runFinanceExternalCarrierPriceListLifecycle = async (',
+            "path: 'approve'",
+            "path: 'activate'",
+            "path: 'expire'",
+            "approve.textContent = 'Schv\\u00e1lit';",
+            "activate.textContent = 'Aktivovat';",
+            "expire.textContent = 'Ukon\\u010dit platnost';",
+            "newVersion.textContent = 'Nov\\u00e1 verze';",
+            'ratesTitle.textContent =',
+            'rulesTitle.textContent =',
+            'versionsTitle.textContent =',
+            'financeBillingPriceListPeriod(current),',
+            'metric_numerator_sources',
+            'metric_denominator_sources',
+            'await loadFinanceExternalCarrierPriceLists();',
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+
+        self::assertSame(
+            1,
+            substr_count(
+                $source,
+                'const renderFinanceExternalCarrierPriceListEditor = (',
+            ),
+        );
+        self::assertSame(
+            1,
+            substr_count(
+                $source,
+                'const runFinanceExternalCarrierPriceListLifecycle = async (',
+            ),
+        );
+        self::assertSame(
+            1,
+            substr_count(
+                $source,
+                'const renderFinanceExternalCarrierPriceListDetail = (record) => {',
+            ),
+        );
+    }
+
+    public function test_driver_price_list_web_ui_creates_complete_draft_without_implicit_activation(): void
     {
         $source = file_get_contents(
             resource_path('views/mvp/app.blade.php'),
@@ -544,21 +876,34 @@ final class FinancePricingUiFoundationTest extends TestCase
             'data-driver-price-list-list',
             'const loadFinanceDriverAssignments = async () => {',
             'const loadFinanceDriverPriceLists = async () => {',
+            'const ensureFinanceDriverPriceListCreateCard = () => {',
+            'const populateFinanceDriverPriceListSelect = () => {',
             'const bindFinanceDriverPriceListCreate = () => {',
             "'/api/v1/driver-price-lists'",
-            '/versions/1/approve',
-            '/versions/1/activate',
-            'expected_lock_version:',
+            'collectFinanceConditionalRules(createCard)',
+            'resetFinanceConditionalRules(createCard);',
+            'conditional_rules:',
+            'data-driver-price-list-create-open',
+            'data-driver-price-list-create-card',
             'bindFinanceDriverPriceListCreate();',
             'loadFinanceDriverAssignments();',
             'loadFinanceDriverPriceLists();',
-            'Uložit a aktivovat ceník',
         ] as $marker) {
             self::assertStringContainsString(
                 $marker,
                 $source,
             );
         }
+
+        self::assertStringNotContainsString(
+            '/versions/1/approve',
+            $source,
+        );
+
+        self::assertStringNotContainsString(
+            '/versions/1/activate',
+            $source,
+        );
 
         self::assertSame(
             4,

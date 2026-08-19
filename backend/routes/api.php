@@ -13,6 +13,7 @@ use App\Modules\Organizations\Controllers\CarrierAdminController;
 use App\Modules\Organizations\Controllers\CustomerAdminController;
 use App\Modules\Organizations\Controllers\OrganizationProfileController;
 use App\Modules\Pricing\Controllers\CustomerBillingPriceListController;
+use App\Modules\Pricing\Controllers\ExternalCarrierPriceListRelationshipController;
 use App\Modules\Routes\Controllers\RouteCatalogController;
 use Illuminate\Support\Facades\Route;
 
@@ -391,4 +392,100 @@ Route::middleware([
             ->middleware('perm:pricing.manage')
             ->whereNumber('relationship')
             ->name('customers.price-lists.store');
+
+        Route::get(
+            '/external-carriers',
+            [
+                ExternalCarrierPriceListRelationshipController::class,
+                'index',
+            ],
+        )
+            ->middleware('perm:pricing.view')
+            ->name('external-carriers.index');
+
+        Route::get(
+            '/external-carriers/{relationship}',
+            [
+                ExternalCarrierPriceListRelationshipController::class,
+                'show',
+            ],
+        )
+            ->middleware('perm:pricing.view')
+            ->whereNumber('relationship')
+            ->name('external-carriers.show');
+
+        Route::post(
+            '/external-carriers/{relationship}/price-lists',
+            [
+                ExternalCarrierPriceListRelationshipController::class,
+                'store',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->whereNumber('relationship')
+            ->name('external-carriers.price-lists.store');
+
+        Route::post(
+            '/external-carriers/{relationship}/price-lists/{priceList}/versions',
+            [
+                ExternalCarrierPriceListRelationshipController::class,
+                'storeVersion',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->whereNumber('relationship')
+            ->where('priceList', '[A-Za-z0-9-]+')
+            ->name('external-carriers.price-lists.versions.store');
+
+        Route::put(
+            '/external-carriers/{relationship}/price-lists/{priceList}/versions/{version}',
+            [
+                ExternalCarrierPriceListRelationshipController::class,
+                'updateVersion',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->whereNumber('relationship')
+            ->where('priceList', '[A-Za-z0-9-]+')
+            ->whereNumber('version')
+            ->name('external-carriers.price-lists.versions.update');
+
+        Route::post(
+            '/external-carriers/{relationship}/price-lists/{priceList}/versions/{version}/approve',
+            [
+                ExternalCarrierPriceListRelationshipController::class,
+                'approveVersion',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->whereNumber('relationship')
+            ->where('priceList', '[A-Za-z0-9-]+')
+            ->whereNumber('version')
+            ->name('external-carriers.price-lists.versions.approve');
+
+        Route::post(
+            '/external-carriers/{relationship}/price-lists/{priceList}/versions/{version}/activate',
+            [
+                ExternalCarrierPriceListRelationshipController::class,
+                'activateVersion',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->whereNumber('relationship')
+            ->where('priceList', '[A-Za-z0-9-]+')
+            ->whereNumber('version')
+            ->name('external-carriers.price-lists.versions.activate');
+
+        Route::post(
+            '/external-carriers/{relationship}/price-lists/{priceList}/versions/{version}/expire',
+            [
+                ExternalCarrierPriceListRelationshipController::class,
+                'expireVersion',
+            ],
+        )
+            ->middleware('perm:pricing.manage')
+            ->whereNumber('relationship')
+            ->where('priceList', '[A-Za-z0-9-]+')
+            ->whereNumber('version')
+            ->name('external-carriers.price-lists.versions.expire');
     });

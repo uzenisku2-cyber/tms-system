@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Pricing\Requests;
 
-use App\Modules\Pricing\Models\DriverPriceListItem;
+use App\Modules\Pricing\Models\PriceListItem;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-final class UpdateDriverPriceListVersionRequest extends FormRequest
+final class StoreCustomerManagedPriceListRequest extends FormRequest
 {
     use InteractsWithConditionalPriceListRules;
 
@@ -21,14 +21,13 @@ final class UpdateDriverPriceListVersionRequest extends FormRequest
     {
         $normalized = [];
 
-        foreach ([
-            'name',
-            'description',
-        ] as $field) {
-            if (! $this->exists($field)) {
-                continue;
-            }
-
+        foreach (
+            [
+                'name',
+                'description',
+                'change_reason',
+            ] as $field
+        ) {
             $value = $this->input($field);
 
             if (! is_string($value)) {
@@ -38,50 +37,69 @@ final class UpdateDriverPriceListVersionRequest extends FormRequest
             $value = trim($value);
 
             $normalized[$field] = (
-                $field === 'description'
+                $field !== 'name'
                 && $value === ''
             )
                 ? null
                 : $value;
         }
 
-        $reason = $this->input('change_reason');
+        $currency = $this->input('currency');
 
-        if (is_string($reason)) {
-            $reason = trim($reason);
-            $normalized['change_reason'] =
-                $reason === '' ? null : $reason;
+        if (is_string($currency)) {
+            $normalized['currency'] = mb_strtoupper(
+                trim($currency),
+                'UTF-8',
+            );
         }
 
         $items = $this->input('items');
 
         if (is_array($items)) {
-            $normalized['items'] = array_map(
-                static function (mixed $item): mixed {
-                    if (! is_array($item)) {
-                        return $item;
-                    }
+            $normalizedItems = [];
 
-                    $copy = $item;
+            foreach ($items as $item) {
+                if (! is_array($item)) {
+                    $normalizedItems[] = $item;
 
-                    if (is_string($copy['code'] ?? null)) {
-                        $copy['code'] = trim($copy['code']);
-                    }
+                    continue;
+                }
 
-                    if (is_string($copy['description'] ?? null)) {
-                        $description = trim($copy['description']);
-                        $copy['description'] =
-                            $description === '' ? null : $description;
-                    }
+                $normalizedItem = $item;
 
-                    if (is_string($copy['unit_rate'] ?? null)) {
-                        $copy['unit_rate'] = trim($copy['unit_rate']);
-                    }
+                $code = $item['code'] ?? null;
 
-                    return $copy;
-                },
-                $items,
-            );
+                if (is_string($code)) {
+                    $normalizedItem['code'] = trim($code);
+                }
+
+                $description =
+                    $item['description'] ?? null;
+
+                if (is_string($description)) {
+                    $description = trim($description);
+
+                    $normalizedItem['description'] = (
+                        $description === ''
+                    )
+                        ? null
+                        : $description;
+                }
+
+                $unitRate =
+                    $item['unit_rate'] ?? null;
+
+                if (is_string($unitRate)) {
+                    $normalizedItem['unit_rate'] =
+                        trim($unitRate);
+                }
+
+                $normalizedItems[] =
+                    $normalizedItem;
+            }
+
+            $normalized['items'] =
+                $normalizedItems;
         }
 
         $conditionalRules = $this->input(
@@ -107,21 +125,20 @@ final class UpdateDriverPriceListVersionRequest extends FormRequest
     {
         return [
             'name' => [
-                'sometimes',
                 'required',
                 'string',
                 'max:150',
             ],
             'description' => [
-                'sometimes',
                 'nullable',
                 'string',
                 'max:5000',
             ],
-            'expected_lock_version' => [
+            'currency' => [
                 'required',
-                'integer',
-                'min:1',
+                'string',
+                'size:3',
+                'regex:/^[A-Z]{3}$/',
             ],
             'valid_from' => [
                 'nullable',
@@ -141,7 +158,7 @@ final class UpdateDriverPriceListVersionRequest extends FormRequest
             'items' => [
                 'required',
                 'array',
-                'size:'.count(DriverPriceListItem::CODES),
+                'size:'.count(PriceListItem::CODES),
             ],
             'items.*' => [
                 'required',
@@ -150,7 +167,7 @@ final class UpdateDriverPriceListVersionRequest extends FormRequest
             'items.*.code' => [
                 'required',
                 'string',
-                Rule::in(DriverPriceListItem::CODES),
+                Rule::in(PriceListItem::CODES),
                 'distinct:strict',
             ],
             'items.*.description' => [

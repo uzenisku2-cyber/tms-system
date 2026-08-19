@@ -30,6 +30,16 @@ class PriceList extends Model
         self::STATUS_ARCHIVED,
     ];
 
+    public const PERSPECTIVE_CUSTOMER = 'customer';
+
+    public const PERSPECTIVE_PROVIDER = 'provider';
+
+    /** @var list<string> */
+    public const PERSPECTIVES = [
+        self::PERSPECTIVE_CUSTOMER,
+        self::PERSPECTIVE_PROVIDER,
+    ];
+
     protected $table = 'price_lists';
 
     /** @var list<string> */
