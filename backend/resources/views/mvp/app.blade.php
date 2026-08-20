@@ -2369,10 +2369,10 @@
             background: #e2f2e8;
         }
 
-        /* dilci kvalita */
+        /* objective processed share */
         .drayvia-driver-stat-table th:nth-child(12),
         .drayvia-driver-stat-table td:nth-child(12) {
-            background: #e2f2e8;
+            background: #e7edf3;
         }
 
         .drayvia-driver-stat-identity {
@@ -8888,32 +8888,21 @@ const calendarJuly2026 = {
             ? body.data
             : body;
 
-    /* DRAYVIA-25E2B STATISTICS PAGE */
-    const driverStatisticsNow = new Date();
-
+    /* S026-04A FILTERED DRIVER PERFORMANCE OVERVIEW */
     const driverStatisticsState = {
-        items: null,
-        navigationDrivers: [],
+        data: null,
+        driverOptions: [],
+        carrierOptions: [],
+        quickPeriods: [],
         loading: false,
-        mode: 'month',
-        year: driverStatisticsNow.getFullYear(),
-        month: driverStatisticsNow.getMonth() + 1,
+        driverId: '',
+        carrierScope: 'all',
+        carrierOrganizationId: '',
+        period: 'current_month',
+        dateFrom: '',
+        dateTo: '',
+        groupBy: 'month',
     };
-
-    const driverStatisticsMonths = [
-        'Leden',
-        '\u00danor',
-        'B\u0159ezen',
-        'Duben',
-        'Kv\u011bten',
-        '\u010cerven',
-        '\u010cervenec',
-        'Srpen',
-        'Z\u00e1\u0159\u00ed',
-        '\u0158\u00edjen',
-        'Listopad',
-        'Prosinec',
-    ];
 
     const driverStatisticsNumber = (value) => {
         const number = Number(value);
@@ -8934,7 +8923,10 @@ const calendarJuly2026 = {
     const driverStatisticsKm = (value) =>
         new Intl.NumberFormat(
             'cs-CZ',
-            { maximumFractionDigits: 1 }
+            {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }
         ).format(
             driverStatisticsNumber(value)
         );
@@ -8950,253 +8942,230 @@ const calendarJuly2026 = {
         return new Intl.NumberFormat(
             'cs-CZ',
             {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
             }
         ).format(Number(value)) + ' %';
     };
 
-    const driverStatisticsResponseItems = (body) => {
-        if (Array.isArray(body?.data?.items)) {
-            return body.data.items;
-        }
-
-        if (Array.isArray(body?.items)) {
-            return body.items;
-        }
-
-        if (Array.isArray(body?.data)) {
-            return body.data;
-        }
-
-        return [];
-    };
-
-    const driverStatisticsNavigationDrivers = (body) => {
-        const candidates = [
-            body?.data?.navigation?.drivers,
-            body?.navigation?.drivers,
-            body?.meta?.navigation?.drivers,
-            body?.data?.meta?.navigation?.drivers,
-        ];
-
-        return candidates.find(Array.isArray) || [];
-    };
-
-    const driverStatisticsDriverIsActive = (driver) => {
-        const active = driver?.active;
-
-        if (
-            active === true
-            || active === 1
-            || active === '1'
-            || String(active).toLowerCase() === 'true'
-        ) {
-            return true;
-        }
-
-        return String(
-            driver?.status ?? ''
-        ).toLowerCase() === 'active';
-    };
-
-    const fetchAllDriverStatisticsReports = async () => {
-        const items = [];
-        const perPage = 100;
-
-        driverStatisticsState.navigationDrivers = [];
-
-        for (let page = 1; page <= 100; page += 1) {
-            const body = await realDriverApi(
-                `/api/v1/daily-reports?per_page=${perPage}&page=${page}`
-            );
-
-            const pageItems =
-                driverStatisticsResponseItems(body);
-
-            const navigationDrivers =
-                driverStatisticsNavigationDrivers(body);
-
-            if (
-                driverStatisticsState.navigationDrivers.length === 0
-                && navigationDrivers.length > 0
-            ) {
-                driverStatisticsState.navigationDrivers =
-                    navigationDrivers;
-            }
-
-            items.push(...pageItems);
-
-            if (pageItems.length < perPage) {
-                break;
-            }
-        }
-
-        return items;
-    };
-
-    const driverStatisticsDateParts = (value) => {
+    const driverStatisticsDate = (value) => {
         const match = String(value ?? '').match(
-            /^(\d{4})-(\d{2})-(\d{2})/
+            /^(\d{4})-(\d{2})-(\d{2})$/
         );
 
         if (!match) {
-            return null;
+            return value || '\u2014';
         }
 
-        return {
-            year: Number(match[1]),
-            month: Number(match[2]),
-        };
+        return `${match[3]}.${match[2]}.${match[1]}`;
     };
 
-    const driverStatisticsYears = () =>
-        Array.from(
-            new Set(
-                (driverStatisticsState.items || [])
-                    .map(
-                        (item) =>
-                            driverStatisticsDateParts(
-                                item?.service_date
-                            )?.year
-                    )
-                    .filter(Number.isInteger)
-            )
-        ).sort(
-            (left, right) => right - left
+    const driverStatisticsPeriod = (value) => {
+        const month = String(value ?? '').match(
+            /^(\d{4})-(\d{2})$/
         );
 
-    const driverStatisticsAvailableMonths = (year) =>
-        Array.from(
-            new Set(
-                (driverStatisticsState.items || [])
-                    .map(
-                        (item) =>
-                            driverStatisticsDateParts(
-                                item?.service_date
-                            )
-                    )
-                    .filter(
-                        (date) => date?.year === year
-                    )
-                    .map(
-                        (date) => date.month
-                    )
-            )
-        ).sort(
-            (left, right) => left - right
-        );
+        if (month) {
+            const date = new Date(
+                Number(month[1]),
+                Number(month[2]) - 1,
+                1
+            );
 
-    const driverStatisticsFilteredItems = () => {
-        const items =
-            driverStatisticsState.items || [];
-
-        if (driverStatisticsState.mode === 'all') {
-            return items;
+            return new Intl.DateTimeFormat(
+                'cs-CZ',
+                {
+                    month: 'long',
+                    year: 'numeric',
+                }
+            ).format(date);
         }
 
-        return items.filter(
-            (item) => {
-                const date =
-                    driverStatisticsDateParts(
-                        item?.service_date
-                    );
-
-                if (
-                    !date
-                    || date.year !== driverStatisticsState.year
-                ) {
-                    return false;
-                }
-
-                if (driverStatisticsState.mode === 'year') {
-                    return true;
-                }
-
-                return date.month === driverStatisticsState.month;
-            }
-        );
+        return driverStatisticsDate(value);
     };
 
-    const driverStatisticsButton = (
-        label,
-        active,
-        handler
+    const driverStatisticsQuickPeriodLabel = (key) => ({
+        current_month: 'AKTUÁLNÍ MĚSÍC',
+        previous_month: 'MINULÝ MĚSÍC',
+        current_year: 'AKTUÁLNÍ ROK',
+        previous_year: 'MINULÝ ROK',
+        last_12_months: 'POSLEDNÍCH 12 MĚSÍCŮ',
+        all_history: 'CELÁ HISTORIE',
+    }[key] ?? key);
+
+    const driverStatisticsPayload = (body) => {
+        const data = getPayload(body);
+
+        return data && typeof data === 'object'
+            ? data
+            : {};
+    };
+
+    const driverStatisticsCell = (
+        primary,
+        secondary = ''
     ) => {
-        const button =
-            document.createElement('button');
+        const cell = document.createElement('td');
+        const first = document.createElement('span');
 
-        button.type = 'button';
-        button.className =
-            'drayvia-driver-stat-button';
+        first.className = 'drayvia-driver-stat-primary';
+        first.textContent = String(primary);
+        cell.appendChild(first);
 
-        if (active) {
-            button.classList.add('active');
+        if (secondary) {
+            const second = document.createElement('span');
+
+            second.className =
+                'drayvia-driver-stat-secondary';
+            second.textContent = String(secondary);
+            cell.appendChild(second);
         }
 
-        button.textContent = label;
+        return cell;
+    };
 
-        button.addEventListener(
-            'click',
-            handler
+    const driverStatisticsIdentityCell = (driver) => {
+        const cell = document.createElement('td');
+        const name = document.createElement('span');
+        const id = document.createElement('span');
+
+        cell.className = 'drayvia-driver-stat-identity';
+        name.className = 'drayvia-driver-stat-name';
+        id.className = 'drayvia-driver-stat-id';
+
+        name.textContent = driver?.name || '\u2014';
+        id.textContent = driver?.external_id
+            ? `ID: ${driver.external_id}`
+            : `Intern\u00ed ID: ${driver?.id ?? '\u2014'}`;
+
+        cell.appendChild(name);
+        cell.appendChild(id);
+
+        return cell;
+    };
+
+    const driverStatisticsCarrierCell = (carriers) => {
+        const rows = Array.isArray(carriers)
+            ? carriers
+            : [];
+
+        return driverStatisticsCell(
+            rows.length > 0
+                ? rows.map((item) => item?.name || '—').join(', ')
+                : 'Bez historicky doloženého dopravce'
         );
-
-        return button;
     };
 
     const ensureDriverStatisticsShell = () => {
-        const driverStatsHost =
-            document.getElementById(
-                'drayviaDriverStatisticsHost'
-            );
+        const host = document.getElementById(
+            'drayviaDriverStatisticsHost'
+        );
 
-        if (!driverStatsHost) {
+        if (!host) {
             return null;
         }
 
         if (
-            !driverStatsHost.querySelector(
+            !host.querySelector(
                 '#drayviaDriverStatisticsRows'
             )
         ) {
-            driverStatsHost.innerHTML = `
+            host.innerHTML = `
                 <div class="drayvia-preview-panel-head">
                     <h2 class="drayvia-preview-panel-title">
                         STATISTIKY &#344;IDI&#268;&#366;
                     </h2>
 
                     <div class="drayvia-preview-panel-subtitle">
-                        Skute&#269;n&#253; provozn&#237; v&#253;kon z tras DRAYVIA.
+                        Sou&#269;ty a pod&#237;ly ze skute&#269;n&#253;ch tras DRAYVIA.
                     </div>
                 </div>
 
-                <div class="drayvia-driver-stat-filters">
-                    <div class="drayvia-driver-stat-filter-row">
-                        <div class="drayvia-driver-stat-label">ROK</div>
-                        <div
-                            id="drayviaDriverStatisticsYears"
-                            class="drayvia-driver-stat-buttons"
-                        ></div>
-                    </div>
+                <form
+                    id="drayviaDriverStatisticsFilters"
+                    class="drayvia-driver-stat-filters"
+                >
+                    <div
+                        id="drayviaDriverStatisticsQuickPeriods"
+                        style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"
+                    ></div>
 
                     <div class="drayvia-driver-stat-filter-row">
-                        <div class="drayvia-driver-stat-label">
-                            M&#282;S&#205;C
-                        </div>
-                        <div
-                            id="drayviaDriverStatisticsMonths"
-                            class="drayvia-driver-stat-buttons"
-                        ></div>
-                    </div>
+                        <label style="min-width:240px;">
+                            <span class="drayvia-driver-stat-label" style="display:block;width:auto;padding:0 0 6px;">
+                                &#344;IDI&#268;
+                            </span>
+                            <select
+                                id="drayviaDriverStatisticsDriver"
+                                style="width:100%;height:40px;padding:0 10px;border:1px solid #b8c2ce;border-radius:8px;background:#fff;"
+                            >
+                                <option value="">V&#352;ICHNI &#344;IDI&#268;I</option>
+                            </select>
+                        </label>
 
-                    <div class="drayvia-driver-stat-filter-row">
-                        <div class="drayvia-driver-stat-label">
-                            RYCHL&#201; OBDOB&#205;
-                        </div>
-                        <div
-                            id="drayviaDriverStatisticsQuick"
-                            class="drayvia-driver-stat-buttons"
-                        ></div>
+                        <label style="min-width:240px;">
+                            <span class="drayvia-driver-stat-label" style="display:block;width:auto;padding:0 0 6px;">
+                                DOPRAVCE
+                            </span>
+                            <select
+                                id="drayviaDriverStatisticsCarrier"
+                                style="width:100%;height:40px;padding:0 10px;border:1px solid #b8c2ce;border-radius:8px;background:#fff;"
+                            >
+                                <option value="all">VŠICHNI DOPRAVCI</option>
+                            </select>
+                        </label>
+
+                        <label style="min-width:170px;">
+                            <span class="drayvia-driver-stat-label" style="display:block;width:auto;padding:0 0 6px;">
+                                OBDOB&#205; OD
+                            </span>
+                            <input
+                                id="drayviaDriverStatisticsFrom"
+                                type="date"
+                                style="width:100%;height:40px;padding:0 10px;border:1px solid #b8c2ce;border-radius:8px;background:#fff;"
+                            >
+                        </label>
+
+                        <label style="min-width:170px;">
+                            <span class="drayvia-driver-stat-label" style="display:block;width:auto;padding:0 0 6px;">
+                                OBDOB&#205; DO
+                            </span>
+                            <input
+                                id="drayviaDriverStatisticsTo"
+                                type="date"
+                                style="width:100%;height:40px;padding:0 10px;border:1px solid #b8c2ce;border-radius:8px;background:#fff;"
+                            >
+                        </label>
+
+                        <label style="min-width:160px;">
+                            <span class="drayvia-driver-stat-label" style="display:block;width:auto;padding:0 0 6px;">
+                                V&#221;VOJ PO
+                            </span>
+                            <select
+                                id="drayviaDriverStatisticsGroup"
+                                style="width:100%;height:40px;padding:0 10px;border:1px solid #b8c2ce;border-radius:8px;background:#fff;"
+                            >
+                                <option value="month">M&#282;S&#205;C&#205;CH</option>
+                                <option value="day">DNECH</option>
+                            </select>
+                        </label>
+
+                        <button
+                            class="drayvia-driver-stat-button active"
+                            type="submit"
+                            style="align-self:flex-end;height:40px;"
+                        >
+                            ZOBRAZIT
+                        </button>
+
+                        <button
+                            id="drayviaDriverStatisticsReset"
+                            class="drayvia-driver-stat-button"
+                            type="button"
+                            style="align-self:flex-end;height:40px;"
+                        >
+                            AKTU&#193;LN&#205; M&#282;S&#205;C
+                        </button>
                     </div>
 
                     <div
@@ -9205,627 +9174,597 @@ const calendarJuly2026 = {
                     >
                         NA&#268;&#205;T&#193;M STATISTIKY...
                     </div>
+                </form>
+
+                <div
+                    class="drayvia-real-driver-message"
+                    style="display:block;margin-top:14px;"
+                >
+                    D&#237;l&#269;&#237; kvalita je zde objektivn&#237; pod&#237;l vy&#345;&#237;zen&#253;ch
+                    z&#225;silek z nalo&#382;en&#253;ch. Konfigurovateln&#253; profil kvality,
+                    finan&#269;n&#237; podm&#237;nky ani bonusy zat&#237;m nejsou pou&#382;ity.
+                </div>
+
+                <div class="drayvia-preview-grid" style="margin-top:16px;">
+                    <div class="drayvia-preview-card">
+                        <div class="drayvia-preview-card-label">TRASY</div>
+                        <div id="drayviaDriverStatisticsRouteCount" class="drayvia-preview-card-value">&#8212;</div>
+                    </div>
+                    <div class="drayvia-preview-card">
+                        <div class="drayvia-preview-card-label">PRACOVN&#205; DNY</div>
+                        <div id="drayviaDriverStatisticsWorkDayCount" class="drayvia-preview-card-value">&#8212;</div>
+                    </div>
+                    <div class="drayvia-preview-card">
+                        <div class="drayvia-preview-card-label">NALO&#381;ENO</div>
+                        <div id="drayviaDriverStatisticsLoaded" class="drayvia-preview-card-value">&#8212;</div>
+                    </div>
+                    <div class="drayvia-preview-card">
+                        <div class="drayvia-preview-card-label">D&#205;L&#268;&#205; KVALITA</div>
+                        <div id="drayviaDriverStatisticsProcessedShare" class="drayvia-preview-card-value">&#8212;</div>
+                    </div>
+                    <div class="drayvia-preview-card">
+                        <div class="drayvia-preview-card-label">ROZD&#205;L KM</div>
+                        <div id="drayviaDriverStatisticsKmDifference" class="drayvia-preview-card-value">&#8212;</div>
+                    </div>
                 </div>
 
                 <div class="drayvia-driver-stat-table-wrap">
                     <table class="drayvia-driver-stat-table">
                         <thead>
                             <tr>
-                                <th>P&#344;&#205;JMEN&#205; A JM&#201;NO</th>
+                                <th>&#344;IDI&#268;</th>
+                                <th>DOPRAVCE</th>
                                 <th>TRASY</th>
-                                <th>DNY S TRASOU</th>
+                                <th>PRACOVN&#205; DNY</th>
                                 <th>NALO&#381;ENO</th>
-                                <th>DORU&#268;ENO NA ADRESU</th>
-                                <th>V&#221;DEJN&#205; M&#205;STO</th>
+                                <th>DORU&#268;ENO</th>
+                                <th>P&#344;ESM&#282;ROV&#193;NO</th>
                                 <th>ODM&#205;TNUTO Z&#193;KAZN&#205;KEM</th>
-                                <th>NEDORU&#268;ENO</th>
+                                <th>Z&#366;STALO NEDORU&#268;ENO</th>
                                 <th>PL&#193;N KM</th>
                                 <th>SKUT. KM</th>
                                 <th>ROZD&#205;L N&#193;JEZDU</th>
                                 <th>D&#205;L&#268;&#205; KVALITA</th>
                             </tr>
                         </thead>
-
                         <tbody id="drayviaDriverStatisticsRows"></tbody>
                     </table>
                 </div>
+
+                <div
+                    id="drayviaDriverStatisticsCompleteness"
+                    class="drayvia-driver-stat-summary"
+                ></div>
+
+                <div class="drayvia-driver-stat-table-wrap">
+                    <h3 style="margin:24px 0 10px;">V&#221;VOJ V OBDOB&#205;</h3>
+                    <table class="drayvia-driver-stat-table">
+                        <thead>
+                            <tr>
+                                <th>OBDOB&#205;</th>
+                                <th>TRASY</th>
+                                <th>DNY</th>
+                                <th>NALO&#381;ENO</th>
+                                <th>DORU&#268;ENO</th>
+                                <th>P&#344;ESM&#282;ROV&#193;NO</th>
+                                <th>ODM&#205;TNUTO</th>
+                                <th>NEDORU&#268;ENO</th>
+                                <th>D&#205;L&#268;&#205; KVALITA</th>
+                                <th>ROZD&#205;L KM</th>
+                            </tr>
+                        </thead>
+                        <tbody id="drayviaDriverStatisticsTimelineRows"></tbody>
+                    </table>
+                </div>
             `;
+
+            const form = document.getElementById(
+                'drayviaDriverStatisticsFilters'
+            );
+
+            form?.addEventListener(
+                'submit',
+                (event) => {
+                    event.preventDefault();
+
+                    driverStatisticsState.driverId = String(
+                        document.getElementById(
+                            'drayviaDriverStatisticsDriver'
+                        )?.value ?? ''
+                    );
+
+                    const carrierValue = String(
+                        document.getElementById(
+                            'drayviaDriverStatisticsCarrier'
+                        )?.value ?? 'all'
+                    );
+
+                    if (carrierValue.startsWith('organization:')) {
+                        driverStatisticsState.carrierScope =
+                            'external';
+                        driverStatisticsState.carrierOrganizationId =
+                            carrierValue.split(':')[1] ?? '';
+                    }
+                    else {
+                        driverStatisticsState.carrierScope =
+                            carrierValue;
+                        driverStatisticsState.carrierOrganizationId = '';
+                    }
+
+                    driverStatisticsState.dateFrom = String(
+                        document.getElementById(
+                            'drayviaDriverStatisticsFrom'
+                        )?.value ?? ''
+                    );
+
+                    driverStatisticsState.dateTo = String(
+                        document.getElementById(
+                            'drayviaDriverStatisticsTo'
+                        )?.value ?? ''
+                    );
+
+                    driverStatisticsState.groupBy = String(
+                        document.getElementById(
+                            'drayviaDriverStatisticsGroup'
+                        )?.value ?? 'month'
+                    );
+
+                    driverStatisticsState.period = 'custom';
+
+                    loadDriverStatistics(true);
+                }
+            );
+
+            document.getElementById(
+                'drayviaDriverStatisticsReset'
+            )?.addEventListener(
+                'click',
+                () => {
+                    driverStatisticsState.driverId = '';
+                    driverStatisticsState.carrierScope = 'all';
+                    driverStatisticsState.carrierOrganizationId = '';
+                    driverStatisticsState.period = 'current_month';
+                    driverStatisticsState.dateFrom = '';
+                    driverStatisticsState.dateTo = '';
+                    driverStatisticsState.groupBy = 'month';
+
+                    loadDriverStatistics(true);
+                }
+            );
         }
 
-        return driverStatsHost;
+        return host;
     };
 
-    const renderDriverStatisticsFilters = () => {
-        const yearTarget =
-            document.getElementById(
-                'drayviaDriverStatisticsYears'
+    const driverStatisticsSyncControls = () => {
+        const driver = document.getElementById(
+            'drayviaDriverStatisticsDriver'
+        );
+
+        const carrier = document.getElementById(
+            'drayviaDriverStatisticsCarrier'
+        );
+
+        const from = document.getElementById(
+            'drayviaDriverStatisticsFrom'
+        );
+
+        const to = document.getElementById(
+            'drayviaDriverStatisticsTo'
+        );
+
+        const group = document.getElementById(
+            'drayviaDriverStatisticsGroup'
+        );
+
+        if (driver) {
+            const current = driverStatisticsState.driverId;
+
+            driver.replaceChildren();
+
+            const all = document.createElement('option');
+
+            all.value = '';
+            all.textContent = 'V\u0160ICHNI \u0158IDI\u010cI';
+            driver.appendChild(all);
+
+            driverStatisticsState.driverOptions.forEach(
+                (item) => {
+                    const option = document.createElement(
+                        'option'
+                    );
+
+                    option.value = String(item.id);
+                    option.textContent = item.name
+                        || `\u0158idi\u010d ${item.id}`;
+                    driver.appendChild(option);
+                }
             );
 
-        const monthTarget =
-            document.getElementById(
-                'drayviaDriverStatisticsMonths'
+            driver.value = current;
+        }
+
+        if (carrier) {
+            const current =
+                driverStatisticsState.carrierScope === 'external'
+                    ? `organization:${driverStatisticsState.carrierOrganizationId}`
+                    : driverStatisticsState.carrierScope;
+
+            carrier.replaceChildren();
+
+            const all = document.createElement('option');
+
+            all.value = 'all';
+            all.textContent = 'VŠICHNI DOPRAVCI';
+            carrier.appendChild(all);
+
+            driverStatisticsState.carrierOptions.forEach(
+                (item) => {
+                    const option = document.createElement(
+                        'option'
+                    );
+
+                    option.value = String(item.key);
+                    option.textContent =
+                        `${item.name} (${driverStatisticsInteger(
+                            item.route_count
+                        )})`;
+                    carrier.appendChild(option);
+                }
             );
 
-        const quickTarget =
-            document.getElementById(
-                'drayviaDriverStatisticsQuick'
+            carrier.value = current;
+
+            if (carrier.value !== current) {
+                driverStatisticsState.carrierScope = 'all';
+                driverStatisticsState.carrierOrganizationId = '';
+                carrier.value = 'all';
+            }
+        }
+
+        if (from) {
+            from.value = driverStatisticsState.dateFrom;
+        }
+
+        if (to) {
+            to.value = driverStatisticsState.dateTo;
+        }
+
+        if (group) {
+            group.value = driverStatisticsState.groupBy;
+        }
+
+        const quickPeriods = document.getElementById(
+            'drayviaDriverStatisticsQuickPeriods'
+        );
+
+        if (quickPeriods) {
+            quickPeriods.replaceChildren();
+
+            driverStatisticsState.quickPeriods.forEach(
+                (item) => {
+                    const button = document.createElement(
+                        'button'
+                    );
+
+                    button.type = 'button';
+                    button.className =
+                        'drayvia-driver-stat-button';
+                    button.textContent =
+                        `${driverStatisticsQuickPeriodLabel(
+                            item.key
+                        )} (${driverStatisticsInteger(
+                            item.route_count
+                        )})`;
+
+                    if (
+                        driverStatisticsState.period === item.key
+                    ) {
+                        button.classList.add('active');
+                    }
+
+                    button.addEventListener(
+                        'click',
+                        () => {
+                            driverStatisticsState.period =
+                                String(item.key);
+                            driverStatisticsState.dateFrom =
+                                String(item.date_from ?? '');
+                            driverStatisticsState.dateTo =
+                                String(item.date_to ?? '');
+
+                            loadDriverStatistics(true);
+                        }
+                    );
+
+                    quickPeriods.appendChild(button);
+                }
             );
+        }
+    };
+
+    const driverStatisticsQuery = () => {
+        const query = new URLSearchParams();
+
+        query.set(
+            'group_by',
+            driverStatisticsState.groupBy
+        );
+
+        query.set(
+            'carrier_scope',
+            driverStatisticsState.carrierScope
+        );
 
         if (
-            !yearTarget
-            || !monthTarget
-            || !quickTarget
+            driverStatisticsState.carrierScope === 'external'
+            && driverStatisticsState.carrierOrganizationId
         ) {
-            return;
-        }
-
-        yearTarget.replaceChildren();
-        monthTarget.replaceChildren();
-        quickTarget.replaceChildren();
-
-        driverStatisticsYears().forEach(
-            (year) => {
-                yearTarget.appendChild(
-                    driverStatisticsButton(
-                        String(year),
-                        driverStatisticsState.mode !== 'all'
-                            && driverStatisticsState.year === year,
-                        () => {
-                            driverStatisticsState.year = year;
-                            driverStatisticsState.mode = 'year';
-                            renderDriverStatistics();
-                        }
-                    )
-                );
-            }
-        );
-
-        driverStatisticsAvailableMonths(
-            driverStatisticsState.year
-        ).forEach(
-            (month) => {
-                monthTarget.appendChild(
-                    driverStatisticsButton(
-                        driverStatisticsMonths[month - 1],
-                        driverStatisticsState.mode === 'month'
-                            && driverStatisticsState.month === month,
-                        () => {
-                            driverStatisticsState.month = month;
-                            driverStatisticsState.mode = 'month';
-                            renderDriverStatistics();
-                        }
-                    )
-                );
-            }
-        );
-
-        const now = new Date();
-
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1;
-
-        const previous = new Date(
-            currentYear,
-            currentMonth - 2,
-            1
-        );
-
-        const quick = [
-            {
-                label: 'Tento m\u011bs\u00edc',
-                active:
-                    driverStatisticsState.mode === 'month'
-                    && driverStatisticsState.year === currentYear
-                    && driverStatisticsState.month === currentMonth,
-                apply: () => {
-                    driverStatisticsState.mode = 'month';
-                    driverStatisticsState.year = currentYear;
-                    driverStatisticsState.month = currentMonth;
-                },
-            },
-            {
-                label: 'Minul\u00fd m\u011bs\u00edc',
-                active:
-                    driverStatisticsState.mode === 'month'
-                    && driverStatisticsState.year
-                        === previous.getFullYear()
-                    && driverStatisticsState.month
-                        === previous.getMonth() + 1,
-                apply: () => {
-                    driverStatisticsState.mode = 'month';
-                    driverStatisticsState.year =
-                        previous.getFullYear();
-                    driverStatisticsState.month =
-                        previous.getMonth() + 1;
-                },
-            },
-            {
-                label: 'Tento rok',
-                active:
-                    driverStatisticsState.mode === 'year'
-                    && driverStatisticsState.year === currentYear,
-                apply: () => {
-                    driverStatisticsState.mode = 'year';
-                    driverStatisticsState.year = currentYear;
-                },
-            },
-            {
-                label: 'V\u0161e',
-                active:
-                    driverStatisticsState.mode === 'all',
-                apply: () => {
-                    driverStatisticsState.mode = 'all';
-                },
-            },
-        ];
-
-        quick.forEach(
-            (item) => {
-                quickTarget.appendChild(
-                    driverStatisticsButton(
-                        item.label,
-                        item.active,
-                        () => {
-                            item.apply();
-                            renderDriverStatistics();
-                        }
-                    )
-                );
-            }
-        );
-    };
-
-    const driverStatisticsPeriodLabel = () => {
-        if (driverStatisticsState.mode === 'all') {
-            return 'V\u0161echna data';
-        }
-
-        if (driverStatisticsState.mode === 'year') {
-            return String(
-                driverStatisticsState.year
+            query.set(
+                'carrier_organization_id',
+                driverStatisticsState.carrierOrganizationId
             );
         }
 
-        return (
-            driverStatisticsMonths[
-                driverStatisticsState.month - 1
-            ]
-            + ' '
-            + driverStatisticsState.year
-        );
-    };
-
-    const driverStatisticsActiveDriver = (stat) => {
-        return (
-            driverStatisticsState.navigationDrivers
-            || []
-        ).find(
-            (driver) => {
-                const internalId =
-                    Number(
-                        driver?.id
-                        ?? driver?.driver_id
-                        ?? driver?.performed_by_driver_id
-                    );
-
-                const externalId =
-                    String(
-                        driver?.external_driver_id
-                        ?? ''
-                    ).trim();
-
-                return (
-                    (
-                        Number.isInteger(internalId)
-                        && internalId === stat.driverId
-                    )
-                    || (
-                        externalId !== ''
-                        && externalId === stat.externalId
-                    )
-                );
-            }
-        );
-    };
-
-    const renderDriverStatistics = () => {
-        if (!ensureDriverStatisticsShell()) {
-            return;
+        if (driverStatisticsState.period) {
+            query.set(
+                'period',
+                driverStatisticsState.period
+            );
         }
 
-        renderDriverStatisticsFilters();
-
-        const target =
-            document.getElementById(
-                'drayviaDriverStatisticsRows'
+        if (driverStatisticsState.driverId) {
+            query.set(
+                'performed_by_driver_id',
+                driverStatisticsState.driverId
             );
+        }
 
-        const summary =
-            document.getElementById(
-                'drayviaDriverStatisticsSummary'
+        if (driverStatisticsState.dateFrom) {
+            query.set(
+                'service_date_from',
+                driverStatisticsState.dateFrom
             );
+        }
 
-        const filtered =
-            driverStatisticsFilteredItems();
+        if (driverStatisticsState.dateTo) {
+            query.set(
+                'service_date_to',
+                driverStatisticsState.dateTo
+            );
+        }
 
-        const statistics = new Map();
+        return query.toString();
+    };
 
-        filtered.forEach(
-            (item) => {
-                const driverId =
-                    Number(
-                        item?.performed_by_driver_id
-                    );
+    const driverStatisticsRenderSummary = (data) => {
+        const totals = data?.totals ?? {};
+        const set = (id, value) => {
+            const element = document.getElementById(id);
 
-                if (
-                    !Number.isInteger(driverId)
-                    || driverId <= 0
-                ) {
-                    return;
-                }
-
-                if (!statistics.has(driverId)) {
-                    statistics.set(
-                        driverId,
-                        {
-                            driverId,
-                            name:
-                                String(
-                                    item?.performed_by_driver_name
-                                    || `\u0158idi\u010d ${driverId}`
-                                ),
-                            externalId:
-                                String(
-                                    item?.performed_by_driver_external_id
-                                    ?? ''
-                                ).trim(),
-                            routes: 0,
-                            dates: new Set(),
-                            loaded: 0,
-                            delivered: 0,
-                            redirected: 0,
-                            rejected: 0,
-                            notDelivered: 0,
-                            plannedKm: 0,
-                            actualKm: 0,
-                        }
-                    );
-                }
-
-                const stat =
-                    statistics.get(driverId);
-
-                stat.routes += 1;
-
-                if (item?.service_date) {
-                    stat.dates.add(
-                        String(item.service_date)
-                    );
-                }
-
-                const loaded =
-                    driverStatisticsNumber(
-                        item?.loaded_parcels
-                    );
-
-                const delivered =
-                    driverStatisticsNumber(
-                        item?.delivered_parcels
-                    );
-
-                const redirected =
-                    driverStatisticsNumber(
-                        item?.redirected_parcels
-                    );
-
-                const rejected =
-                    driverStatisticsNumber(
-                        item?.undelivered_parcels
-                    );
-
-                stat.loaded += loaded;
-                stat.delivered += delivered;
-                stat.redirected += redirected;
-                stat.rejected += rejected;
-
-                const calculatedNotDelivered =
-                    Number(
-                        item?.calculated
-                            ?.not_delivered_parcels
-                    );
-
-                stat.notDelivered +=
-                    Number.isFinite(
-                        calculatedNotDelivered
-                    )
-                        ? calculatedNotDelivered
-                        : Math.max(
-                            loaded
-                            - delivered
-                            - redirected
-                            - rejected,
-                            0
-                        );
-
-                stat.plannedKm +=
-                    driverStatisticsNumber(
-                        item?.planned_km
-                    );
-
-                stat.actualKm +=
-                    driverStatisticsNumber(
-                        item?.actual_km
-                    );
+            if (element) {
+                element.textContent = String(value);
             }
-        );
+        };
 
-        const rows =
-            Array.from(
-                statistics.values()
+        set(
+            'drayviaDriverStatisticsRouteCount',
+            driverStatisticsInteger(totals.route_count)
+        );
+        set(
+            'drayviaDriverStatisticsWorkDayCount',
+            driverStatisticsInteger(totals.work_day_count)
+        );
+        set(
+            'drayviaDriverStatisticsLoaded',
+            driverStatisticsInteger(totals.loaded_parcels)
+        );
+        set(
+            'drayviaDriverStatisticsProcessedShare',
+            driverStatisticsPercent(
+                totals.processed_share_percent
             )
-                .filter(
-                    (stat) => {
-                        if (stat.routes <= 0) {
-                            return false;
-                        }
+        );
+        set(
+            'drayviaDriverStatisticsKmDifference',
+            `${driverStatisticsKm(totals.difference_km)} km`
+        );
 
-                        const driver =
-                            driverStatisticsActiveDriver(
-                                stat
-                            );
+        const summary = document.getElementById(
+            'drayviaDriverStatisticsSummary'
+        );
 
-                        return (
-                            driver !== undefined
-                            && driverStatisticsDriverIsActive(
-                                driver
-                            )
-                        );
-                    }
+        if (summary) {
+            const first = totals.first_service_date
+                ? driverStatisticsDate(
+                    totals.first_service_date
                 )
-                .sort(
-                    (left, right) =>
-                        left.name.localeCompare(
-                            right.name,
-                            'cs-CZ'
-                        )
-                );
+                : '\u2014';
+
+            const last = totals.last_service_date
+                ? driverStatisticsDate(
+                    totals.last_service_date
+                )
+                : '\u2014';
+
+            summary.textContent =
+                `Obdob\u00ed dat: ${first} \u2013 ${last}`
+                + ` \u00b7 Tras: ${driverStatisticsInteger(
+                    totals.route_count
+                )}`
+                + ` \u00b7 Pracovn\u00edch dn\u016f: ${driverStatisticsInteger(
+                    totals.work_day_count
+                )}`;
+        }
+
+        const completeness = document.getElementById(
+            'drayviaDriverStatisticsCompleteness'
+        );
+
+        if (completeness) {
+            completeness.textContent =
+                `\u00daplnost z\u00e1silkov\u00fdch dat: ${driverStatisticsInteger(
+                    totals.parcel_complete_route_count
+                )} z ${driverStatisticsInteger(
+                    totals.route_count
+                )} tras`;
+
+            completeness.textContent +=
+                ` \u00b7 \u00daplnost kilometr\u016f: ${driverStatisticsInteger(
+                    totals.kilometre_complete_route_count
+                )} z ${driverStatisticsInteger(
+                    totals.route_count
+                )} tras`;
+
+            if (data?.scope?.quality_profile_applied === false) {
+                completeness.textContent +=
+                    ' \u00b7 Profil kvality nebyl aplikov\u00e1n.';
+            }
+
+            const attribution =
+                data?.carrier_attribution ?? {};
+
+            completeness.textContent +=
+                ` · Historicky doložený dopravce: ${driverStatisticsInteger(
+                    attribution.attributed_route_count
+                )} tras`;
+
+            if (
+                driverStatisticsNumber(
+                    attribution.unattributed_route_count
+                ) > 0
+            ) {
+                completeness.textContent +=
+                    ` · Bez historicky doloženého dopravce: ${driverStatisticsInteger(
+                        attribution.unattributed_route_count
+                    )} tras`;
+            }
+
+            completeness.textContent +=
+                ' · Dílčí kvalita = (doručeno + přesměrováno + odmítnuto zákazníkem) / naloženo.';
+        }
+    };
+
+    const driverStatisticsRenderDrivers = (data) => {
+        const target = document.getElementById(
+            'drayviaDriverStatisticsRows'
+        );
+
+        if (!target) {
+            return;
+        }
 
         target.replaceChildren();
 
-        const simpleCell = (
-            value,
-            className = ''
-        ) => {
-            const cell =
-                document.createElement('td');
-
-            cell.textContent = value;
-
-            if (className) {
-                cell.className = className;
-            }
-
-            return cell;
-        };
-
-        const twoLineCell = (
-            primary,
-            secondary,
-            className = ''
-        ) => {
-            const cell =
-                document.createElement('td');
-
-            if (className) {
-                cell.className = className;
-            }
-
-            const first =
-                document.createElement('span');
-
-            first.className =
-                'drayvia-driver-stat-primary';
-
-            first.textContent = primary;
-
-            const second =
-                document.createElement('span');
-
-            second.className =
-                'drayvia-driver-stat-secondary';
-
-            second.textContent = secondary;
-
-            cell.appendChild(first);
-            cell.appendChild(second);
-
-            return cell;
-        };
+        const rows = Array.isArray(data?.drivers)
+            ? data.drivers
+            : [];
 
         rows.forEach(
-            (stat) => {
-                const row =
-                    document.createElement('tr');
-
-                const differenceKm =
-                    stat.actualKm
-                    - stat.plannedKm;
-
-                const differencePercent =
-                    stat.plannedKm > 0
-                        ? (
-                            differenceKm
-                            / stat.plannedKm
-                        ) * 100
-                        : null;
-
-                const pickupPercent =
-                    stat.loaded > 0
-                        ? (
-                            stat.redirected
-                            / stat.loaded
-                        ) * 100
-                        : null;
-
-                const partialQuality =
-                    Math.max(
-                        stat.loaded
-                        - stat.delivered
-                        - stat.redirected
-                        - stat.rejected,
-                        0
-                    );
-
-                const kmAlert =
-                    differencePercent !== null
-                    && Math.abs(
-                        differencePercent
-                    ) > 10;
-
-                const identityCell =
-                    document.createElement('td');
-
-                identityCell.className =
-                    'drayvia-driver-stat-identity';
-
-                const name =
-                    document.createElement('span');
-
-                name.className =
-                    'drayvia-driver-stat-name';
-
-                name.textContent =
-                    stat.name;
-
-                const id =
-                    document.createElement('span');
-
-                id.className =
-                    'drayvia-driver-stat-id';
-
-                id.textContent =
-                    `ID: ${stat.externalId || '\u2014'}`;
-
-                identityCell.appendChild(name);
-                identityCell.appendChild(id);
-
-                row.appendChild(identityCell);
+            (item) => {
+                const metrics = item?.metrics ?? {};
+                const row = document.createElement('tr');
 
                 row.appendChild(
-                    simpleCell(
+                    driverStatisticsIdentityCell(
+                        item?.driver ?? {}
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCarrierCell(
+                        item?.carriers
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
                         driverStatisticsInteger(
-                            stat.routes
+                            metrics.route_count
                         )
                     )
                 );
-
                 row.appendChild(
-                    simpleCell(
+                    driverStatisticsCell(
                         driverStatisticsInteger(
-                            stat.dates.size
+                            metrics.work_day_count
                         )
                     )
                 );
-
                 row.appendChild(
-                    simpleCell(
+                    driverStatisticsCell(
                         driverStatisticsInteger(
-                            stat.loaded
+                            metrics.loaded_parcels
                         )
                     )
                 );
-
                 row.appendChild(
-                    simpleCell(
+                    driverStatisticsCell(
                         driverStatisticsInteger(
-                            stat.delivered
-                        )
-                    )
-                );
-
-                row.appendChild(
-                    twoLineCell(
-                        driverStatisticsInteger(
-                            stat.redirected
+                            metrics.delivered_parcels
                         ),
                         driverStatisticsPercent(
-                            pickupPercent
+                            metrics.delivered_share_percent
                         )
                     )
                 );
-
                 row.appendChild(
-                    simpleCell(
+                    driverStatisticsCell(
                         driverStatisticsInteger(
-                            stat.rejected
+                            metrics.redirected_parcels
                         ),
-                        stat.rejected > 0
-                            ? 'drayvia-driver-stat-warning'
-                            : ''
+                        driverStatisticsPercent(
+                            metrics.redirected_share_percent
+                        )
                     )
                 );
-
                 row.appendChild(
-                    simpleCell(
+                    driverStatisticsCell(
                         driverStatisticsInteger(
-                            stat.notDelivered
+                            metrics.customer_rejected_parcels
                         ),
-                        stat.notDelivered === 0
-                            ? 'drayvia-driver-stat-quality-good'
-                            : 'drayvia-driver-stat-quality-bad'
-                    )
-                );
-
-                row.appendChild(
-                    simpleCell(
-                        driverStatisticsKm(
-                            stat.plannedKm
+                        driverStatisticsPercent(
+                            metrics.customer_rejected_share_percent
                         )
                     )
                 );
-
                 row.appendChild(
-                    simpleCell(
-                        driverStatisticsKm(
-                            stat.actualKm
-                        )
-                    )
-                );
-
-                row.appendChild(
-                    twoLineCell(
-                        (
-                            differenceKm > 0
-                                ? '+'
-                                : ''
-                        )
-                        + driverStatisticsKm(
-                            differenceKm
-                        )
-                        + ' km',
-                        (
-                            differencePercent !== null
-                            && differencePercent > 0
-                                ? '+'
-                                : ''
-                        )
-                        + driverStatisticsPercent(
-                            differencePercent
-                        ),
-                        kmAlert
-                            ? 'drayvia-driver-stat-alert'
-                            : ''
-                    )
-                );
-
-                row.appendChild(
-                    simpleCell(
+                    driverStatisticsCell(
                         driverStatisticsInteger(
-                            partialQuality
+                            metrics.not_delivered_parcels
                         ),
-                        partialQuality === 0
-                            ? 'drayvia-driver-stat-quality-good'
-                            : 'drayvia-driver-stat-quality-bad'
+                        driverStatisticsPercent(
+                            metrics.not_delivered_share_percent
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        `${driverStatisticsKm(
+                            metrics.planned_km
+                        )} km`
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        `${driverStatisticsKm(
+                            metrics.actual_km
+                        )} km`
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        `${driverStatisticsKm(
+                            metrics.difference_km
+                        )} km`,
+                        driverStatisticsPercent(
+                            metrics.kilometre_deviation_percent
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsPercent(
+                            metrics.processed_share_percent
+                        )
                     )
                 );
 
@@ -9834,32 +9773,139 @@ const calendarJuly2026 = {
         );
 
         if (rows.length === 0) {
-            const row =
-                document.createElement('tr');
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
 
-            const empty =
-                document.createElement('td');
-
-            empty.colSpan = 12;
-            empty.className =
-                'drayvia-driver-stat-empty';
-
-            empty.textContent =
-                'V tomto obdob\u00ed nem\u00e1 \u017e\u00e1dn\u00fd aktivn\u00ed \u0159idi\u010d trasu.';
-
-            row.appendChild(empty);
+            cell.colSpan = 13;
+            cell.className = 'drayvia-driver-stat-empty';
+            cell.textContent =
+                'Ve zvolen\u00e9m obdob\u00ed nejsou ulo\u017een\u00e9 trasy.';
+            row.appendChild(cell);
             target.appendChild(row);
         }
+    };
 
-        if (summary) {
-            summary.textContent =
-                `Obdob\u00ed: ${driverStatisticsPeriodLabel()}`
-                + ` \u00b7 Aktivn\u00edch \u0159idi\u010d\u016f s trasou: ${rows.length}`
-                + ` \u00b7 Tras: ${rows.reduce(
-                    (sum, row) => sum + row.routes,
-                    0
-                )}`;
+    const driverStatisticsRenderTimeline = (data) => {
+        const target = document.getElementById(
+            'drayviaDriverStatisticsTimelineRows'
+        );
+
+        if (!target) {
+            return;
         }
+
+        target.replaceChildren();
+
+        const rows = Array.isArray(data?.timeline)
+            ? data.timeline
+            : [];
+
+        rows.forEach(
+            (item) => {
+                const metrics = item?.metrics ?? {};
+                const row = document.createElement('tr');
+
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsPeriod(item?.period)
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsInteger(
+                            metrics.route_count
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsInteger(
+                            metrics.work_day_count
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsInteger(
+                            metrics.loaded_parcels
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsInteger(
+                            metrics.delivered_parcels
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsInteger(
+                            metrics.redirected_parcels
+                        ),
+                        driverStatisticsPercent(
+                            metrics.redirected_share_percent
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsInteger(
+                            metrics.customer_rejected_parcels
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsInteger(
+                            metrics.not_delivered_parcels
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        driverStatisticsPercent(
+                            metrics.processed_share_percent
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverStatisticsCell(
+                        `${driverStatisticsKm(
+                            metrics.difference_km
+                        )} km`
+                    )
+                );
+
+                target.appendChild(row);
+            }
+        );
+
+        if (rows.length === 0) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+
+            cell.colSpan = 10;
+            cell.className = 'drayvia-driver-stat-empty';
+            cell.textContent =
+                'Pro zvolen\u00e9 obdob\u00ed nen\u00ed dostupn\u00fd v\u00fdvoj.';
+            row.appendChild(cell);
+            target.appendChild(row);
+        }
+    };
+
+    const renderDriverStatistics = () => {
+        if (!ensureDriverStatisticsShell()) {
+            return;
+        }
+
+        driverStatisticsSyncControls();
+
+        const data = driverStatisticsState.data ?? {};
+
+        driverStatisticsRenderSummary(data);
+        driverStatisticsRenderDrivers(data);
+        driverStatisticsRenderTimeline(data);
     };
 
     const loadDriverStatistics = async (
@@ -9873,22 +9919,16 @@ const calendarJuly2026 = {
             return;
         }
 
-        if (
-            !force
-            && Array.isArray(
-                driverStatisticsState.items
-            )
-        ) {
+        if (!force && driverStatisticsState.data) {
             renderDriverStatistics();
             return;
         }
 
         driverStatisticsState.loading = true;
 
-        const summary =
-            document.getElementById(
-                'drayviaDriverStatisticsSummary'
-            );
+        const summary = document.getElementById(
+            'drayviaDriverStatisticsSummary'
+        );
 
         if (summary) {
             summary.textContent =
@@ -9896,8 +9936,46 @@ const calendarJuly2026 = {
         }
 
         try {
-            driverStatisticsState.items =
-                await fetchAllDriverStatisticsReports();
+            const query = driverStatisticsQuery();
+            const body = await realDriverApi(
+                `/api/v1/daily-reports/performance-overview?${query}`
+            );
+            const data = driverStatisticsPayload(body);
+
+            if (!Array.isArray(data.drivers)) {
+                throw new Error(
+                    'API nevr\u00e1tilo p\u0159ehled \u0159idi\u010d\u016f.'
+                );
+            }
+
+            driverStatisticsState.data = data;
+
+            const filterOptions =
+                data?.filter_options ?? {};
+
+            driverStatisticsState.driverOptions =
+                Array.isArray(filterOptions.drivers)
+                    ? filterOptions.drivers
+                    : [];
+            driverStatisticsState.carrierOptions =
+                Array.isArray(filterOptions.carriers)
+                    ? filterOptions.carriers
+                    : [];
+            driverStatisticsState.quickPeriods =
+                Array.isArray(filterOptions.quick_periods)
+                    ? filterOptions.quick_periods
+                    : [];
+
+            driverStatisticsState.period = String(
+                data?.filters?.period
+                ?? driverStatisticsState.period
+            );
+            driverStatisticsState.dateFrom = String(
+                data?.filters?.service_date_from ?? ''
+            );
+            driverStatisticsState.dateTo = String(
+                data?.filters?.service_date_to ?? ''
+            );
 
             renderDriverStatistics();
         }
@@ -11487,7 +11565,7 @@ const calendarJuly2026 = {
     const statistics = () => `
         ${header(
             'Statistiky',
-            'Provozn\u00ed statistiky aktivn\u00edch \u0159idi\u010d\u016f podle skute\u010dn\u00fdch tras DRAYVIA.'
+            'Provozn\u00ed statistiky \u0159idi\u010d\u016f podle skute\u010dn\u00fdch tras DRAYVIA.'
         )}
 
         <div
