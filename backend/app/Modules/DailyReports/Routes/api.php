@@ -22,6 +22,14 @@ Route::middleware([
             )->name('index');
 
             Route::get(
+                '/performance-overview',
+                [
+                    DailyReportController::class,
+                    'performanceOverview',
+                ],
+            )->name('performance-overview');
+
+            Route::get(
                 '/{dailyReport}/versions',
                 [DailyReportController::class, 'versions'],
             )

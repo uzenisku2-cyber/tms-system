@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\DailyReports\Requests\DailyReportIndexRequest;
 use App\Modules\DailyReports\Requests\DailyReportTransitionRequest;
+use App\Modules\DailyReports\Requests\DriverPerformanceOverviewRequest;
 use App\Modules\DailyReports\Requests\RecordDailyReportCorrectionRequest;
 use App\Modules\DailyReports\Requests\StoreDailyReportRequest;
 use App\Modules\DailyReports\Requests\UpdateDailyReportRequest;
@@ -17,6 +18,7 @@ use App\Modules\DailyReports\Resources\DailyReportResource;
 use App\Modules\DailyReports\Resources\DailyReportVersionResource;
 use App\Modules\DailyReports\Services\DailyReportQueryService;
 use App\Modules\DailyReports\Services\DailyReportWriteService;
+use App\Modules\DailyReports\Services\DriverPerformanceOverviewService;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,6 +49,17 @@ final class DailyReportController extends BaseController
                 $filters,
             ),
         ]);
+    }
+
+    public function performanceOverview(
+        DriverPerformanceOverviewRequest $request,
+        DriverPerformanceOverviewService $performance,
+    ): JsonResponse {
+        return $this->success(
+            $performance->overview(
+                $request->validated(),
+            ),
+        );
     }
 
     public function store(
