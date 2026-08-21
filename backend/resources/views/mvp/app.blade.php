@@ -9989,6 +9989,1926 @@ const calendarJuly2026 = {
             driverStatisticsState.loading = false;
         }
     };
+
+    /*
+     * S027-03A STATISTICS QUALITY PROFILE SETTINGS
+     *
+     * The browser selects and displays canonical raw metric components.
+     * Formula evaluation, effective-scope resolution and optimistic locking
+     * remain server-side responsibilities.
+     */
+    const driverQualitySettingsBaseUrl =
+        '/api/v1/daily-reports/quality-profiles';
+
+    const driverQualitySettingsState = {
+        profiles: [],
+        bindings: [],
+        targets: {
+            organization: null,
+            carrier_relationships: [],
+            driver_assignments: [],
+        },
+        selectedProfileId: '',
+        loading: false,
+        loaded: false,
+        effective: null,
+    };
+
+    const driverQualitySourceLabels = {
+        delivered_parcels: 'Doručené zásilky',
+        redirected_parcels: 'Přesměrované zásilky',
+        customer_rejected_parcels:
+            'Zásilky odmítnuté zákazníkem',
+    };
+
+    const driverQualityStatusLabels = {
+        draft: 'Koncept',
+        active: 'Aktivní',
+        replaced: 'Nahrazená',
+        expired: 'Ukončená',
+        archived: 'Archivovaný',
+    };
+
+    const driverQualityScopeLabels = {
+        organization: 'Výchozí nastavení organizace',
+        carrier_relationship: 'Dopravce',
+        driver_assignment: 'Řidič',
+    };
+
+    const driverQualityCurrentMonth = () => {
+        const now = new Date();
+        const month = String(
+            now.getMonth() + 1
+        ).padStart(2, '0');
+
+        return String(now.getFullYear()) + '-' + month;
+    };
+
+    const driverQualityCurrentDate = () => {
+        const now = new Date();
+        const month = String(
+            now.getMonth() + 1
+        ).padStart(2, '0');
+        const day = String(
+            now.getDate()
+        ).padStart(2, '0');
+
+        return String(now.getFullYear())
+            + '-' + month
+            + '-' + day;
+    };
+
+    const driverQualityMonthStart = (value) => {
+        const month = String(value ?? '').match(
+            /^(\d{4})-(\d{2})$/
+        );
+
+        return month
+            ? month[1] + '-' + month[2] + '-01'
+            : String(value ?? '');
+    };
+
+    const driverQualityItems = (body) => {
+        const data = getPayload(body);
+
+        return Array.isArray(data?.items)
+            ? data.items
+            : [];
+    };
+
+    const driverQualityMessage = (
+        message,
+        tone = 'info'
+    ) => {
+        const target = document.getElementById(
+            'drayviaDriverQualityMessage'
+        );
+
+        if (!target) {
+            return;
+        }
+
+        target.textContent = String(message ?? '');
+        target.dataset.tone = tone;
+        target.style.color =
+            tone === 'error'
+                ? '#b42318'
+                : tone === 'success'
+                    ? '#067647'
+                    : '#344054';
+        target.style.background =
+            tone === 'error'
+                ? '#fef3f2'
+                : tone === 'success'
+                    ? '#ecfdf3'
+                    : '#f2f4f7';
+        target.style.borderColor =
+            tone === 'error'
+                ? '#fecdca'
+                : tone === 'success'
+                    ? '#abefc6'
+                    : '#d0d5dd';
+    };
+
+    const driverQualityCreateOption = (
+        value,
+        label
+    ) => {
+        const option = document.createElement('option');
+
+        option.value = String(value ?? '');
+        option.textContent = String(label ?? '');
+
+        return option;
+    };
+
+    const driverQualityReplaceOptions = (
+        select,
+        items,
+        placeholder,
+        value,
+        label
+    ) => {
+        if (!select) {
+            return;
+        }
+
+        select.replaceChildren();
+
+        if (placeholder !== null) {
+            select.appendChild(
+                driverQualityCreateOption(
+                    '',
+                    placeholder
+                )
+            );
+        }
+
+        items.forEach(
+            (item) => {
+                select.appendChild(
+                    driverQualityCreateOption(
+                        value(item),
+                        label(item)
+                    )
+                );
+            }
+        );
+    };
+
+    const driverQualityFormulaText = (
+        method,
+        sources
+    ) => {
+        if (method === 'disabled') {
+            return 'Výpočet dílčí kvality je výslovně vypnutý.';
+        }
+
+        const labels = sources.map(
+            (source) =>
+                driverQualitySourceLabels[source]
+                ?? source
+        );
+
+        if (labels.length === 0) {
+            return 'Vyberte alespoň jednu složku čitatele.';
+        }
+
+        return '(' + labels.join(' + ')
+            + ') / Naložené zásilky × 100 %';
+    };
+
+    const driverQualitySelectedSources = (
+        selector
+    ) => Array.from(
+        document.querySelectorAll(selector)
+    )
+        .filter((input) => input.checked)
+        .map((input) => String(input.value));
+
+    const driverQualityTextCell = (value) => {
+        const cell = document.createElement('td');
+
+        cell.textContent = String(value ?? '—');
+
+        return cell;
+    };
+
+    const ensureDriverQualitySettingsShell = () => {
+        const host = document.getElementById(
+            'drayviaDriverQualitySettingsHost'
+        );
+
+        if (!host) {
+            return null;
+        }
+
+        if (
+            host.querySelector(
+                '#drayviaDriverQualityCreateForm'
+            )
+        ) {
+            return host;
+        }
+
+        host.innerHTML = `
+            <style>
+                .drayvia-driver-quality-settings {
+                    padding:0;
+                    overflow:hidden;
+                }
+                .drayvia-quality-head {
+                    padding:20px;
+                    border-bottom:1px solid #e4e7ec;
+                }
+                .drayvia-quality-grid {
+                    display:grid;
+                    grid-template-columns:repeat(2,minmax(0,1fr));
+                    gap:16px;
+                    padding:16px;
+                }
+                .drayvia-quality-card {
+                    border:1px solid #d0d5dd;
+                    border-radius:12px;
+                    background:#fff;
+                    padding:16px;
+                }
+                .drayvia-quality-card.wide {
+                    grid-column:1 / -1;
+                }
+                .drayvia-quality-card h3 {
+                    margin:0 0 6px;
+                    font-size:16px;
+                }
+                .drayvia-quality-card p {
+                    margin:0 0 14px;
+                    color:#475467;
+                    line-height:1.5;
+                }
+                .drayvia-quality-fields {
+                    display:grid;
+                    grid-template-columns:repeat(2,minmax(0,1fr));
+                    gap:12px;
+                }
+                .drayvia-quality-field {
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                    min-width:0;
+                    color:#344054;
+                    font-size:12px;
+                    font-weight:800;
+                }
+                .drayvia-quality-field.wide {
+                    grid-column:1 / -1;
+                }
+                .drayvia-quality-field input,
+                .drayvia-quality-field select,
+                .drayvia-quality-field textarea {
+                    width:100%;
+                    border:1px solid #b8c2ce;
+                    border-radius:8px;
+                    background:#fff;
+                    color:#101828;
+                    font:inherit;
+                    font-weight:600;
+                    padding:9px 10px;
+                }
+                .drayvia-quality-field textarea {
+                    min-height:72px;
+                    resize:vertical;
+                }
+                .drayvia-quality-source-list {
+                    display:grid;
+                    gap:8px;
+                    padding:10px;
+                    border:1px solid #e4e7ec;
+                    border-radius:8px;
+                    background:#f9fafb;
+                }
+                .drayvia-quality-source-list label {
+                    display:flex;
+                    gap:8px;
+                    align-items:center;
+                    font-size:13px;
+                    font-weight:700;
+                    color:#344054;
+                }
+                .drayvia-quality-source-list input {
+                    width:auto;
+                }
+                .drayvia-quality-formula {
+                    margin-top:10px;
+                    padding:10px 12px;
+                    border-left:4px solid #175cd3;
+                    background:#eff8ff;
+                    color:#1849a9;
+                    font-size:13px;
+                    line-height:1.45;
+                }
+                .drayvia-quality-actions {
+                    display:flex;
+                    flex-wrap:wrap;
+                    gap:8px;
+                    margin-top:14px;
+                }
+                .drayvia-quality-table-wrap {
+                    overflow:auto;
+                    margin-top:12px;
+                }
+                .drayvia-quality-table {
+                    width:100%;
+                    border-collapse:collapse;
+                    font-size:12px;
+                }
+                .drayvia-quality-table th,
+                .drayvia-quality-table td {
+                    padding:9px 8px;
+                    border-bottom:1px solid #e4e7ec;
+                    text-align:left;
+                    vertical-align:top;
+                }
+                .drayvia-quality-table th {
+                    color:#475467;
+                    background:#f9fafb;
+                    font-size:10px;
+                    letter-spacing:.04em;
+                    text-transform:uppercase;
+                }
+                @media (max-width:980px) {
+                    .drayvia-quality-grid,
+                    .drayvia-quality-fields {
+                        grid-template-columns:1fr;
+                    }
+                    .drayvia-quality-card.wide,
+                    .drayvia-quality-field.wide {
+                        grid-column:auto;
+                    }
+                }
+            </style>
+
+            <div class="drayvia-quality-head">
+                <h2 class="drayvia-preview-panel-title">
+                    NASTAVENÍ DÍLČÍ KVALITY
+                </h2>
+                <div class="drayvia-preview-panel-subtitle">
+                    Samostatné, verzované nastavení zdrojů výpočtu pro organizaci,
+                    dopravce nebo konkrétní zařazení řidiče.
+                </div>
+            </div>
+
+            <div
+                id="drayviaDriverQualityMessage"
+                style="margin:16px 16px 0;padding:10px 12px;border:1px solid #d0d5dd;border-radius:8px;"
+            >
+                Načítám nastavení dílčí kvality…
+            </div>
+
+            <div class="drayvia-quality-grid">
+                <section class="drayvia-quality-card">
+                    <h3>Nový profil</h3>
+                    <p>
+                        Profil pouze vybírá zdroje čitatele. Jmenovatelem
+                        zůstávají naložené zásilky a výpočet provádí server.
+                    </p>
+                    <form id="drayviaDriverQualityCreateForm">
+                        <div class="drayvia-quality-fields">
+                            <label class="drayvia-quality-field">
+                                Kód
+                                <input id="drayviaDriverQualityCreateCode" maxlength="32" required placeholder="STANDARD">
+                            </label>
+                            <label class="drayvia-quality-field">
+                                Název
+                                <input id="drayviaDriverQualityCreateName" maxlength="150" required placeholder="Standardní dílčí kvalita">
+                            </label>
+                            <label class="drayvia-quality-field wide">
+                                Popis
+                                <textarea id="drayviaDriverQualityCreateDescription" maxlength="5000"></textarea>
+                            </label>
+                            <label class="drayvia-quality-field">
+                                Režim
+                                <select id="drayviaDriverQualityCreateMethod">
+                                    <option value="processed_share">Vypočítat podíl</option>
+                                    <option value="disabled">Výpočet vypnout</option>
+                                </select>
+                            </label>
+                            <label class="drayvia-quality-field">
+                                Důvod založení
+                                <input id="drayviaDriverQualityCreateReason" maxlength="2000">
+                            </label>
+                            <div class="drayvia-quality-field wide">
+                                Složky čitatele
+                                <div class="drayvia-quality-source-list">
+                                    <label>
+                                        <input type="checkbox" value="delivered_parcels" data-quality-create-source checked>
+                                        Doručené zásilky
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" value="redirected_parcels" data-quality-create-source checked>
+                                        Přesměrované zásilky
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" value="customer_rejected_parcels" data-quality-create-source checked>
+                                        Zásilky odmítnuté zákazníkem
+                                    </label>
+                                </div>
+                                <div id="drayviaDriverQualityCreateFormula" class="drayvia-quality-formula"></div>
+                            </div>
+                        </div>
+                        <div class="drayvia-quality-actions">
+                            <button class="drayvia-preview-action primary" type="submit">
+                                VYTVOŘIT KONCEPT
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="drayvia-quality-card">
+                    <h3>Profil a verze</h3>
+                    <p>
+                        Změna vzorce vzniká jako nová revize. Aktivace i
+                        účinnost vazeb začínají vždy prvním dnem měsíce.
+                    </p>
+                    <label class="drayvia-quality-field">
+                        Profil
+                        <select id="drayviaDriverQualityProfileSelect"></select>
+                    </label>
+                    <div class="drayvia-quality-fields" style="margin-top:12px;">
+                        <label class="drayvia-quality-field">
+                            Důvod nové revize
+                            <input id="drayviaDriverQualityNewVersionReason" maxlength="2000">
+                        </label>
+                        <div class="drayvia-quality-field" style="justify-content:flex-end;">
+                            <button id="drayviaDriverQualityNewVersion" class="drayvia-preview-action" type="button">
+                                NOVÁ REVIZE
+                            </button>
+                        </div>
+                    </div>
+                    <div id="drayviaDriverQualityProfileDetail" style="margin-top:14px;"></div>
+                </section>
+
+                <section class="drayvia-quality-card wide">
+                    <h3>Platnost nastavení</h3>
+                    <p>
+                        Nejpřesnější vazba má přednost: řidič, poté dopravce,
+                        poté organizace. Ukončením výjimky se zvolený cíl vrátí
+                        k děděnému nastavení.
+                    </p>
+                    <form id="drayviaDriverQualityBindingForm">
+                        <div class="drayvia-quality-fields">
+                            <label class="drayvia-quality-field">
+                                Profil
+                                <select id="drayviaDriverQualityBindingProfile" required></select>
+                            </label>
+                            <label class="drayvia-quality-field">
+                                Úroveň
+                                <select id="drayviaDriverQualityBindingScope">
+                                    <option value="organization">Organizace – výchozí</option>
+                                    <option value="carrier_relationship">Dopravce</option>
+                                    <option value="driver_assignment">Řidič</option>
+                                </select>
+                            </label>
+                            <label id="drayviaDriverQualityBindingTargetLabel" class="drayvia-quality-field">
+                                <span id="drayviaDriverQualityBindingTargetText">Cíl</span>
+                                <select id="drayviaDriverQualityBindingTarget"></select>
+                            </label>
+                            <label class="drayvia-quality-field">
+                                Platnost od měsíce
+                                <input id="drayviaDriverQualityBindingMonth" type="month" required>
+                            </label>
+                        </div>
+                        <div class="drayvia-quality-actions">
+                            <button class="drayvia-preview-action primary" type="submit">
+                                ULOŽIT PLATNOST
+                            </button>
+                            <label class="drayvia-quality-field" style="min-width:190px;">
+                                Ukončit od měsíce
+                                <input id="drayviaDriverQualityEndMonth" type="month">
+                            </label>
+                        </div>
+                    </form>
+                    <div class="drayvia-quality-table-wrap">
+                        <table class="drayvia-quality-table">
+                            <thead>
+                                <tr>
+                                    <th>Úroveň</th>
+                                    <th>Cíl</th>
+                                    <th>Profil</th>
+                                    <th>Platnost</th>
+                                    <th>Akce</th>
+                                </tr>
+                            </thead>
+                            <tbody id="drayviaDriverQualityBindingRows"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="drayvia-quality-card wide">
+                    <h3>Ověřit účinné nastavení</h3>
+                    <p>
+                        Náhled pouze ukáže, která historická vazba a verze
+                        platí pro zadané datum. Statistiky se zde nepřepočítávají.
+                    </p>
+                    <form id="drayviaDriverQualityEffectiveForm">
+                        <div class="drayvia-quality-fields">
+                            <label class="drayvia-quality-field">
+                                Datum trasy
+                                <input id="drayviaDriverQualityEffectiveDate" type="date" required>
+                            </label>
+                            <label class="drayvia-quality-field">
+                                Dopravce (volitelně)
+                                <select id="drayviaDriverQualityEffectiveCarrier"></select>
+                            </label>
+                            <label class="drayvia-quality-field">
+                                Řidič (volitelně)
+                                <select id="drayviaDriverQualityEffectiveDriver"></select>
+                            </label>
+                        </div>
+                        <div class="drayvia-quality-actions">
+                            <button class="drayvia-preview-action" type="submit">
+                                OVĚŘIT NASTAVENÍ
+                            </button>
+                        </div>
+                    </form>
+                    <div id="drayviaDriverQualityEffectiveResult" class="drayvia-quality-formula" style="margin-top:14px;">
+                        Zvolte datum a případný cíl.
+                    </div>
+                </section>
+            </div>
+        `;
+
+        const month = driverQualityCurrentMonth();
+        const bindingMonth = document.getElementById(
+            'drayviaDriverQualityBindingMonth'
+        );
+        const endMonth = document.getElementById(
+            'drayviaDriverQualityEndMonth'
+        );
+        const effectiveDate = document.getElementById(
+            'drayviaDriverQualityEffectiveDate'
+        );
+
+        if (bindingMonth) {
+            bindingMonth.value = month;
+        }
+
+        if (endMonth) {
+            endMonth.value = month;
+        }
+
+        if (effectiveDate) {
+            effectiveDate.value =
+                driverQualityCurrentDate();
+        }
+
+        const createMethod = document.getElementById(
+            'drayviaDriverQualityCreateMethod'
+        );
+
+        createMethod?.addEventListener(
+            'change',
+            driverQualitySyncCreateFormula
+        );
+
+        host.querySelectorAll(
+            '[data-quality-create-source]'
+        ).forEach(
+            (input) => input.addEventListener(
+                'change',
+                driverQualitySyncCreateFormula
+            )
+        );
+
+        document.getElementById(
+            'drayviaDriverQualityCreateForm'
+        )?.addEventListener(
+            'submit',
+            driverQualityCreateProfile
+        );
+
+        document.getElementById(
+            'drayviaDriverQualityProfileSelect'
+        )?.addEventListener(
+            'change',
+            (event) => {
+                driverQualitySettingsState
+                    .selectedProfileId =
+                    String(event.target?.value ?? '');
+                driverQualityRenderProfileDetail();
+            }
+        );
+
+        document.getElementById(
+            'drayviaDriverQualityNewVersion'
+        )?.addEventListener(
+            'click',
+            driverQualityCreateVersion
+        );
+
+        document.getElementById(
+            'drayviaDriverQualityBindingScope'
+        )?.addEventListener(
+            'change',
+            driverQualitySyncBindingTargets
+        );
+
+        document.getElementById(
+            'drayviaDriverQualityBindingForm'
+        )?.addEventListener(
+            'submit',
+            driverQualitySaveBinding
+        );
+
+        document.getElementById(
+            'drayviaDriverQualityEffectiveForm'
+        )?.addEventListener(
+            'submit',
+            driverQualityLoadEffective
+        );
+
+        driverQualitySyncCreateFormula();
+
+        return host;
+    };
+
+    function driverQualitySyncCreateFormula() {
+        const method = String(
+            document.getElementById(
+                'drayviaDriverQualityCreateMethod'
+            )?.value ?? 'processed_share'
+        );
+        const inputs = Array.from(
+            document.querySelectorAll(
+                '[data-quality-create-source]'
+            )
+        );
+        const disabled = method === 'disabled';
+
+        inputs.forEach(
+            (input) => {
+                input.disabled = disabled;
+            }
+        );
+
+        const formula = document.getElementById(
+            'drayviaDriverQualityCreateFormula'
+        );
+
+        if (formula) {
+            formula.textContent =
+                driverQualityFormulaText(
+                    method,
+                    disabled
+                        ? []
+                        : driverQualitySelectedSources(
+                            '[data-quality-create-source]'
+                        )
+                );
+        }
+    }
+
+    const driverQualitySelectedProfile = () =>
+        driverQualitySettingsState.profiles.find(
+            (profile) =>
+                String(profile?.public_id ?? '')
+                === driverQualitySettingsState
+                    .selectedProfileId
+        ) ?? null;
+
+    const driverQualityRenderProfileOptions = () => {
+        const profiles =
+            driverQualitySettingsState.profiles;
+        const selected =
+            driverQualitySettingsState
+                .selectedProfileId;
+        const profileSelect = document.getElementById(
+            'drayviaDriverQualityProfileSelect'
+        );
+        const bindingSelect = document.getElementById(
+            'drayviaDriverQualityBindingProfile'
+        );
+
+        driverQualityReplaceOptions(
+            profileSelect,
+            profiles,
+            profiles.length > 0
+                ? null
+                : 'Zatím nebyl vytvořen žádný profil',
+            (profile) => profile.public_id,
+            (profile) =>
+                profile.code + ' · ' + profile.name
+        );
+
+        if (profileSelect && selected) {
+            profileSelect.value = selected;
+        }
+
+        driverQualityReplaceOptions(
+            bindingSelect,
+            profiles.filter(
+                (profile) =>
+                    profile.status === 'active'
+            ),
+            'Vyberte aktivní profil',
+            (profile) => profile.public_id,
+            (profile) =>
+                profile.code + ' · ' + profile.name
+        );
+    };
+
+    const driverQualityRenderVersionRows = (
+        versions,
+        target
+    ) => {
+        target.replaceChildren();
+
+        versions.forEach(
+            (version) => {
+                const row = document.createElement('tr');
+                const sources = Array.isArray(
+                    version?.numerator_sources
+                )
+                    ? version.numerator_sources
+                    : [];
+
+                row.appendChild(
+                    driverQualityTextCell(
+                        'v' + String(
+                            version?.version_number ?? '—'
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverQualityTextCell(
+                        driverQualityStatusLabels[
+                            version?.status
+                        ] ?? version?.status
+                    )
+                );
+                row.appendChild(
+                    driverQualityTextCell(
+                        driverQualityFormulaText(
+                            version?.calculation_method,
+                            sources
+                        )
+                    )
+                );
+                row.appendChild(
+                    driverQualityTextCell(
+                        (version?.valid_from || '—')
+                        + ' – '
+                        + (version?.valid_until || '—')
+                    )
+                );
+                row.appendChild(
+                    driverQualityTextCell(
+                        version?.lock_version ?? '—'
+                    )
+                );
+                target.appendChild(row);
+            }
+        );
+
+        if (versions.length === 0) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+
+            cell.colSpan = 5;
+            cell.textContent =
+                'Profil zatím nemá žádnou verzi.';
+            row.appendChild(cell);
+            target.appendChild(row);
+        }
+    };
+
+    const driverQualityRenderProfileDetail = () => {
+        const target = document.getElementById(
+            'drayviaDriverQualityProfileDetail'
+        );
+        const profile = driverQualitySelectedProfile();
+        const newVersionButton = document.getElementById(
+            'drayviaDriverQualityNewVersion'
+        );
+
+        if (!target) {
+            return;
+        }
+
+        if (!profile) {
+            target.textContent =
+                'Vytvořte nebo vyberte profil.';
+
+            if (newVersionButton) {
+                newVersionButton.disabled = true;
+            }
+
+            return;
+        }
+
+        const versions = Array.isArray(profile.versions)
+            ? profile.versions
+            : [];
+        const draft = versions.find(
+            (version) => version?.status === 'draft'
+        ) ?? null;
+
+        if (newVersionButton) {
+            newVersionButton.disabled =
+                Boolean(draft);
+            newVersionButton.title = draft
+                ? 'Profil již má otevřený koncept.'
+                : '';
+        }
+
+        target.innerHTML = `
+            <div style="padding:12px;border:1px solid #e4e7ec;border-radius:10px;background:#f9fafb;">
+                <strong id="drayviaDriverQualityProfileTitle"></strong>
+                <div id="drayviaDriverQualityProfileDescription" style="margin-top:4px;color:#475467;"></div>
+            </div>
+            <div id="drayviaDriverQualityDraftEditor" style="margin-top:12px;"></div>
+            <div class="drayvia-quality-table-wrap">
+                <table class="drayvia-quality-table">
+                    <thead>
+                        <tr>
+                            <th>Verze</th>
+                            <th>Stav</th>
+                            <th>Výpočet</th>
+                            <th>Platnost</th>
+                            <th>Revize</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drayviaDriverQualityVersionRows"></tbody>
+                </table>
+            </div>
+        `;
+
+        const title = document.getElementById(
+            'drayviaDriverQualityProfileTitle'
+        );
+        const description = document.getElementById(
+            'drayviaDriverQualityProfileDescription'
+        );
+
+        if (title) {
+            title.textContent =
+                profile.code + ' · ' + profile.name;
+        }
+
+        if (description) {
+            description.textContent =
+                profile.description
+                || 'Bez doplňujícího popisu.';
+        }
+
+        const rows = document.getElementById(
+            'drayviaDriverQualityVersionRows'
+        );
+
+        if (rows) {
+            driverQualityRenderVersionRows(
+                versions,
+                rows
+            );
+        }
+
+        const editor = document.getElementById(
+            'drayviaDriverQualityDraftEditor'
+        );
+
+        if (!editor) {
+            return;
+        }
+
+        if (!draft) {
+            editor.textContent =
+                'Profil nemá otevřený koncept. Pro změnu vzorce založte novou revizi.';
+            return;
+        }
+
+        editor.innerHTML = `
+            <form id="drayviaDriverQualityDraftForm">
+                <div class="drayvia-quality-fields">
+                    <label class="drayvia-quality-field">
+                        Režim konceptu
+                        <select id="drayviaDriverQualityDraftMethod">
+                            <option value="processed_share">Vypočítat podíl</option>
+                            <option value="disabled">Výpočet vypnout</option>
+                        </select>
+                    </label>
+                    <label class="drayvia-quality-field">
+                        Důvod změny
+                        <input id="drayviaDriverQualityDraftReason" maxlength="2000">
+                    </label>
+                    <div class="drayvia-quality-field wide">
+                        Složky čitatele
+                        <div class="drayvia-quality-source-list">
+                            <label>
+                                <input type="checkbox" value="delivered_parcels" data-quality-draft-source>
+                                Doručené zásilky
+                            </label>
+                            <label>
+                                <input type="checkbox" value="redirected_parcels" data-quality-draft-source>
+                                Přesměrované zásilky
+                            </label>
+                            <label>
+                                <input type="checkbox" value="customer_rejected_parcels" data-quality-draft-source>
+                                Zásilky odmítnuté zákazníkem
+                            </label>
+                        </div>
+                        <div id="drayviaDriverQualityDraftFormula" class="drayvia-quality-formula"></div>
+                    </div>
+                    <label class="drayvia-quality-field">
+                        Aktivovat od měsíce
+                        <input id="drayviaDriverQualityActivationMonth" type="month">
+                    </label>
+                </div>
+                <div class="drayvia-quality-actions">
+                    <button class="drayvia-preview-action primary" type="submit">
+                        ULOŽIT KONCEPT
+                    </button>
+                    <button id="drayviaDriverQualityActivateVersion" class="drayvia-preview-action" type="button">
+                        AKTIVOVAT OD MĚSÍCE
+                    </button>
+                </div>
+            </form>
+        `;
+
+        const method = document.getElementById(
+            'drayviaDriverQualityDraftMethod'
+        );
+        const reason = document.getElementById(
+            'drayviaDriverQualityDraftReason'
+        );
+        const activation = document.getElementById(
+            'drayviaDriverQualityActivationMonth'
+        );
+        const sources = Array.isArray(
+            draft.numerator_sources
+        )
+            ? draft.numerator_sources
+            : [];
+
+        if (method) {
+            method.value =
+                draft.calculation_method;
+        }
+
+        if (reason) {
+            reason.value =
+                draft.change_reason || '';
+        }
+
+        if (activation) {
+            activation.value =
+                driverQualityCurrentMonth();
+        }
+
+        editor.querySelectorAll(
+            '[data-quality-draft-source]'
+        ).forEach(
+            (input) => {
+                input.checked =
+                    sources.includes(input.value);
+                input.addEventListener(
+                    'change',
+                    driverQualitySyncDraftFormula
+                );
+            }
+        );
+
+        method?.addEventListener(
+            'change',
+            driverQualitySyncDraftFormula
+        );
+
+        document.getElementById(
+            'drayviaDriverQualityDraftForm'
+        )?.addEventListener(
+            'submit',
+            (event) =>
+                driverQualitySaveDraft(
+                    event,
+                    profile,
+                    draft
+                )
+        );
+
+        document.getElementById(
+            'drayviaDriverQualityActivateVersion'
+        )?.addEventListener(
+            'click',
+            () =>
+                driverQualityActivateVersion(
+                    profile,
+                    draft
+                )
+        );
+
+        driverQualitySyncDraftFormula();
+    };
+
+    function driverQualitySyncDraftFormula() {
+        const method = String(
+            document.getElementById(
+                'drayviaDriverQualityDraftMethod'
+            )?.value ?? 'processed_share'
+        );
+        const inputs = Array.from(
+            document.querySelectorAll(
+                '[data-quality-draft-source]'
+            )
+        );
+        const disabled = method === 'disabled';
+
+        inputs.forEach(
+            (input) => {
+                input.disabled = disabled;
+            }
+        );
+
+        const formula = document.getElementById(
+            'drayviaDriverQualityDraftFormula'
+        );
+
+        if (formula) {
+            formula.textContent =
+                driverQualityFormulaText(
+                    method,
+                    disabled
+                        ? []
+                        : driverQualitySelectedSources(
+                            '[data-quality-draft-source]'
+                        )
+                );
+        }
+    }
+
+    const driverQualitySyncBindingTargets = () => {
+        const scope = String(
+            document.getElementById(
+                'drayviaDriverQualityBindingScope'
+            )?.value ?? 'organization'
+        );
+        const target = document.getElementById(
+            'drayviaDriverQualityBindingTarget'
+        );
+        const label = document.getElementById(
+            'drayviaDriverQualityBindingTargetText'
+        );
+        const targets =
+            driverQualitySettingsState.targets;
+
+        if (!target) {
+            return;
+        }
+
+        if (scope === 'organization') {
+            const organization =
+                targets.organization;
+
+            driverQualityReplaceOptions(
+                target,
+                organization
+                    ? [organization]
+                    : [],
+                null,
+                (item) => item.id,
+                (item) => item.name
+            );
+            target.disabled = true;
+
+            if (label) {
+                label.textContent = 'Organizace';
+            }
+
+            return;
+        }
+
+        target.disabled = false;
+
+        if (scope === 'carrier_relationship') {
+            driverQualityReplaceOptions(
+                target,
+                targets.carrier_relationships,
+                'Vyberte dopravce',
+                (item) => item.relationship_id,
+                (item) => item.name
+            );
+
+            if (label) {
+                label.textContent = 'Dopravce';
+            }
+
+            return;
+        }
+
+        driverQualityReplaceOptions(
+            target,
+            targets.driver_assignments,
+            'Vyberte řidiče',
+            (item) => item.assignment_id,
+            (item) =>
+                item.driver_name
+                + ' · '
+                + item.organization_name
+        );
+
+        if (label) {
+            label.textContent = 'Řidič';
+        }
+    };
+
+    const driverQualityRenderTargets = () => {
+        const targets =
+            driverQualitySettingsState.targets;
+        const effectiveCarrier =
+            document.getElementById(
+                'drayviaDriverQualityEffectiveCarrier'
+            );
+        const effectiveDriver =
+            document.getElementById(
+                'drayviaDriverQualityEffectiveDriver'
+            );
+
+        driverQualityReplaceOptions(
+            effectiveCarrier,
+            targets.carrier_relationships,
+            'Bez konkrétního dopravce',
+            (item) => item.relationship_id,
+            (item) => item.name
+        );
+        driverQualityReplaceOptions(
+            effectiveDriver,
+            targets.driver_assignments,
+            'Bez konkrétního řidiče',
+            (item) => item.assignment_id,
+            (item) =>
+                item.driver_name
+                + ' · '
+                + item.organization_name
+        );
+        driverQualitySyncBindingTargets();
+    };
+
+    const driverQualityBindingPath = (
+        binding
+    ) => {
+        if (
+            binding?.scope_type === 'organization'
+        ) {
+            return driverQualitySettingsBaseUrl
+                + '/bindings/organization';
+        }
+
+        if (
+            binding?.scope_type
+            === 'carrier_relationship'
+        ) {
+            return driverQualitySettingsBaseUrl
+                + '/bindings/carrier-relationships/'
+                + String(
+                    binding.organization_relationship_id
+                );
+        }
+
+        return driverQualitySettingsBaseUrl
+            + '/bindings/driver-assignments/'
+            + String(
+                binding
+                    ?.driver_organization_assignment_id
+            );
+    };
+
+    const driverQualityRenderBindings = () => {
+        const target = document.getElementById(
+            'drayviaDriverQualityBindingRows'
+        );
+
+        if (!target) {
+            return;
+        }
+
+        target.replaceChildren();
+
+        driverQualitySettingsState.bindings.forEach(
+            (binding) => {
+                const row = document.createElement('tr');
+                const validity =
+                    (binding?.valid_from || '—')
+                    + ' – '
+                    + (binding?.valid_until || '—');
+
+                row.appendChild(
+                    driverQualityTextCell(
+                        driverQualityScopeLabels[
+                            binding?.scope_type
+                        ] ?? binding?.scope_type
+                    )
+                );
+                row.appendChild(
+                    driverQualityTextCell(
+                        binding?.scope_label || '—'
+                    )
+                );
+                row.appendChild(
+                    driverQualityTextCell(
+                        binding?.profile
+                            ? binding.profile.code
+                                + ' · '
+                                + binding.profile.name
+                            : '—'
+                    )
+                );
+                row.appendChild(
+                    driverQualityTextCell(validity)
+                );
+
+                const action = document.createElement('td');
+
+                if (!binding?.valid_until) {
+                    const button =
+                        document.createElement('button');
+
+                    button.type = 'button';
+                    button.className =
+                        'drayvia-preview-action';
+                    button.textContent =
+                        'UKONČIT VÝJIMKU';
+                    button.addEventListener(
+                        'click',
+                        () =>
+                            driverQualityEndBinding(
+                                binding
+                            )
+                    );
+                    action.appendChild(button);
+                }
+                else {
+                    action.textContent =
+                        'Historie';
+                }
+
+                row.appendChild(action);
+                target.appendChild(row);
+            }
+        );
+
+        if (
+            driverQualitySettingsState
+                .bindings.length === 0
+        ) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+
+            cell.colSpan = 5;
+            cell.textContent =
+                'Zatím není nastavena žádná platnost profilu.';
+            row.appendChild(cell);
+            target.appendChild(row);
+        }
+    };
+
+    const driverQualityRender = () => {
+        if (!ensureDriverQualitySettingsShell()) {
+            return;
+        }
+
+        const profiles =
+            driverQualitySettingsState.profiles;
+
+        if (
+            profiles.length > 0
+            && !profiles.some(
+                (profile) =>
+                    String(profile.public_id)
+                    === driverQualitySettingsState
+                        .selectedProfileId
+            )
+        ) {
+            driverQualitySettingsState
+                .selectedProfileId =
+                String(profiles[0].public_id);
+        }
+
+        driverQualityRenderProfileOptions();
+        driverQualityRenderProfileDetail();
+        driverQualityRenderTargets();
+        driverQualityRenderBindings();
+    };
+
+    const loadDriverQualitySettings = async (
+        force = false
+    ) => {
+        if (!ensureDriverQualitySettingsShell()) {
+            return;
+        }
+
+        if (driverQualitySettingsState.loading) {
+            return;
+        }
+
+        if (
+            driverQualitySettingsState.loaded
+            && !force
+        ) {
+            driverQualityRender();
+            return;
+        }
+
+        driverQualitySettingsState.loading = true;
+        driverQualityMessage(
+            'Načítám profily, platnosti a povolené cíle…'
+        );
+
+        try {
+            const [
+                profilesBody,
+                bindingsBody,
+                targetsBody,
+            ] = await Promise.all([
+                realDriverApi(
+                    driverQualitySettingsBaseUrl
+                ),
+                realDriverApi(
+                    driverQualitySettingsBaseUrl
+                    + '/bindings'
+                ),
+                realDriverApi(
+                    driverQualitySettingsBaseUrl
+                    + '/targets'
+                ),
+            ]);
+
+            driverQualitySettingsState.profiles =
+                driverQualityItems(profilesBody);
+            driverQualitySettingsState.bindings =
+                driverQualityItems(bindingsBody);
+
+            const targets = getPayload(targetsBody);
+
+            driverQualitySettingsState.targets =
+                targets
+                && typeof targets === 'object'
+                    ? {
+                        organization:
+                            targets.organization ?? null,
+                        carrier_relationships:
+                            Array.isArray(
+                                targets
+                                    .carrier_relationships
+                            )
+                                ? targets
+                                    .carrier_relationships
+                                : [],
+                        driver_assignments:
+                            Array.isArray(
+                                targets.driver_assignments
+                            )
+                                ? targets
+                                    .driver_assignments
+                                : [],
+                    }
+                    : {
+                        organization: null,
+                        carrier_relationships: [],
+                        driver_assignments: [],
+                    };
+
+            driverQualitySettingsState.loaded = true;
+            driverQualityRender();
+            driverQualityMessage(
+                'Nastavení dílčí kvality je aktuální.',
+                'success'
+            );
+        }
+        catch (error) {
+            driverQualityMessage(
+                'Nastavení se nepodařilo načíst: '
+                + (error?.message || 'neznámá chyba'),
+                'error'
+            );
+        }
+        finally {
+            driverQualitySettingsState.loading = false;
+        }
+    };
+
+    async function driverQualityCreateProfile(
+        event
+    ) {
+        event.preventDefault();
+
+        const method = String(
+            document.getElementById(
+                'drayviaDriverQualityCreateMethod'
+            )?.value ?? 'processed_share'
+        );
+
+        try {
+            await realDriverApi(
+                driverQualitySettingsBaseUrl,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        code: String(
+                            document.getElementById(
+                                'drayviaDriverQualityCreateCode'
+                            )?.value ?? ''
+                        ),
+                        name: String(
+                            document.getElementById(
+                                'drayviaDriverQualityCreateName'
+                            )?.value ?? ''
+                        ),
+                        description: String(
+                            document.getElementById(
+                                'drayviaDriverQualityCreateDescription'
+                            )?.value ?? ''
+                        ) || null,
+                        calculation_method: method,
+                        numerator_sources:
+                            method === 'disabled'
+                                ? []
+                                : driverQualitySelectedSources(
+                                    '[data-quality-create-source]'
+                                ),
+                        change_reason: String(
+                            document.getElementById(
+                                'drayviaDriverQualityCreateReason'
+                            )?.value ?? ''
+                        ) || null,
+                    }),
+                }
+            );
+
+            event.target.reset();
+            driverQualitySyncCreateFormula();
+            driverQualitySettingsState.loaded = false;
+            await loadDriverQualitySettings(true);
+            driverQualityMessage(
+                'Koncept profilu byl vytvořen.',
+                'success'
+            );
+        }
+        catch (error) {
+            driverQualityMessage(
+                'Profil se nepodařilo vytvořit: '
+                + (error?.message || 'neznámá chyba'),
+                'error'
+            );
+        }
+    }
+
+    async function driverQualityCreateVersion() {
+        const profile = driverQualitySelectedProfile();
+
+        if (!profile) {
+            return;
+        }
+
+        try {
+            await realDriverApi(
+                driverQualitySettingsBaseUrl
+                + '/'
+                + profile.public_id
+                + '/versions',
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        change_reason: String(
+                            document.getElementById(
+                                'drayviaDriverQualityNewVersionReason'
+                            )?.value ?? ''
+                        ) || null,
+                    }),
+                }
+            );
+            driverQualitySettingsState.loaded = false;
+            await loadDriverQualitySettings(true);
+            driverQualityMessage(
+                'Nová revize byla založena.',
+                'success'
+            );
+        }
+        catch (error) {
+            driverQualityMessage(
+                'Revizi se nepodařilo založit: '
+                + (error?.message || 'neznámá chyba'),
+                'error'
+            );
+        }
+    }
+
+    async function driverQualitySaveDraft(
+        event,
+        profile,
+        draft
+    ) {
+        event.preventDefault();
+
+        const method = String(
+            document.getElementById(
+                'drayviaDriverQualityDraftMethod'
+            )?.value ?? 'processed_share'
+        );
+
+        try {
+            await realDriverApi(
+                driverQualitySettingsBaseUrl
+                + '/'
+                + profile.public_id
+                + '/versions/'
+                + String(draft.version_number),
+                {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        lock_version:
+                            Number(draft.lock_version),
+                        calculation_method: method,
+                        numerator_sources:
+                            method === 'disabled'
+                                ? []
+                                : driverQualitySelectedSources(
+                                    '[data-quality-draft-source]'
+                                ),
+                        change_reason: String(
+                            document.getElementById(
+                                'drayviaDriverQualityDraftReason'
+                            )?.value ?? ''
+                        ) || null,
+                    }),
+                }
+            );
+            driverQualitySettingsState.loaded = false;
+            await loadDriverQualitySettings(true);
+            driverQualityMessage(
+                'Koncept byl uložen s novou revizí zámku.',
+                'success'
+            );
+        }
+        catch (error) {
+            driverQualityMessage(
+                'Koncept se nepodařilo uložit: '
+                + (error?.message || 'neznámá chyba'),
+                'error'
+            );
+        }
+    }
+
+    async function driverQualityActivateVersion(
+        profile,
+        draft
+    ) {
+        const month = String(
+            document.getElementById(
+                'drayviaDriverQualityActivationMonth'
+            )?.value ?? ''
+        );
+
+        if (!month) {
+            driverQualityMessage(
+                'Vyberte měsíc aktivace.',
+                'error'
+            );
+            return;
+        }
+
+        try {
+            await realDriverApi(
+                driverQualitySettingsBaseUrl
+                + '/'
+                + profile.public_id
+                + '/versions/'
+                + String(draft.version_number)
+                + '/activate',
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        lock_version:
+                            Number(draft.lock_version),
+                        valid_from:
+                            driverQualityMonthStart(month),
+                    }),
+                }
+            );
+            driverQualitySettingsState.loaded = false;
+            await loadDriverQualitySettings(true);
+            driverQualityMessage(
+                'Verze byla aktivována od zvoleného měsíce.',
+                'success'
+            );
+        }
+        catch (error) {
+            driverQualityMessage(
+                'Verzi se nepodařilo aktivovat: '
+                + (error?.message || 'neznámá chyba'),
+                'error'
+            );
+        }
+    }
+
+    async function driverQualitySaveBinding(
+        event
+    ) {
+        event.preventDefault();
+
+        const profileId = String(
+            document.getElementById(
+                'drayviaDriverQualityBindingProfile'
+            )?.value ?? ''
+        );
+        const scope = String(
+            document.getElementById(
+                'drayviaDriverQualityBindingScope'
+            )?.value ?? 'organization'
+        );
+        const targetId = String(
+            document.getElementById(
+                'drayviaDriverQualityBindingTarget'
+            )?.value ?? ''
+        );
+        const month = String(
+            document.getElementById(
+                'drayviaDriverQualityBindingMonth'
+            )?.value ?? ''
+        );
+        let path = driverQualitySettingsBaseUrl
+            + '/bindings/organization';
+
+        if (
+            scope === 'carrier_relationship'
+        ) {
+            path = driverQualitySettingsBaseUrl
+                + '/bindings/carrier-relationships/'
+                + targetId;
+        }
+        else if (scope === 'driver_assignment') {
+            path = driverQualitySettingsBaseUrl
+                + '/bindings/driver-assignments/'
+                + targetId;
+        }
+
+        try {
+            await realDriverApi(
+                path,
+                {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        profile_public_id: profileId,
+                        valid_from:
+                            driverQualityMonthStart(month),
+                    }),
+                }
+            );
+            driverQualitySettingsState.loaded = false;
+            await loadDriverQualitySettings(true);
+            driverQualityMessage(
+                'Platnost profilu byla uložena.',
+                'success'
+            );
+        }
+        catch (error) {
+            driverQualityMessage(
+                'Platnost se nepodařilo uložit: '
+                + (error?.message || 'neznámá chyba'),
+                'error'
+            );
+        }
+    }
+
+    async function driverQualityEndBinding(
+        binding
+    ) {
+        const month = String(
+            document.getElementById(
+                'drayviaDriverQualityEndMonth'
+            )?.value ?? ''
+        );
+
+        if (!month) {
+            driverQualityMessage(
+                'Vyberte měsíc návratu k děděnému nastavení.',
+                'error'
+            );
+            return;
+        }
+
+        if (
+            !window.confirm(
+                'Ukončit tuto výjimku a obnovit děděné nastavení?'
+            )
+        ) {
+            return;
+        }
+
+        try {
+            await realDriverApi(
+                driverQualityBindingPath(binding),
+                {
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        effective_from:
+                            driverQualityMonthStart(month),
+                    }),
+                }
+            );
+            driverQualitySettingsState.loaded = false;
+            await loadDriverQualitySettings(true);
+            driverQualityMessage(
+                'Výjimka byla ukončena; od zvoleného měsíce se opět dědí.',
+                'success'
+            );
+        }
+        catch (error) {
+            driverQualityMessage(
+                'Výjimku se nepodařilo ukončit: '
+                + (error?.message || 'neznámá chyba'),
+                'error'
+            );
+        }
+    }
+
+    async function driverQualityLoadEffective(
+        event
+    ) {
+        event.preventDefault();
+
+        const query = new URLSearchParams();
+        const serviceDate = String(
+            document.getElementById(
+                'drayviaDriverQualityEffectiveDate'
+            )?.value ?? ''
+        );
+        const relationshipId = String(
+            document.getElementById(
+                'drayviaDriverQualityEffectiveCarrier'
+            )?.value ?? ''
+        );
+        const assignmentId = String(
+            document.getElementById(
+                'drayviaDriverQualityEffectiveDriver'
+            )?.value ?? ''
+        );
+
+        query.set('service_date', serviceDate);
+
+        if (relationshipId) {
+            query.set(
+                'organization_relationship_id',
+                relationshipId
+            );
+        }
+
+        if (assignmentId) {
+            query.set(
+                'driver_organization_assignment_id',
+                assignmentId
+            );
+        }
+
+        try {
+            const body = await realDriverApi(
+                driverQualitySettingsBaseUrl
+                + '/effective?'
+                + query.toString()
+            );
+            const data = getPayload(body) ?? {};
+            const target = document.getElementById(
+                'drayviaDriverQualityEffectiveResult'
+            );
+            const reasonLabels = {
+                resolved: 'Nastavení bylo nalezeno.',
+                unconfigured: 'Pro tento rozsah není nastaven žádný profil.',
+                profile_unavailable: 'Vazba odkazuje na nedostupný profil.',
+                version_unavailable: 'Profil pro dané datum nemá účinnou verzi.',
+            };
+
+            driverQualitySettingsState.effective =
+                data;
+
+            if (target) {
+                const scope =
+                    driverQualityScopeLabels[
+                        data.scope_type
+                    ] ?? 'Bez vazby';
+                const profile = data.profile
+                    ? data.profile.code
+                        + ' · '
+                        + data.profile.name
+                    : 'Žádný';
+                const version = data.version
+                    ? 'v'
+                        + String(
+                            data.version.version_number
+                        )
+                        + ' · '
+                        + driverQualityFormulaText(
+                            data.version
+                                .calculation_method,
+                            Array.isArray(
+                                data.version
+                                    .numerator_sources
+                            )
+                                ? data.version
+                                    .numerator_sources
+                                : []
+                        )
+                    : 'Bez účinné verze';
+
+                target.textContent =
+                    (reasonLabels[data.reason]
+                        ?? data.reason)
+                    + ' Úroveň: '
+                    + scope
+                    + '. Profil: '
+                    + profile
+                    + '. Verze: '
+                    + version
+                    + '.';
+            }
+        }
+        catch (error) {
+            const target = document.getElementById(
+                'drayviaDriverQualityEffectiveResult'
+            );
+
+            if (target) {
+                target.textContent =
+                    'Náhled se nepodařilo načíst: '
+                    + (error?.message || 'neznámá chyba');
+            }
+        }
+    }
+
+    const activateDriverStatisticsTab = (
+        tab
+    ) => {
+        const overview = document.getElementById(
+            'drayviaDriverStatisticsHost'
+        );
+        const settings = document.getElementById(
+            'drayviaDriverQualitySettingsHost'
+        );
+        const settingsActive =
+            tab === 'quality-settings';
+
+        if (overview) {
+            overview.hidden = settingsActive;
+        }
+
+        if (settings) {
+            settings.hidden = !settingsActive;
+        }
+
+        document.querySelectorAll(
+            '[data-driver-statistics-tab]'
+        ).forEach(
+            (button) => {
+                const active =
+                    button.dataset
+                        .driverStatisticsTab === tab;
+
+                button.classList.toggle(
+                    'primary',
+                    active
+                );
+                button.setAttribute(
+                    'aria-pressed',
+                    active ? 'true' : 'false'
+                );
+            }
+        );
+
+        if (settingsActive) {
+            loadDriverQualitySettings();
+        }
+        else {
+            loadDriverStatistics();
+        }
+    };
+
+    const bindDriverStatisticsTabs = () => {
+        document.querySelectorAll(
+            '[data-driver-statistics-tab]'
+        ).forEach(
+            (button) => {
+                button.addEventListener(
+                    'click',
+                    () => {
+                        activateDriverStatisticsTab(
+                            String(
+                                button.dataset
+                                    .driverStatisticsTab
+                                ?? 'overview'
+                            )
+                        );
+                    }
+                );
+            }
+        );
+
+        activateDriverStatisticsTab('overview');
+    };
     const realDriverAssignmentAdminState = {
         driver: null,
         organizations: [],
@@ -11569,8 +13489,35 @@ const calendarJuly2026 = {
         )}
 
         <div
+            class="drayvia-preview-actions"
+            style="margin:0 0 14px;"
+            aria-label="Sekce statistik"
+        >
+            <button
+                class="drayvia-preview-action primary"
+                type="button"
+                data-driver-statistics-tab="overview"
+            >
+                PŘEHLED
+            </button>
+            <button
+                class="drayvia-preview-action"
+                type="button"
+                data-driver-statistics-tab="quality-settings"
+            >
+                NASTAVENÍ DÍLČÍ KVALITY
+            </button>
+        </div>
+
+        <div
             id="drayviaDriverStatisticsHost"
             class="drayvia-preview-panel drayvia-driver-statistics"
+        ></div>
+
+        <div
+            id="drayviaDriverQualitySettingsHost"
+            class="drayvia-preview-panel drayvia-driver-quality-settings"
+            hidden
         ></div>
     `;
 const fuel = () => `
@@ -19896,7 +21843,7 @@ const loadFinanceCustomers = async () => {
         }
 
         if (page === 'statistics') {
-            loadDriverStatistics();
+            bindDriverStatisticsTabs();
         }
 
 if (page === 'finance') {

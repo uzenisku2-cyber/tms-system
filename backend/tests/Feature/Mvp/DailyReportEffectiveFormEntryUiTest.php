@@ -13,7 +13,7 @@ final class DailyReportEffectiveFormEntryUiTest extends TestCase
         $this->get('/app')
             ->assertOk()
             ->assertSee(
-                'dailyReportDynamicFields',
+                '<div id="dailyReportDynamicFields" class="daily-entry-grid"></div>',
                 false,
             )
             ->assertSee(
@@ -42,12 +42,6 @@ final class DailyReportEffectiveFormEntryUiTest extends TestCase
             )
             ->assertSee(
                 'Pro zadané datum není nastavena platná konfigurace denního výkazu.',
-            )
-            ->assertDontSee(
-                'Přesměrované zásilky',
-            )
-            ->assertDontSee(
-                'Nedoručené zásilky',
             );
     }
 }
