@@ -1676,6 +1676,423 @@
             color: #ffffff;
         }
 
+        /* S028-01A DEPOT IMPORT READ-ONLY PREVIEW */
+        .drayvia-depot-import-form {
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .drayvia-depot-import-form label,
+        .drayvia-depot-alias-field {
+            display: grid;
+            gap: 7px;
+            color: #132038;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .drayvia-depot-import-form input,
+        .drayvia-depot-alias-field input {
+            min-height: 44px;
+            border: 1px solid #b7c4d6;
+            border-radius: 9px;
+            background: #ffffff;
+            color: #132038;
+            padding: 9px 12px;
+        }
+
+        .drayvia-depot-readonly-note {
+            margin-bottom: 16px;
+            border-left: 4px solid #1667d9;
+            background: #edf6ff;
+            color: #0b438f;
+            padding: 12px 14px;
+            line-height: 1.5;
+        }
+
+        .drayvia-depot-import-status {
+            margin-top: 14px;
+            min-height: 22px;
+            color: #52627a;
+        }
+
+        .drayvia-depot-import-status.error {
+            color: #a11b1b;
+        }
+
+        .drayvia-depot-import-status.success {
+            color: #08743b;
+        }
+
+        .drayvia-depot-preview-table-wrap {
+            margin-top: 16px;
+            overflow: auto;
+            border: 1px solid #d9e1ec;
+            border-radius: 10px;
+        }
+
+        .drayvia-depot-preview-table {
+            width: 100%;
+            min-width: 1120px;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .drayvia-depot-preview-table th,
+        .drayvia-depot-preview-table td {
+            border-bottom: 1px solid #e5eaf1;
+            padding: 9px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .drayvia-depot-preview-table th {
+            position: sticky;
+            top: 0;
+            background: #f5f7fa;
+            color: #34445d;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .drayvia-depot-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 1400;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: rgba(11, 22, 41, 0.58);
+        }
+
+        .drayvia-depot-modal {
+            width: min(660px, 100%);
+            max-height: calc(100vh - 48px);
+            overflow: auto;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 24px 70px rgba(11, 22, 41, 0.3);
+            padding: 24px;
+        }
+
+        .drayvia-depot-modal h2 {
+            margin: 0 0 8px;
+            color: #132038;
+        }
+
+        .drayvia-depot-modal p {
+            margin: 0 0 16px;
+            color: #52627a;
+            line-height: 1.55;
+        }
+
+        .drayvia-depot-carrier-list {
+            display: grid;
+            gap: 7px;
+            margin: 14px 0;
+            padding: 12px;
+            border: 1px solid #d9e1ec;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .drayvia-depot-carrier-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            color: #34445d;
+        }
+
+        .drayvia-depot-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        /* S028-04A DEPOT IMPORT AUDITED DRAFT ADMINISTRATION */
+        .drayvia-depot-draft-section {
+            margin-top: 18px;
+            border: 1px solid #d9e1ec;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 18px;
+        }
+
+        .drayvia-depot-draft-section h2,
+        .drayvia-depot-draft-section h3 {
+            margin: 0 0 8px;
+            color: #132038;
+        }
+
+        .drayvia-depot-draft-section-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .drayvia-depot-draft-list,
+        .drayvia-depot-mapping-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .drayvia-depot-draft-list-item,
+        .drayvia-depot-mapping-card {
+            display: grid;
+            gap: 10px;
+            border: 1px solid #d9e1ec;
+            border-radius: 10px;
+            background: #f8fafc;
+            padding: 13px;
+        }
+
+        .drayvia-depot-draft-list-item {
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+        }
+
+        .drayvia-depot-draft-list-item p,
+        .drayvia-depot-mapping-card p {
+            margin: 4px 0 0;
+            color: #52627a;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .drayvia-depot-mapping-success {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 3px 8px;
+            align-items: center;
+            width: fit-content;
+            color: #087443;
+        }
+
+        .drayvia-depot-mapping-success-icon {
+            display: inline-grid;
+            grid-row: 1 / span 2;
+            place-items: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #0b8f52;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 900;
+        }
+
+        .drayvia-depot-mapping-success strong {
+            font-size: 12px;
+        }
+
+        .drayvia-depot-mapping-success small {
+            color: #397a5d;
+            font-size: 11px;
+        }
+
+        .drayvia-depot-import-result {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 4px 10px;
+            align-items: center;
+            margin: 14px 0;
+            border: 1px solid;
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+
+        .drayvia-depot-import-result.success {
+            border-color: #8bd1ac;
+            background: #ecfbf3;
+            color: #087443;
+        }
+
+        .drayvia-depot-import-result.cancelled {
+            border-color: #efb0aa;
+            background: #fff3f1;
+            color: #9d281d;
+        }
+
+        .drayvia-depot-import-result-icon {
+            display: inline-grid;
+            grid-row: 1 / span 2;
+            place-items: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: #ffffff;
+            font-size: 19px;
+            font-weight: 900;
+        }
+
+        .drayvia-depot-import-result.success
+            .drayvia-depot-import-result-icon {
+            background: #0b8f52;
+        }
+
+        .drayvia-depot-import-result.cancelled
+            .drayvia-depot-import-result-icon {
+            background: #b63428;
+        }
+
+        .drayvia-depot-import-result strong {
+            font-size: 15px;
+        }
+
+        .drayvia-depot-import-result small {
+            color: inherit;
+            font-size: 11px;
+            line-height: 1.45;
+            opacity: 0.82;
+        }
+
+        .drayvia-depot-finalize-summary {
+            display: grid;
+            gap: 8px;
+            margin: 18px 0;
+            border: 1px solid #d9e1ec;
+            border-radius: 10px;
+            background: #f8fafc;
+            padding: 14px;
+        }
+
+        .drayvia-depot-finalize-summary div {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            color: #34445d;
+        }
+
+        .drayvia-depot-finalize-summary strong {
+            color: #132038;
+            text-align: right;
+        }
+
+        .drayvia-depot-finalize-warning {
+            border-left: 4px solid #d88600;
+            border-radius: 8px;
+            background: #fff8e8;
+            color: #71420b;
+            padding: 12px 14px;
+            line-height: 1.5;
+        }
+
+        .drayvia-depot-cancel-reason {
+            display: grid;
+            gap: 6px;
+            margin-top: 16px;
+            color: #34445d;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .drayvia-depot-cancel-reason textarea {
+            min-height: 92px;
+            resize: vertical;
+            border: 1px solid #aebbd0;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 10px 12px;
+            color: #132038;
+            font: inherit;
+            font-weight: 500;
+        }
+
+        .drayvia-depot-cancel-action {
+            border-color: #b63428;
+            background: #a72c22;
+            color: #ffffff;
+        }
+
+        .drayvia-depot-cancel-action:hover:not(:disabled) {
+            background: #852219;
+        }
+
+        .drayvia-depot-cancelled-note {
+            margin: 14px 0;
+            border: 1px solid #efb0aa;
+            border-left: 4px solid #b63428;
+            border-radius: 8px;
+            background: #fff3f1;
+            color: #782118;
+            padding: 12px 14px;
+            line-height: 1.5;
+        }
+
+        .drayvia-depot-locked-note {
+            margin: 14px 0;
+            border: 1px solid #e7b754;
+            border-left: 4px solid #d98b00;
+            border-radius: 8px;
+            background: #fff8e8;
+            color: #71420b;
+            padding: 12px 14px;
+            line-height: 1.5;
+        }
+
+        .drayvia-depot-mapping-card form {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.4fr) auto;
+            gap: 8px;
+            align-items: end;
+        }
+
+        .drayvia-depot-mapping-card label {
+            display: grid;
+            gap: 5px;
+            color: #34445d;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .drayvia-depot-mapping-card select,
+        .drayvia-depot-mapping-card input {
+            min-height: 38px;
+            min-width: 0;
+            border: 1px solid #b7c4d6;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #132038;
+            padding: 7px 9px;
+            font: inherit;
+        }
+
+        .drayvia-depot-draft-state {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            background: #e7eef9;
+            color: #244a7c;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        @media (max-width: 760px) {
+            .drayvia-depot-import-form {
+                grid-template-columns: 1fr;
+            }
+
+            .drayvia-depot-modal-actions {
+                flex-direction: column-reverse;
+            }
+
+            .drayvia-depot-draft-section-head,
+            .drayvia-depot-draft-list-item {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .drayvia-depot-mapping-card form {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .drayvia-calendar-board {
             overflow-x: auto;
         }
@@ -15037,47 +15454,1359 @@ const fuel = () => `
         </div>
     `;
 
+    // S028-01A DEPOT IMPORT READ-ONLY PREVIEW
+    const depotImportState = {
+        file: null,
+        inspection: null,
+        preview: null,
+        draft: null,
+    };
+
+    const depotImportApi = async (
+        path,
+        {method = 'GET', formData = null, json = null} = {}
+    ) => {
+        const depotImportToken = sessionStorage.getItem('tms_mvp_token') || '';
+        const headers = {
+            Accept: 'application/json',
+            'X-Organization-ID': '1',
+        };
+
+        if (depotImportToken) {
+            headers.Authorization = `Bearer ${depotImportToken}`;
+        }
+
+        if (json !== null) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        const response = await fetch(path, {
+            method,
+            headers,
+            body: formData ?? (json === null ? null : JSON.stringify(json)),
+        });
+        let body = null;
+
+        try {
+            body = await response.json();
+        } catch {
+            body = null;
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                readError(
+                    body,
+                    `Operace importu skončila chybou HTTP ${response.status}.`
+                )
+            );
+        }
+
+        return getPayload(body);
+    };
+
+    const depotImportSetStatus = (message, type = '') => {
+        const status = document.getElementById(
+            'drayviaDepotImportStatus'
+        );
+
+        if (!status) {
+            return;
+        }
+
+        status.textContent = message;
+        status.className =
+            `drayvia-depot-import-status ${type}`.trim();
+    };
+
+    const depotImportCard = (label, value, note = '') => {
+        const card = document.createElement('div');
+        card.className = 'drayvia-preview-card';
+
+        const cardLabel = document.createElement('div');
+        cardLabel.className = 'drayvia-preview-card-label';
+        cardLabel.textContent = label;
+
+        const cardValue = document.createElement('div');
+        cardValue.className = 'drayvia-preview-card-value';
+        cardValue.textContent = value;
+
+        card.append(cardLabel, cardValue);
+
+        if (note) {
+            const cardNote = document.createElement('div');
+            cardNote.className = 'drayvia-preview-card-note';
+            cardNote.textContent = note;
+            card.appendChild(cardNote);
+        }
+
+        return card;
+    };
+
+    const depotImportFormatDate = (value) => {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+            String(value ?? '')
+        );
+
+        return match
+            ? `${match[3]}.${match[2]}.${match[1]}`
+            : (value || '—');
+    };
+
+    const depotImportFormatDateTime = (value) => {
+        const parsed = new Date(value);
+
+        if (Number.isNaN(parsed.getTime())) {
+            return value || '—';
+        }
+
+        return new Intl.DateTimeFormat('cs-CZ', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        }).format(parsed);
+    };
+
+    // S028-04A DEPOT IMPORT AUDITED DRAFT ADMINISTRATION
+    const depotImportStatusLabel = (status) => ({
+        draft: 'Koncept – čeká na přiřazení',
+        ready: 'Připraveno – řidiči přiřazeni',
+        imported: 'Importováno',
+        cancelled: 'Stornováno',
+        no_run: 'Neodjeto',
+    })[status] || status;
+
+    const depotImportUniqueDrivers = (drivers) => {
+        const unique = new Map();
+
+        (drivers || []).forEach((driver) => {
+            if (!unique.has(driver.driver_id)) {
+                unique.set(driver.driver_id, driver);
+            }
+        });
+
+        return [...unique.values()];
+    };
+
+    const depotImportAppendDriverOptions = (
+        select,
+        drivers,
+        selectedDriverId = null
+    ) => {
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = 'Vyberte oprávněného řidiče';
+        select.appendChild(empty);
+
+        depotImportUniqueDrivers(drivers).forEach((driver) => {
+            const option = document.createElement('option');
+            option.value = String(driver.driver_id);
+            option.textContent = driver.external_driver_id
+                ? `${driver.driver_name} · ${driver.external_driver_id}`
+                : driver.driver_name;
+            option.selected = Number(selectedDriverId) === driver.driver_id;
+            select.appendChild(option);
+        });
+    };
+
+    const depotImportRenderDraftList = (drafts) => {
+        const host = document.getElementById(
+            'drayviaDepotImportDraftListHost'
+        );
+
+        if (!host) {
+            return;
+        }
+
+        host.replaceChildren();
+
+        const section = document.createElement('section');
+        section.className = 'drayvia-depot-draft-section';
+
+        const heading = document.createElement('div');
+        heading.className = 'drayvia-depot-draft-section-head';
+
+        const copy = document.createElement('div');
+        const title = document.createElement('h2');
+        title.textContent = 'Importy z depa';
+        const description = document.createElement('p');
+        description.textContent =
+            'Koncept lze znovu otevřít; dokončený import zůstává neměnným zdrojem depa.';
+        copy.append(title, description);
+
+        const refresh = document.createElement('button');
+        refresh.type = 'button';
+        refresh.className = 'drayvia-preview-action';
+        refresh.textContent = 'Obnovit seznam';
+        refresh.addEventListener('click', () => depotImportLoadDrafts());
+        heading.append(copy, refresh);
+        section.appendChild(heading);
+
+        const list = document.createElement('div');
+        list.className = 'drayvia-depot-draft-list';
+
+        if (!Array.isArray(drafts) || drafts.length === 0) {
+            const empty = document.createElement('p');
+            empty.textContent = 'Zatím není uložen žádný koncept importu.';
+            list.appendChild(empty);
+        } else {
+            drafts.forEach((draft) => {
+                const item = document.createElement('div');
+                item.className = 'drayvia-depot-draft-list-item';
+
+                const details = document.createElement('div');
+                const name = document.createElement('strong');
+                name.textContent =
+                    `${draft.source.original_filename} · ${draft.confirmed_alias}`;
+                const meta = document.createElement('p');
+                meta.textContent =
+                    `${depotImportFormatDate(draft.period.from)}–`
+                    + `${depotImportFormatDate(draft.period.until)} · `
+                    + `${depotImportStatusLabel(draft.status)} · `
+                    + `${draft.counts.unassigned_ready} nepřiřazených záznamů`;
+                details.append(name, meta);
+
+                const open = document.createElement('button');
+                open.type = 'button';
+                open.className = 'drayvia-preview-action';
+                open.textContent = draft.status === 'imported'
+                    ? 'Otevřít import'
+                    : (draft.status === 'cancelled'
+                        ? 'Otevřít stornovaný import'
+                        : 'Otevřít koncept');
+                open.addEventListener(
+                    'click',
+                    () => depotImportLoadDraft(draft.public_id)
+                );
+                item.append(details, open);
+                list.appendChild(item);
+            });
+        }
+
+        section.appendChild(list);
+        host.appendChild(section);
+    };
+
+    const depotImportLoadDrafts = async () => {
+        try {
+            const drafts = await depotImportApi(
+                '/api/v1/daily-reports/depot-imports/drafts'
+            );
+            depotImportRenderDraftList(drafts);
+        } catch (error) {
+            const host = document.getElementById(
+                'drayviaDepotImportDraftListHost'
+            );
+
+            if (host) {
+                const notice = document.createElement('div');
+                notice.className = 'drayvia-depot-import-status error';
+                notice.textContent =
+                    `Rozpracované importy nelze načíst: ${error.message}`;
+                host.replaceChildren(notice);
+            }
+        }
+    };
+
+    const depotImportLoadDraft = async (publicId) => {
+        depotImportSetStatus('Načítám ověřený koncept importu…');
+
+        try {
+            const draft = await depotImportApi(
+                `/api/v1/daily-reports/depot-imports/drafts/${publicId}`
+            );
+            depotImportState.draft = draft;
+            depotImportRenderDraft(draft);
+            depotImportSetStatus(
+                'Koncept byl načten a jeho chráněné hodnoty byly ověřeny.',
+                'success'
+            );
+        } catch (error) {
+            depotImportSetStatus(error.message, 'error');
+        }
+    };
+
+    const depotImportUpdateDraft = async (
+        path,
+        payload,
+        successMessage
+    ) => {
+        const currentPublicId = depotImportState.draft?.public_id;
+
+        try {
+            const draft = await depotImportApi(path, {
+                method: 'PATCH',
+                json: payload,
+            });
+            depotImportState.draft = draft;
+            depotImportRenderDraft(draft);
+            depotImportSetStatus(successMessage, 'success');
+            await depotImportLoadDrafts();
+        } catch (error) {
+            depotImportSetStatus(error.message, 'error');
+
+            if (currentPublicId) {
+                await depotImportLoadDraft(currentPublicId);
+            }
+        }
+    };
+
+    const depotImportConfirmFinalization = (batch) => new Promise((resolve) => {
+        document
+            .querySelector('.drayvia-depot-modal-backdrop')
+            ?.remove();
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'drayvia-depot-modal-backdrop';
+        const modal = document.createElement('form');
+        modal.className = 'drayvia-depot-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'drayviaDepotFinalizeTitle');
+
+        const title = document.createElement('h2');
+        title.id = 'drayviaDepotFinalizeTitle';
+        title.textContent = 'Dokončit import zápisů z depa?';
+        const description = document.createElement('p');
+        description.textContent =
+            'Před uzamčením zkontrolujte rozsah importu a přiřazení zdrojových jmen.';
+        const sourceNames = new Set(
+            batch.rows.map((row) => row.source_driver_name)
+        );
+        const assignedSourceNames = new Set(
+            batch.rows
+                .filter((row) => row.assigned_driver?.id)
+                .map((row) => row.source_driver_name)
+        );
+        const totals = batch.source_totals || {};
+        const summary = document.createElement('div');
+        summary.className = 'drayvia-depot-finalize-summary';
+
+        [
+            ['Soubor', batch.source.original_filename],
+            ['Alias dopravce', batch.confirmed_alias],
+            ['Záznamy depa', String(batch.rows.length)],
+            [
+                'Přiřazená zdrojová jména',
+                `${assignedSourceNames.size} z ${sourceNames.size}`,
+            ],
+            [
+                'Kontrolní součty',
+                `naloženo ${totals.loaded_parcels ?? 0}, doručeno `
+                + `${totals.delivered_parcels ?? 0}, VM `
+                + `${totals.redirected_parcels ?? 0}`,
+            ],
+        ].forEach(([label, value]) => {
+            const row = document.createElement('div');
+            const name = document.createElement('span');
+            name.textContent = label;
+            const content = document.createElement('strong');
+            content.textContent = value;
+            row.append(name, content);
+            summary.appendChild(row);
+        });
+
+        const warning = document.createElement('div');
+        warning.className = 'drayvia-depot-finalize-warning';
+        warning.textContent =
+            'Potvrzením se hodnoty depa a přiřazení jmen uzamknou jako '
+            + 'samostatný zdroj. Nevzniknou trasy, denní výkazy ani párování.';
+        const actions = document.createElement('div');
+        actions.className = 'drayvia-depot-modal-actions';
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'drayvia-preview-action';
+        cancel.textContent = 'Zpět ke kontrole';
+        const confirm = document.createElement('button');
+        confirm.type = 'submit';
+        confirm.className = 'drayvia-preview-action primary';
+        confirm.textContent = 'Potvrdit a dokončit import';
+        actions.append(cancel, confirm);
+        modal.append(title, description, summary, warning, actions);
+        backdrop.appendChild(modal);
+
+        let settled = false;
+        const close = (confirmed) => {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            backdrop.remove();
+            resolve(confirmed);
+        };
+
+        cancel.addEventListener('click', () => close(false));
+        modal.addEventListener('submit', (event) => {
+            event.preventDefault();
+            close(true);
+        });
+        document.body.appendChild(backdrop);
+        confirm.focus();
+    });
+
+    const depotImportConfirmCancellation = (batch) => new Promise((resolve) => {
+        document
+            .querySelector('.drayvia-depot-modal-backdrop')
+            ?.remove();
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'drayvia-depot-modal-backdrop';
+        const modal = document.createElement('form');
+        modal.className = 'drayvia-depot-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'drayviaDepotCancelTitle');
+
+        const title = document.createElement('h2');
+        title.id = 'drayviaDepotCancelTitle';
+        title.textContent = 'Stornovat import zápisů z depa?';
+        const description = document.createElement('p');
+        description.textContent =
+            'Storno vyřadí tuto importní dávku z dalšího zpracování. '
+            + 'Původní zápis depa zůstane zachován pro kontrolu a audit.';
+        const totals = batch.source_totals || {};
+        const summary = document.createElement('div');
+        summary.className = 'drayvia-depot-finalize-summary';
+
+        [
+            ['Soubor', batch.source.original_filename],
+            ['Alias dopravce', batch.confirmed_alias],
+            ['Záznamy depa', String(batch.counts.rows)],
+            [
+                'Kontrolní součty',
+                `naloženo ${totals.loaded_parcels ?? 0}, doručeno `
+                + `${totals.delivered_parcels ?? 0}, VM `
+                + `${totals.redirected_parcels ?? 0}`,
+            ],
+        ].forEach(([label, value]) => {
+            const row = document.createElement('div');
+            const name = document.createElement('span');
+            name.textContent = label;
+            const content = document.createElement('strong');
+            content.textContent = value;
+            row.append(name, content);
+            summary.appendChild(row);
+        });
+
+        const warning = document.createElement('div');
+        warning.className = 'drayvia-depot-finalize-warning';
+        warning.textContent =
+            'Storno nic nemaže: zdrojové hodnoty, přiřazení řidičů, kontrolní '
+            + 'součty i auditní historie zůstanou beze změny.';
+        const reasonLabel = document.createElement('label');
+        reasonLabel.className = 'drayvia-depot-cancel-reason';
+        reasonLabel.textContent = 'Důvod storna';
+        const reason = document.createElement('textarea');
+        reason.required = true;
+        reason.minLength = 5;
+        reason.maxLength = 2000;
+        reason.placeholder = 'Uveďte důvod storna importu…';
+        reasonLabel.appendChild(reason);
+
+        const actions = document.createElement('div');
+        actions.className = 'drayvia-depot-modal-actions';
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'drayvia-preview-action';
+        back.textContent = 'Zpět';
+        const confirm = document.createElement('button');
+        confirm.type = 'submit';
+        confirm.className =
+            'drayvia-preview-action drayvia-depot-cancel-action';
+        confirm.textContent = 'Potvrdit storno importu';
+        actions.append(back, confirm);
+        modal.append(
+            title,
+            description,
+            summary,
+            warning,
+            reasonLabel,
+            actions
+        );
+        backdrop.appendChild(modal);
+
+        let settled = false;
+        const close = (value) => {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            backdrop.remove();
+            resolve(value);
+        };
+
+        back.addEventListener('click', () => close(null));
+        modal.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            if (!modal.reportValidity()) {
+                return;
+            }
+
+            close(reason.value.trim());
+        });
+        document.body.appendChild(backdrop);
+        reason.focus();
+    });
+
+    const depotImportRenderDraft = (batch) => {
+        const host = document.getElementById(
+            'drayviaDepotImportDraftHost'
+        );
+
+        if (!host) {
+            return;
+        }
+
+        host.replaceChildren();
+
+        const section = document.createElement('section');
+        section.className = 'drayvia-depot-draft-section';
+        section.dataset.depotImportDraft = batch.public_id;
+
+        const heading = document.createElement('div');
+        heading.className = 'drayvia-depot-draft-section-head';
+        const copy = document.createElement('div');
+        const title = document.createElement('h2');
+        title.textContent = 'Správa konceptu importu';
+        const meta = document.createElement('p');
+        meta.textContent =
+            `${batch.source.original_filename} · alias „${batch.confirmed_alias}“ · `
+            + `verze ${batch.lock_version}`;
+        copy.append(title, meta);
+        const state = document.createElement('span');
+        state.className = 'drayvia-depot-draft-state';
+        state.textContent = depotImportStatusLabel(batch.status);
+        heading.append(copy, state);
+        section.appendChild(heading);
+
+        if (batch.status === 'imported') {
+            const result = document.createElement('div');
+            result.className = 'drayvia-depot-import-result success';
+            const icon = document.createElement('span');
+            icon.className = 'drayvia-depot-import-result-icon';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = '✓';
+            const resultTitle = document.createElement('strong');
+            resultTitle.textContent = 'Import úspěšně uložen';
+            const detail = document.createElement('small');
+            detail.textContent =
+                `${batch.counts.rows} záznamů depa bylo uzamčeno jako `
+                + 'samostatný neměnný zdroj.';
+            result.append(icon, resultTitle, detail);
+            section.appendChild(result);
+        }
+
+        if (batch.status === 'cancelled') {
+            const result = document.createElement('div');
+            result.className = 'drayvia-depot-import-result cancelled';
+            const icon = document.createElement('span');
+            icon.className = 'drayvia-depot-import-result-icon';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = '×';
+            const resultTitle = document.createElement('strong');
+            resultTitle.textContent = 'Import stornován';
+            const detail = document.createElement('small');
+            detail.textContent = batch.cancellation
+                ? `Storno ${depotImportFormatDateTime(batch.cancellation.created_at)}. `
+                    + `Důvod: ${batch.cancellation.reason}`
+                : 'Zdrojový zápis zůstal zachován pro kontrolu a audit.';
+            result.append(icon, resultTitle, detail);
+            section.appendChild(result);
+        }
+
+        const cards = document.createElement('div');
+        cards.className = 'drayvia-preview-grid';
+        cards.append(
+            depotImportCard(
+                'Záznamy připravené k přiřazení',
+                String(batch.counts.ready),
+                `${batch.counts.unassigned_ready} ještě bez řidiče`
+            ),
+            depotImportCard(
+                'Neodjeté záznamy',
+                String(batch.counts.no_run),
+                'Nevytvoří nulovou trasu'
+            ),
+            depotImportCard(
+                'Aktivní oprávnění řidiči',
+                String(depotImportUniqueDrivers(batch.eligible_drivers).length),
+                'Pouze přiřazení hlavnímu dopravci v období'
+            ),
+            depotImportCard(
+                'Integrita hodnot',
+                batch.integrity_verified ? 'Ověřena' : 'Neověřena',
+                `Kontrolní otisk ${batch.protected_totals_sha256.slice(0, 12)}…`
+            )
+        );
+        section.appendChild(cards);
+
+        const locked = document.createElement('div');
+        locked.className = 'drayvia-depot-locked-note';
+        locked.textContent =
+            'Naloženo, doručeno, výdejní místa, odmítnuto, nerozvezeno, kilometry '
+            + 'a ostatní hodnoty jsou přesným, neměnným zápisem depa. V Importech '
+            + 'lze pouze hromadně přiřadit zdrojová jména oprávněným řidičům.';
+        section.appendChild(locked);
+
+        const totals = batch.source_totals || {};
+        const totalsNote = document.createElement('div');
+        totalsNote.className = 'drayvia-depot-readonly-note';
+        totalsNote.textContent =
+            `Neměnné kontrolní součty: naloženo ${totals.loaded_parcels ?? 0}, `
+            + `doručeno ${totals.delivered_parcels ?? 0}, výdejní místo `
+            + `${totals.redirected_parcels ?? 0}, odmítnuto `
+            + `${totals.customer_rejected_parcels ?? 0}, nerozvezeno `
+            + `${totals.computed_not_delivered_parcels ?? 0}.`;
+        section.appendChild(totalsNote);
+
+        const mappingTitle = document.createElement('h3');
+        mappingTitle.textContent = 'Hromadné přiřazení jmen z depa';
+        section.appendChild(mappingTitle);
+
+        const groups = new Map();
+        batch.rows.forEach((row) => {
+            if (!groups.has(row.source_driver_name)) {
+                groups.set(row.source_driver_name, []);
+            }
+
+            groups.get(row.source_driver_name).push(row);
+        });
+
+        const mappingGrid = document.createElement('div');
+        mappingGrid.className = 'drayvia-depot-mapping-grid';
+
+        [...groups.entries()].forEach(([sourceName, rows]) => {
+            const card = document.createElement('div');
+            card.className = 'drayvia-depot-mapping-card';
+            const label = document.createElement('strong');
+            label.textContent = `${sourceName} · ${rows.length} záznamů`;
+            const assignedNames = [
+                ...new Set(
+                    rows
+                        .map((row) => row.assigned_driver?.name)
+                        .filter(Boolean)
+                ),
+            ];
+            const current = document.createElement('p');
+            current.textContent = assignedNames.length === 0
+                ? 'Zatím bez přiřazení.'
+                : `Nyní přiřazeno: ${assignedNames.join(', ')}.`;
+
+            card.append(label, current);
+
+            if (assignedNames.length > 0) {
+                const success = document.createElement('div');
+                success.className = 'drayvia-depot-mapping-success';
+                const icon = document.createElement('span');
+                icon.className = 'drayvia-depot-mapping-success-icon';
+                icon.setAttribute('aria-hidden', 'true');
+                icon.textContent = '✓';
+                const heading = document.createElement('strong');
+                heading.textContent = 'Přiřazení uloženo';
+                const detail = document.createElement('small');
+                detail.textContent =
+                    'Záznamy z depa byly úspěšně přiřazeny zvolenému řidiči.';
+                success.append(icon, heading, detail);
+                card.appendChild(success);
+            }
+
+            if (['draft', 'ready'].includes(batch.status)) {
+                const form = document.createElement('form');
+                const driverLabel = document.createElement('label');
+                driverLabel.textContent = 'Oprávněný řidič';
+                const select = document.createElement('select');
+                select.required = true;
+                const selectedId = rows.every(
+                    (row) => row.assigned_driver?.id === rows[0].assigned_driver?.id
+                )
+                    ? rows[0].assigned_driver?.id
+                    : null;
+                depotImportAppendDriverOptions(
+                    select,
+                    batch.eligible_drivers,
+                    selectedId
+                );
+                driverLabel.appendChild(select);
+
+                const reasonLabel = document.createElement('label');
+                reasonLabel.textContent = 'Důvod přiřazení';
+                const reason = document.createElement('input');
+                reason.required = true;
+                reason.maxLength = 2000;
+                reason.value = 'Kontrola a přiřazení zdrojového jména dispečerem.';
+                reasonLabel.appendChild(reason);
+
+                const submit = document.createElement('button');
+                submit.type = 'submit';
+                submit.className = 'drayvia-preview-action primary';
+                submit.textContent = 'Přiřadit záznamy řidiči';
+                form.append(driverLabel, reasonLabel, submit);
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    submit.disabled = true;
+
+                    await depotImportUpdateDraft(
+                        `/api/v1/daily-reports/depot-imports/drafts/${batch.public_id}/source-driver`,
+                        {
+                            source_driver_name: sourceName,
+                            driver_id: Number(select.value),
+                            expected_lock_version: batch.lock_version,
+                            reason: reason.value.trim(),
+                        },
+                        `Všechny záznamy se jménem „${sourceName}“ byly přiřazeny.`
+                    );
+                });
+                card.appendChild(form);
+            }
+
+            mappingGrid.appendChild(card);
+        });
+        section.appendChild(mappingGrid);
+
+        const rowTitle = document.createElement('h3');
+        rowTitle.style.marginTop = '20px';
+        rowTitle.textContent = 'Přesný obsah zápisu depa';
+        section.appendChild(rowTitle);
+
+        const tableWrap = document.createElement('div');
+        tableWrap.className = 'drayvia-depot-preview-table-wrap';
+        const table = document.createElement('table');
+        table.className = 'drayvia-depot-preview-table';
+        table.style.minWidth = '1380px';
+        const head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+
+        [
+            'Řádek',
+            'Stav',
+            'Datum',
+            'Trasa',
+            'Řidič v depu',
+            'Přiřazený řidič',
+            'Naloženo',
+            'Adresa',
+            'VM',
+            'Odmítnuto',
+            'Nerozvezeno',
+            'Skut. km',
+            'Plán km',
+        ].forEach((text) => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            headRow.appendChild(th);
+        });
+        head.appendChild(headRow);
+        const body = document.createElement('tbody');
+
+        batch.rows.forEach((row) => {
+            const tr = document.createElement('tr');
+            const values = row.values || {};
+            [
+                row.source_row,
+                depotImportStatusLabel(row.status),
+                row.service_date_display || depotImportFormatDate(row.service_date),
+                row.route_number || '—',
+                row.source_driver_name || '—',
+                row.assigned_driver?.name || 'Nepřiřazeno',
+                values.loaded_parcels ?? '—',
+                values.delivered_parcels ?? '—',
+                values.redirected_parcels ?? '—',
+                values.customer_rejected_parcels ?? '—',
+                values.computed_not_delivered_parcels ?? '—',
+                values.actual_km ?? '—',
+                values.planned_km ?? '—',
+            ].forEach((value) => {
+                const td = document.createElement('td');
+                td.textContent = String(value);
+                tr.appendChild(td);
+            });
+
+            body.appendChild(tr);
+        });
+
+        table.append(head, body);
+        tableWrap.appendChild(table);
+        section.appendChild(tableWrap);
+
+        if (batch.rows_truncated) {
+            const warning = document.createElement('div');
+            warning.className = 'drayvia-depot-import-status error';
+            warning.textContent =
+                'Dávka obsahuje více řádků, než lze zobrazit. Mapování nelze uzavřít bez úplné kontroly.';
+            section.appendChild(warning);
+        }
+
+        const boundary = document.createElement('div');
+
+        if (batch.status === 'cancelled') {
+            boundary.className = 'drayvia-depot-cancelled-note';
+            boundary.textContent =
+                'Tento import je auditně stornován a nebude nabídnut k dalšímu '
+                + 'zpracování. Zdrojové záznamy depa, přiřazení a kontrolní součty '
+                + 'zůstávají zachovány a uzamčeny.';
+            section.appendChild(boundary);
+        } else if (batch.status === 'imported') {
+            boundary.className = 'drayvia-depot-locked-note';
+            boundary.textContent =
+                'Import je dokončen a zdrojové hodnoty jsou uzamčeny. Pokud byla '
+                + 'naimportována nesprávná dávka, lze ji auditně stornovat bez '
+                + 'smazání nebo změny záznamů depa.';
+            const cancelImport = document.createElement('button');
+            cancelImport.type = 'button';
+            cancelImport.className =
+                'drayvia-preview-action drayvia-depot-cancel-action';
+            cancelImport.disabled = !batch.cancellation_enabled;
+            cancelImport.textContent = 'Stornovat import';
+            cancelImport.addEventListener('click', async () => {
+                if (!batch.cancellation_enabled) {
+                    return;
+                }
+
+                const reason = await depotImportConfirmCancellation(batch);
+
+                if (!reason) {
+                    return;
+                }
+
+                cancelImport.disabled = true;
+                cancelImport.textContent = 'Stornuji import…';
+
+                try {
+                    const cancelled = await depotImportApi(
+                        `/api/v1/daily-reports/depot-imports/drafts/${batch.public_id}/cancel`,
+                        {
+                            method: 'POST',
+                            json: {
+                                expected_lock_version: batch.lock_version,
+                                reason,
+                            },
+                        }
+                    );
+                    depotImportState.draft = cancelled;
+                    depotImportRenderDraft(cancelled);
+                    depotImportSetStatus(
+                        'Import byl auditně stornován. Zdrojové hodnoty zůstaly zachovány.',
+                        'success'
+                    );
+                    await depotImportLoadDrafts();
+                } catch (error) {
+                    depotImportSetStatus(error.message, 'error');
+                    await depotImportLoadDraft(batch.public_id);
+                }
+            });
+            boundary.append(document.createElement('br'), cancelImport);
+            section.appendChild(boundary);
+        } else {
+            boundary.className = 'drayvia-depot-locked-note';
+            boundary.textContent =
+                'Dokončením se uložený zápis depa uzamkne jako samostatný zdroj. '
+                + 'Nevytvoří se denní výkazy, párování ani rozdělení tras. Tyto kroky '
+                + 'budou později samostatně v Trasy → Kontrola zápisů.';
+            const finalize = document.createElement('button');
+            finalize.type = 'button';
+            finalize.className = 'drayvia-preview-action primary';
+            finalize.disabled = !batch.finalization_enabled;
+            finalize.textContent = batch.finalization_enabled
+                ? 'Dokončit import depa'
+                : 'Nejprve přiřaďte všechna jména';
+            finalize.addEventListener('click', async () => {
+                if (!batch.finalization_enabled) {
+                    return;
+                }
+
+                const confirmed = await depotImportConfirmFinalization(batch);
+
+                if (!confirmed) {
+                    return;
+                }
+
+                finalize.disabled = true;
+                finalize.textContent = 'Dokončuji import…';
+
+                try {
+                    const imported = await depotImportApi(
+                        `/api/v1/daily-reports/depot-imports/drafts/${batch.public_id}/finalize`,
+                        {
+                            method: 'POST',
+                            json: {
+                                expected_lock_version: batch.lock_version,
+                                reason: 'Potvrzení importu depa po hromadném přiřazení zdrojových jmen.',
+                            },
+                        }
+                    );
+                    depotImportState.draft = imported;
+                    depotImportRenderDraft(imported);
+                    depotImportSetStatus(
+                        'Import depa byl dokončen. Nebyl vytvořen žádný denní výkaz ani párování.',
+                        'success'
+                    );
+                    await depotImportLoadDrafts();
+                } catch (error) {
+                    depotImportSetStatus(error.message, 'error');
+                    await depotImportLoadDraft(batch.public_id);
+                }
+            });
+            boundary.append(document.createElement('br'), finalize);
+            section.appendChild(boundary);
+        }
+        host.appendChild(section);
+    };
+
+    const depotImportRenderPreview = (preview) => {
+        const host = document.getElementById(
+            'drayviaDepotImportPreviewHost'
+        );
+
+        if (!host) {
+            return;
+        }
+
+        depotImportState.preview = preview;
+        host.replaceChildren();
+
+        const note = document.createElement('div');
+        note.className = 'drayvia-depot-readonly-note';
+        note.textContent =
+            `Read-only náhled: alias „${preview.confirmed_alias}“, `
+            + `list ${preview.detected.sheet_name}, hlavička řádky `
+            + `${preview.detected.header_start_row}–${preview.detected.header_end_row}. `
+            + 'Zdrojový soubor nebyl uložen ani změněn.';
+        host.appendChild(note);
+
+        if (preview.source.mapped_formula_cell_count > 0) {
+            const formulaWarning = document.createElement('div');
+            formulaWarning.className = 'drayvia-depot-import-status error';
+            formulaWarning.textContent =
+                `${preview.source.mapped_formula_cell_count} mapovaných buněk obsahuje vzorec. `
+                + 'Jejich hodnoty nejsou pro import povoleny.';
+            host.appendChild(formulaWarning);
+        }
+
+        const grid = document.createElement('div');
+        grid.className = 'drayvia-preview-grid';
+        grid.append(
+            depotImportCard(
+                'Připravené záznamy',
+                String(preview.totals.ready_rows),
+                `${preview.totals.matched_rows} řádků odpovídá aliasu`
+            ),
+            depotImportCard(
+                'Neodjeté záznamy',
+                String(preview.totals.no_run_rows),
+                'Nevytvoří nulový výkaz'
+            ),
+            depotImportCard(
+                'Chyby',
+                String(preview.totals.invalid_rows),
+                'Před importem je nutné vyřešit'
+            ),
+            depotImportCard(
+                'Vyloučení dopravci',
+                String(preview.excluded_carrier_row_count),
+                'Řádky jiných dopravců'
+            ),
+            depotImportCard(
+                'Zdrojová jména řidičů',
+                String(preview.source_driver_values.length),
+                'Zatím bez automatického propojení'
+            ),
+            depotImportCard(
+                'Oprávnění řidiči',
+                String(preview.eligible_drivers.length),
+                'Aktivní přiřazení hlavnímu dopravci'
+            )
+        );
+        host.appendChild(grid);
+
+        const summary = document.createElement('div');
+        summary.className = 'drayvia-depot-readonly-note';
+        summary.style.marginTop = '16px';
+        summary.textContent =
+            `Kontrolní součty: naloženo ${preview.totals.loaded_parcels}, `
+            + `doručeno ${preview.totals.delivered_parcels}, `
+            + `výdejní místo ${preview.totals.redirected_parcels}, `
+            + `odmítnuto ${preview.totals.customer_rejected_parcels}, `
+            + `nerozvezeno ${preview.totals.computed_not_delivered_parcels}.`;
+        host.appendChild(summary);
+
+        const tableWrap = document.createElement('div');
+        tableWrap.className = 'drayvia-depot-preview-table-wrap';
+
+        const table = document.createElement('table');
+        table.className = 'drayvia-depot-preview-table';
+        const head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+
+        [
+            'Řádek',
+            'Stav',
+            'Datum',
+            'Trasa',
+            'Řidič v depu',
+            'Naloženo',
+            'Adresa',
+            'VM',
+            'Odmítnuto',
+            'Nerozvezeno',
+            'Skut. km',
+            'Plán km',
+            'Kontrola',
+        ].forEach((label) => {
+            const th = document.createElement('th');
+            th.textContent = label;
+            headRow.appendChild(th);
+        });
+        head.appendChild(headRow);
+
+        const body = document.createElement('tbody');
+
+        preview.rows.forEach((row) => {
+            const tr = document.createElement('tr');
+            const statusLabels = {
+                ready: 'Připraveno',
+                invalid: 'Chyba',
+                no_run: 'Neodjeto',
+            };
+            const values = [
+                row.source_row,
+                statusLabels[row.status] || row.status,
+                depotImportFormatDate(row.service_date),
+                row.route_number || '—',
+                row.source_driver_name || '—',
+                row.loaded_parcels ?? '—',
+                row.delivered_parcels ?? '—',
+                row.redirected_parcels ?? '—',
+                row.customer_rejected_parcels ?? '—',
+                row.computed_not_delivered_parcels ?? '—',
+                row.actual_km ?? '—',
+                row.planned_km ?? '—',
+                [...row.errors, ...row.warnings].join(' ') || 'V pořádku',
+            ];
+
+            values.forEach((value) => {
+                const td = document.createElement('td');
+                td.textContent = String(value);
+                tr.appendChild(td);
+            });
+
+            body.appendChild(tr);
+        });
+
+        table.append(head, body);
+        tableWrap.appendChild(table);
+        host.appendChild(tableWrap);
+
+        const boundary = document.createElement('div');
+        boundary.className = 'drayvia-depot-readonly-note';
+        boundary.style.marginTop = '16px';
+        boundary.textContent =
+            'Náhled sám nic neukládá. Po kontrole můžete vytvořit auditovaný '
+            + 'koncept, který uloží pouze ověřené hodnoty a umožní přiřadit '
+            + 'řidiče. Zdrojový Excel se neuloží a žádná trasa zatím nevznikne.';
+        host.appendChild(boundary);
+
+        const create = document.createElement('button');
+        create.type = 'button';
+        create.className = 'drayvia-preview-action primary';
+        create.textContent = 'Vytvořit auditovaný koncept';
+        create.disabled =
+            preview.totals.invalid_rows !== 0
+            || preview.totals.ready_rows < 1
+            || preview.source.mapped_formula_cell_count > 0;
+        create.addEventListener('click', async () => {
+            if (!(depotImportState.file instanceof File)) {
+                depotImportSetStatus(
+                    'Zdrojový sešit už není v prohlížeči dostupný. Vyberte jej znovu.',
+                    'error'
+                );
+                return;
+            }
+
+            create.disabled = true;
+            create.textContent = 'Vytvářím koncept…';
+
+            try {
+                const formData = new FormData();
+                formData.append(
+                    'workbook',
+                    depotImportState.file,
+                    depotImportState.file.name
+                );
+                formData.append('carrier_alias', preview.confirmed_alias);
+                formData.append('carrier_alias_confirmed', '1');
+
+                const draft = await depotImportApi(
+                    '/api/v1/daily-reports/depot-imports/drafts',
+                    {method: 'POST', formData}
+                );
+                depotImportState.draft = draft;
+                depotImportRenderDraft(draft);
+                await depotImportLoadDrafts();
+                depotImportSetStatus(
+                    'Auditovaný koncept byl vytvořen. Zdrojový Excel nebyl uložen.',
+                    'success'
+                );
+                document
+                    .getElementById('drayviaDepotImportDraftHost')
+                    ?.scrollIntoView({behavior: 'smooth', block: 'start'});
+            } catch (error) {
+                create.disabled = false;
+                create.textContent = 'Vytvořit auditovaný koncept';
+                depotImportSetStatus(error.message, 'error');
+            }
+        });
+        host.appendChild(create);
+    };
+
+    const depotImportOpenAliasConfirmation = (inspection) => {
+        document
+            .querySelector('.drayvia-depot-modal-backdrop')
+            ?.remove();
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'drayvia-depot-modal-backdrop';
+
+        const modal = document.createElement('form');
+        modal.className = 'drayvia-depot-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+
+        const title = document.createElement('h2');
+        title.textContent = 'Potvrdit dopravce před náhledem';
+
+        const description = document.createElement('p');
+        description.textContent =
+            `Soubor ${inspection.source.original_filename} byl přečten pouze `
+            + `pro kontrolu. Systém rozpoznal list ${inspection.detected.sheet_name} `
+            + `a navrhuje alias podle názvu hlavní organizace. Alias můžete hned upravit.`;
+
+        const list = document.createElement('div');
+        list.className = 'drayvia-depot-carrier-list';
+
+        inspection.carrier_values.forEach((carrier) => {
+            const item = document.createElement('div');
+            item.className = 'drayvia-depot-carrier-item';
+
+            const name = document.createElement('span');
+            name.textContent = carrier.value;
+
+            const count = document.createElement('strong');
+            count.textContent = `${carrier.row_count} řádků`;
+
+            item.append(name, count);
+            list.appendChild(item);
+        });
+
+        const aliasField = document.createElement('label');
+        aliasField.className = 'drayvia-depot-alias-field';
+        aliasField.textContent = 'Alias hlavního dopravce';
+
+        const aliasInput = document.createElement('input');
+        aliasInput.name = 'carrier_alias';
+        aliasInput.required = true;
+        aliasInput.maxLength = 255;
+        aliasInput.value = inspection.suggested_alias;
+        aliasField.appendChild(aliasInput);
+
+        const match = document.createElement('p');
+        match.textContent =
+            `Navržený alias nyní odpovídá ${inspection.suggested_matching_row_count} řádkům. `
+            + 'Porovnání ignoruje diakritiku a mezery, nikoli podobnost jmen.';
+
+        const actions = document.createElement('div');
+        actions.className = 'drayvia-depot-modal-actions';
+
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'drayvia-preview-action';
+        cancel.textContent = 'Zrušit';
+        cancel.addEventListener('click', () => backdrop.remove());
+
+        const confirm = document.createElement('button');
+        confirm.type = 'submit';
+        confirm.className = 'drayvia-preview-action primary';
+        confirm.textContent = 'Potvrdit a zobrazit náhled';
+
+        actions.append(cancel, confirm);
+        modal.append(
+            title,
+            description,
+            list,
+            aliasField,
+            match,
+            actions
+        );
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        aliasInput.focus();
+        aliasInput.select();
+
+        modal.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            confirm.disabled = true;
+            cancel.disabled = true;
+            confirm.textContent = 'Kontroluji…';
+
+            try {
+                const formData = new FormData();
+                formData.append(
+                    'workbook',
+                    depotImportState.file,
+                    depotImportState.file.name
+                );
+                formData.append(
+                    'carrier_alias',
+                    aliasInput.value.trim()
+                );
+                formData.append(
+                    'carrier_alias_confirmed',
+                    '1'
+                );
+
+                const preview = await depotImportApi(
+                    '/api/v1/daily-reports/depot-imports/preview',
+                    {method: 'POST', formData}
+                );
+                backdrop.remove();
+                depotImportRenderPreview(preview);
+                depotImportSetStatus(
+                    'Read-only náhled byl vytvořen. Nic nebylo zapsáno.',
+                    'success'
+                );
+            } catch (error) {
+                confirm.disabled = false;
+                cancel.disabled = false;
+                confirm.textContent = 'Potvrdit a zobrazit náhled';
+                depotImportSetStatus(error.message, 'error');
+            }
+        });
+    };
+
+    const bindDepotImportPreview = () => {
+        const form = document.getElementById(
+            'drayviaDepotImportInspectForm'
+        );
+        const input = document.getElementById(
+            'drayviaDepotImportWorkbook'
+        );
+        const button = document.getElementById(
+            'drayviaDepotImportInspect'
+        );
+
+        if (!form || !input || !button) {
+            return;
+        }
+
+        input.addEventListener('change', () => {
+            depotImportState.file = null;
+            depotImportState.inspection = null;
+            depotImportState.preview = null;
+            document
+                .getElementById('drayviaDepotImportPreviewHost')
+                ?.replaceChildren();
+            depotImportSetStatus('');
+        });
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const file = input.files?.[0];
+
+            if (!(file instanceof File)) {
+                depotImportSetStatus(
+                    'Nejprve vyberte sešit XLSX.',
+                    'error'
+                );
+                return;
+            }
+
+            depotImportState.file = file;
+            button.disabled = true;
+            button.textContent = 'Načítám…';
+            depotImportSetStatus(
+                'Bezpečně čtu hodnoty a hledám importní hlavičku…'
+            );
+
+            try {
+                const formData = new FormData();
+                formData.append('workbook', file, file.name);
+
+                const inspection = await depotImportApi(
+                    '/api/v1/daily-reports/depot-imports/inspect',
+                    {method: 'POST', formData}
+                );
+                depotImportState.inspection = inspection;
+                depotImportSetStatus(
+                    'Struktura byla rozpoznána. Potvrďte alias dopravce.',
+                    'success'
+                );
+                depotImportOpenAliasConfirmation(inspection);
+            } catch (error) {
+                depotImportSetStatus(error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Načíst a zkontrolovat';
+            }
+        });
+
+        depotImportLoadDrafts();
+    };
+
     const imports = () => `
         ${header(
             'Importy',
-            'Centrální historie všech importů provedených v jednotlivých částech DRAYVIA.'
+            'Bezpečné převzetí měsíčních zápisů depa jako samostatného zdroje.'
         )}
-
-        <div class="drayvia-preview-grid">
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Importy celkem</div>
-                <div class="drayvia-preview-card-value">—</div>
-                <div class="drayvia-preview-card-note">Všechny zdrojové soubory.</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Úspěšné</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">S chybou</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Ke kontrole</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-        </div>
 
         <div class="drayvia-preview-panel">
             <div class="drayvia-preview-panel-head">
-                <h2 class="drayvia-preview-panel-title">Historie importů</h2>
+                <h2 class="drayvia-preview-panel-title">Import zápisů z depa</h2>
                 <div class="drayvia-preview-panel-subtitle">
-                    Soubor · období · typ · stav · počet položek · chyby.
+                    Rozložení tabulky se rozpoznává podle významu hlaviček, ne podle pevných sloupců.
                 </div>
             </div>
 
             <div class="drayvia-preview-panel-body">
-                Historie všech provedených importů bude zde.
+                <div class="drayvia-depot-readonly-note">
+                    Sešit se čte pouze jako zdroj hodnot. Neukládá se, neupravuje se
+                    a žádný vzorec se nezobrazuje ani nepoužívá pro import.
+                </div>
+
+                <form id="drayviaDepotImportInspectForm" class="drayvia-depot-import-form">
+                    <label>
+                        Měsíční sešit XLSX
+                        <input
+                            id="drayviaDepotImportWorkbook"
+                            name="workbook"
+                            type="file"
+                            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            required
+                        >
+                    </label>
+
+                    <button
+                        id="drayviaDepotImportInspect"
+                        class="drayvia-preview-action primary"
+                        type="submit"
+                    >
+                        Načíst a zkontrolovat
+                    </button>
+                </form>
+
+                <div
+                    id="drayviaDepotImportStatus"
+                    class="drayvia-depot-import-status"
+                    role="status"
+                    aria-live="polite"
+                ></div>
             </div>
         </div>
+
+        <div id="drayviaDepotImportDraftListHost"></div>
+        <div id="drayviaDepotImportPreviewHost"></div>
+        <div id="drayviaDepotImportDraftHost"></div>
     `;
 
     const settings = () => `
@@ -21844,6 +23573,10 @@ const loadFinanceCustomers = async () => {
 
         if (page === 'statistics') {
             bindDriverStatisticsTabs();
+        }
+
+        if (page === 'imports') {
+            bindDepotImportPreview();
         }
 
 if (page === 'finance') {
