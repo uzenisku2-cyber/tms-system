@@ -4,8 +4,97 @@ declare(strict_types=1);
 
 use App\Modules\DailyReports\Controllers\DailyReportController;
 use App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController;
+use App\Modules\DailyReports\Controllers\DepotImportDraftController;
+use App\Modules\DailyReports\Controllers\DepotImportPreviewController;
 use App\Modules\DailyReports\Controllers\DriverQualityProfileController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| S028 DEPOT RECORD IMPORT
+|--------------------------------------------------------------------------
+|
+| Uploaded workbooks are inspected in memory and are never stored or
+| modified. Protected depot values and source-name driver mappings are
+| persisted independently from daily reports and later reconciliation.
+|
+*/
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:daily-reports.view',
+])
+    ->prefix('daily-reports/depot-imports')
+    ->name('daily-reports.depot-imports.')
+    ->group(function (): void {
+        Route::post(
+            '/inspect',
+            [DepotImportPreviewController::class, 'inspect'],
+        )->name('inspect');
+
+        Route::post(
+            '/preview',
+            [DepotImportPreviewController::class, 'preview'],
+        )->name('preview');
+
+        Route::get(
+            '/drafts',
+            [DepotImportDraftController::class, 'index'],
+        )->name('drafts.index');
+
+        Route::get(
+            '/drafts/{batch}',
+            [DepotImportDraftController::class, 'show'],
+        )
+            ->whereUuid('batch')
+            ->name('drafts.show');
+    });
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:daily-reports.view',
+    'perm:daily-reports.review',
+])
+    ->prefix('daily-reports/depot-imports')
+    ->name('daily-reports.depot-imports.')
+    ->group(function (): void {
+        Route::post(
+            '/drafts/{batch}/cancel',
+            [DepotImportDraftController::class, 'cancel'],
+        )
+            ->whereUuid('batch')
+            ->name('drafts.cancel');
+    });
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:daily-reports.enter-for-driver',
+])
+    ->prefix('daily-reports/depot-imports')
+    ->name('daily-reports.depot-imports.')
+    ->group(function (): void {
+        Route::post(
+            '/drafts',
+            [DepotImportDraftController::class, 'store'],
+        )->name('drafts.store');
+
+        Route::patch(
+            '/drafts/{batch}/source-driver',
+            [DepotImportDraftController::class, 'mapSourceDriver'],
+        )
+            ->whereUuid('batch')
+            ->name('drafts.source-driver');
+
+        Route::post(
+            '/drafts/{batch}/finalize',
+            [DepotImportDraftController::class, 'finalize'],
+        )
+            ->whereUuid('batch')
+            ->name('drafts.finalize');
+    });
 
 Route::middleware([
     'auth:sanctum',
