@@ -228,6 +228,19 @@ final class DepotDriverRecordReviewApiTest extends TestCase
                 'data.contract.reconciliation_records_created',
                 0,
             )
+            ->assertJsonPath(
+                'data.filter_options.comparison_statuses',
+                DepotDriverRecordReviewService::COMPARISON_STATUSES,
+            )
+            ->assertJsonPath(
+                'data.filter_options.drivers.0.id',
+                $firstDriver->getKey(),
+            )
+            ->assertJsonPath(
+                'data.filter_options.drivers.0.name',
+                $firstDriver->full_name,
+            )
+            ->assertJsonCount(1, 'data.filter_options.drivers')
             ->assertJsonPath('data.summary.source_records', 5)
             ->assertJsonPath('data.summary.matching', 1)
             ->assertJsonPath('data.summary.different', 1)

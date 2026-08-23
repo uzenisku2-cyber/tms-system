@@ -1676,6 +1676,467 @@
             color: #ffffff;
         }
 
+        /* S030-01A DEPOT VERSUS DRIVER RECORD REVIEW UI */
+        .sidebar .drayvia-main-nav .drayvia-nav-subitem {
+            position: relative;
+            width: calc(100% - 18px);
+            margin-left: 18px;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            color: #9eabc0;
+            font-size: 11px;
+            letter-spacing: .035em;
+        }
+
+        .sidebar .drayvia-main-nav .drayvia-nav-subitem::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 4px;
+            width: 7px;
+            height: 1px;
+            background: currentColor;
+        }
+
+        .sidebar .drayvia-main-nav .drayvia-nav-subitem.active {
+            color: #ffffff;
+        }
+
+        .drayvia-record-review-topbar {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 22px;
+        }
+
+        .drayvia-record-review-topbar .drayvia-preview-actions {
+            flex: 0 0 auto;
+        }
+
+        .drayvia-record-review-topbar .drayvia-preview-action,
+        .drayvia-record-review .drayvia-preview-action {
+            cursor: pointer;
+        }
+
+        .drayvia-record-review .drayvia-preview-action:disabled {
+            cursor: not-allowed;
+            opacity: .55;
+        }
+
+        .drayvia-record-review-batch {
+            display: grid;
+            grid-template-columns: minmax(280px, 1.5fr) auto;
+            gap: 14px;
+            align-items: end;
+            border: 1px solid #dce3ec;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 18px 20px;
+        }
+
+        .drayvia-record-review-field {
+            display: grid;
+            gap: 7px;
+            color: #34445d;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .025em;
+            text-transform: uppercase;
+        }
+
+        .drayvia-record-review-field select,
+        .drayvia-record-review-field input {
+            min-width: 0;
+            min-height: 42px;
+            box-sizing: border-box;
+            border: 1px solid #b9c5d6;
+            border-radius: 9px;
+            background: #ffffff;
+            padding: 8px 10px;
+            color: #172033;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 650;
+            letter-spacing: normal;
+            text-transform: none;
+        }
+
+        .drayvia-record-review-batch-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .drayvia-record-review-status {
+            min-height: 20px;
+            margin-top: 10px;
+            color: #667286;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .drayvia-record-review-status.success {
+            color: #28714b;
+        }
+
+        .drayvia-record-review-status.error {
+            border: 1px solid #efb0aa;
+            border-radius: 9px;
+            background: #fff3f1;
+            padding: 10px 12px;
+            color: #8e2a21;
+        }
+
+        .drayvia-record-review-readonly {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 14px;
+            border: 1px solid #c9d8ef;
+            border-left: 4px solid #365f9c;
+            border-radius: 9px;
+            background: #f1f6fd;
+            padding: 11px 13px;
+            color: #29476f;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .drayvia-record-review-readonly strong {
+            white-space: nowrap;
+        }
+
+        .drayvia-record-review-summary {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .drayvia-record-review-summary-card {
+            min-width: 0;
+            border: 1px solid #dfe5ed;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 14px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .drayvia-record-review-summary-card:hover,
+        .drayvia-record-review-summary-card.is-active {
+            border-color: #607895;
+            box-shadow: 0 0 0 2px rgba(52, 77, 110, .08);
+        }
+
+        .drayvia-record-review-summary-card.is-active {
+            background: #f6f8fb;
+        }
+
+        .drayvia-record-review-summary-card span {
+            display: block;
+            overflow: hidden;
+            color: #6e7a8e;
+            font-size: 10px;
+            font-weight: 850;
+            letter-spacing: .045em;
+            text-overflow: ellipsis;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .drayvia-record-review-summary-card strong {
+            display: block;
+            margin-top: 7px;
+            color: #172033;
+            font-size: 23px;
+            line-height: 1;
+        }
+
+        .drayvia-record-review-summary-card[data-record-review-summary-status="matching"] strong {
+            color: #28714b;
+        }
+
+        .drayvia-record-review-summary-card[data-record-review-summary-status="different"] strong,
+        .drayvia-record-review-summary-card[data-record-review-summary-status="driver_mismatch"] strong {
+            color: #9c5f05;
+        }
+
+        .drayvia-record-review-summary-card[data-record-review-summary-status="missing_driver_record"] strong,
+        .drayvia-record-review-summary-card[data-record-review-summary-status="not_comparable"] strong {
+            color: #9a3027;
+        }
+
+        .drayvia-record-review-filter-panel {
+            margin-top: 16px;
+            border: 1px solid #dfe5ed;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 18px 20px;
+        }
+
+        .drayvia-record-review-filter-grid {
+            display: grid;
+            grid-template-columns: minmax(150px, .9fr) minmax(190px, 1.2fr) repeat(2, minmax(140px, .85fr)) minmax(150px, 1fr);
+            gap: 10px;
+            align-items: end;
+        }
+
+        .drayvia-record-review-filter-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .drayvia-record-review-results {
+            margin-top: 16px;
+        }
+
+        .drayvia-record-review-results-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 10px;
+        }
+
+        .drayvia-record-review-results-head h2 {
+            margin: 0;
+            color: #172033;
+            font-size: 16px;
+        }
+
+        .drayvia-record-review-results-head p {
+            margin: 4px 0 0;
+            color: #6f7b8f;
+            font-size: 12px;
+        }
+
+        .drayvia-record-review-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .drayvia-record-review-item {
+            overflow: hidden;
+            border: 1px solid #dfe5ed;
+            border-radius: 13px;
+            background: #ffffff;
+        }
+
+        .drayvia-record-review-item.is-different,
+        .drayvia-record-review-item.is-driver-mismatch {
+            border-left: 4px solid #d89020;
+        }
+
+        .drayvia-record-review-item.is-missing-driver-record,
+        .drayvia-record-review-item.is-not-comparable {
+            border-left: 4px solid #bc4a40;
+        }
+
+        .drayvia-record-review-item.is-matching {
+            border-left: 4px solid #3d9565;
+        }
+
+        .drayvia-record-review-item summary {
+            display: grid;
+            grid-template-columns: minmax(160px, 1fr) minmax(130px, .9fr) minmax(170px, 1.2fr) auto;
+            gap: 14px;
+            align-items: center;
+            padding: 15px 17px;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .drayvia-record-review-item summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .drayvia-record-review-item summary::after {
+            content: 'Rozbalit';
+            color: #617087;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .drayvia-record-review-item[open] summary::after {
+            content: 'Sbalit';
+        }
+
+        .drayvia-record-review-route strong,
+        .drayvia-record-review-driver strong {
+            display: block;
+            color: #172033;
+            font-size: 13px;
+        }
+
+        .drayvia-record-review-route span,
+        .drayvia-record-review-driver span {
+            display: block;
+            margin-top: 3px;
+            color: #788499;
+            font-size: 11px;
+        }
+
+        .drayvia-record-review-badge {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: #eef2f7;
+            color: #49576c;
+            font-size: 10px;
+            font-weight: 850;
+            text-transform: uppercase;
+        }
+
+        .drayvia-record-review-badge.is-matching {
+            background: #eaf6ef;
+            color: #28714b;
+        }
+
+        .drayvia-record-review-badge.is-different,
+        .drayvia-record-review-badge.is-driver-mismatch {
+            background: #fff3dd;
+            color: #8b5b10;
+        }
+
+        .drayvia-record-review-badge.is-missing-driver-record,
+        .drayvia-record-review-badge.is-not-comparable {
+            background: #fff0ee;
+            color: #91352d;
+        }
+
+        .drayvia-record-review-item-body {
+            border-top: 1px solid #edf0f4;
+            padding: 0 17px 17px;
+        }
+
+        .drayvia-record-review-reason {
+            margin: 0 -17px 12px;
+            background: #f7f9fb;
+            padding: 10px 17px;
+            color: #5d6b80;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .drayvia-record-review-comparison {
+            overflow-x: auto;
+        }
+
+        .drayvia-record-review-comparison-row {
+            display: grid;
+            grid-template-columns: minmax(170px, 1fr) repeat(2, minmax(150px, 1.1fr));
+            min-width: 580px;
+            border-bottom: 1px solid #eef1f5;
+        }
+
+        .drayvia-record-review-comparison-row:last-child {
+            border-bottom: 0;
+        }
+
+        .drayvia-record-review-comparison-row > div {
+            min-width: 0;
+            padding: 9px 11px;
+            color: #34445d;
+            font-size: 12px;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        .drayvia-record-review-comparison-row > div + div {
+            border-left: 1px solid #eef1f5;
+        }
+
+        .drayvia-record-review-comparison-head > div {
+            background: #f5f7fa;
+            color: #677489;
+            font-size: 10px;
+            font-weight: 850;
+            letter-spacing: .045em;
+            text-transform: uppercase;
+        }
+
+        .drayvia-record-review-comparison-row.is-different > div {
+            background: #fff9ed;
+            color: #724b0d;
+            font-weight: 750;
+        }
+
+        .drayvia-record-review-empty {
+            border: 1px dashed #c9d2df;
+            border-radius: 12px;
+            background: #fafbfd;
+            padding: 34px 20px;
+            color: #647188;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .drayvia-record-review-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 9px;
+            margin-top: 12px;
+        }
+
+        .drayvia-record-review-pagination span {
+            color: #657187;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 1180px) {
+            .drayvia-record-review-summary {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .drayvia-record-review-filter-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 760px) {
+            .drayvia-record-review-topbar,
+            .drayvia-record-review-results-head {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .drayvia-record-review-batch,
+            .drayvia-record-review-filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .drayvia-record-review-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .drayvia-record-review-item summary {
+                grid-template-columns: 1fr auto;
+            }
+
+            .drayvia-record-review-item summary::after {
+                grid-column: 2;
+                grid-row: 1 / span 3;
+            }
+
+            .drayvia-record-review-readonly {
+                display: block;
+            }
+
+            .drayvia-record-review-readonly strong {
+                display: block;
+                margin-bottom: 4px;
+            }
+        }
+
         /* S028-01A DEPOT IMPORT READ-ONLY PREVIEW */
         .drayvia-depot-import-form {
             display: grid;
@@ -3438,6 +3899,7 @@
     <button class="nav-item" type="button" data-drayvia-page="overview">Přehled</button>
 <button class="nav-item" type="button" data-drayvia-page="calendar">Kalendář</button>
     <button class="nav-item active" type="button" data-drayvia-page="routes">Trasy</button>
+    <button class="nav-item drayvia-nav-subitem" type="button" data-drayvia-page="record-review">Kontrola zápisů</button>
     <button class="nav-item" type="button" data-drayvia-page="drivers">Řidiči</button>
     <button class="nav-item" id="carriersNavButton" type="button">Dopravci</button>
     <button class="nav-item" type="button" data-drayvia-page="statistics">Statistiky</button>
@@ -16809,6 +17271,908 @@ const fuel = () => `
         <div id="drayviaDepotImportDraftHost"></div>
     `;
 
+    // S030-01A DEPOT VERSUS DRIVER RECORD REVIEW UI
+    const depotDriverReviewStatuses = {
+        matching: 'Shoda',
+        different: 'Rozdíl',
+        missing_driver_record: 'Chybí zápis řidiče',
+        driver_mismatch: 'Jiný řidič',
+        not_comparable: 'Nelze porovnat',
+    };
+
+    const depotDriverReviewReasons = {
+        all_comparable_values_match:
+            'Všechny porovnatelné hodnoty depa a řidiče se shodují.',
+        comparable_values_differ:
+            'Jedna nebo více porovnatelných hodnot se liší.',
+        driver_record_missing:
+            'Pro datum a trasu nebyl nalezen samostatný zápis řidiče.',
+        assigned_driver_differs:
+            'Zápis trasy existuje, ale je vedený na jiného řidiče.',
+        depot_no_run:
+            'Depo označilo řádek jako neodjetou trasu.',
+        depot_driver_unassigned:
+            'K řádku depa není přiřazený oprávněný řidič.',
+        multiple_driver_records:
+            'Pro datum a trasu existuje více zápisů řidiče; automatické porovnání není jednoznačné.',
+    };
+
+    const depotDriverReviewFields = [
+        ['departure_time', 'Čas odjezdu'],
+        ['arrival_time', 'Čas příjezdu'],
+        ['loaded_parcels', 'Naloženo'],
+        ['delivered_parcels', 'Doručeno na adresu'],
+        ['redirected_parcels', 'Doručeno na výdejní místo'],
+        ['customer_rejected_parcels', 'Odmítnuto zákazníkem'],
+        ['computed_not_delivered_parcels', 'Nedoručeno'],
+        ['actual_km', 'Skutečné kilometry'],
+        ['planned_km', 'Plánované kilometry'],
+        ['surcharge_amount', 'Příplatek'],
+        ['operational_notes', 'Provozní poznámka'],
+    ];
+
+    const depotDriverReviewState = {
+        batches: [],
+        selectedBatch: '',
+        data: null,
+        loading: false,
+        page: 1,
+        perPage: 25,
+        filters: {
+            comparisonStatus: '',
+            driverId: '',
+            dateFrom: '',
+            dateTo: '',
+            routeNumber: '',
+        },
+    };
+
+    const depotDriverReviewEscape = (value) => String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+
+    const depotDriverReviewInteger = (value) => {
+        const numeric = Number(value);
+
+        return Number.isFinite(numeric)
+            ? new Intl.NumberFormat('cs-CZ', {
+                maximumFractionDigits: 0,
+            }).format(numeric)
+            : '—';
+    };
+
+    const depotDriverReviewWholeKm = (value) => {
+        const numeric = Number(value);
+
+        return Number.isFinite(numeric)
+            ? `${new Intl.NumberFormat('cs-CZ', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(numeric)} km`
+            : '—';
+    };
+
+    const depotDriverReviewMoney = (value) => {
+        const numeric = Number(value);
+
+        return Number.isFinite(numeric)
+            ? `${new Intl.NumberFormat('cs-CZ', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(numeric)} Kč`
+            : '—';
+    };
+
+    const depotDriverReviewValue = (field, value) => {
+        if (value === null || value === undefined || value === '') {
+            return '—';
+        }
+
+        if (field === 'actual_km' || field === 'planned_km') {
+            return depotDriverReviewWholeKm(value);
+        }
+
+        if (field === 'surcharge_amount') {
+            return depotDriverReviewMoney(value);
+        }
+
+        if ([
+            'loaded_parcels',
+            'delivered_parcels',
+            'redirected_parcels',
+            'customer_rejected_parcels',
+            'computed_not_delivered_parcels',
+        ].includes(field)) {
+            return depotDriverReviewInteger(value);
+        }
+
+        return String(value);
+    };
+
+    const depotDriverReviewDate = (value) => {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+            String(value ?? '')
+        );
+
+        return match
+            ? `${match[3]}.${match[2]}.${match[1]}`
+            : (value || '—');
+    };
+
+    const depotDriverReviewSetStatus = (message, tone = '') => {
+        const target = document.getElementById(
+            'drayviaDepotDriverReviewStatus'
+        );
+
+        if (!target) {
+            return;
+        }
+
+        target.textContent = message;
+        target.className =
+            `drayvia-record-review-status ${tone}`.trim();
+    };
+
+    const depotDriverReviewResetFilters = () => {
+        depotDriverReviewState.page = 1;
+        depotDriverReviewState.filters = {
+            comparisonStatus: '',
+            driverId: '',
+            dateFrom: '',
+            dateTo: '',
+            routeNumber: '',
+        };
+    };
+
+    const depotDriverReviewQuery = () => {
+        const query = new URLSearchParams();
+        const filters = depotDriverReviewState.filters;
+
+        if (filters.comparisonStatus) {
+            query.set('comparison_status', filters.comparisonStatus);
+        }
+
+        if (filters.driverId) {
+            query.set('performed_by_driver_id', filters.driverId);
+        }
+
+        if (filters.dateFrom) {
+            query.set('service_date_from', filters.dateFrom);
+        }
+
+        if (filters.dateTo) {
+            query.set('service_date_to', filters.dateTo);
+        }
+
+        if (filters.routeNumber) {
+            query.set('route_number', filters.routeNumber);
+        }
+
+        query.set('page', String(depotDriverReviewState.page));
+        query.set('per_page', String(depotDriverReviewState.perPage));
+
+        return query.toString();
+    };
+
+    const depotDriverReviewRenderBatches = () => {
+        const select = document.getElementById(
+            'drayviaDepotDriverReviewBatch'
+        );
+
+        if (!select) {
+            return;
+        }
+
+        select.replaceChildren();
+
+        if (depotDriverReviewState.batches.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Není dostupná žádná importovaná dávka';
+            select.appendChild(option);
+            select.disabled = true;
+            return;
+        }
+
+        depotDriverReviewState.batches.forEach((batch) => {
+            const option = document.createElement('option');
+            const period = [
+                depotDriverReviewDate(batch.period?.from),
+                depotDriverReviewDate(batch.period?.until),
+            ].join('–');
+
+            option.value = batch.public_id;
+            option.textContent =
+                `${batch.source?.original_filename || 'Import depa'} · `
+                + `${batch.confirmed_alias || 'bez aliasu'} · ${period}`;
+            option.selected = batch.public_id
+                === depotDriverReviewState.selectedBatch;
+            select.appendChild(option);
+        });
+
+        select.disabled = depotDriverReviewState.loading;
+    };
+
+    const depotDriverReviewRenderFilterOptions = () => {
+        const data = depotDriverReviewState.data;
+        const driver = document.getElementById(
+            'drayviaDepotDriverReviewDriver'
+        );
+        const status = document.getElementById(
+            'drayviaDepotDriverReviewComparisonStatus'
+        );
+
+        if (status) {
+            status.value =
+                depotDriverReviewState.filters.comparisonStatus;
+        }
+
+        if (!driver) {
+            return;
+        }
+
+        driver.replaceChildren();
+
+        const all = document.createElement('option');
+        all.value = '';
+        all.textContent = 'Všichni přiřazení řidiči';
+        driver.appendChild(all);
+
+        const drivers = Array.isArray(data?.filter_options?.drivers)
+            ? data.filter_options.drivers
+            : [];
+
+        drivers.forEach((item) => {
+            const option = document.createElement('option');
+            option.value = String(item.id);
+            option.textContent = item.name || `Řidič ${item.id}`;
+            option.selected = option.value
+                === depotDriverReviewState.filters.driverId;
+            driver.appendChild(option);
+        });
+
+        driver.value = depotDriverReviewState.filters.driverId;
+
+        const dateFrom = document.getElementById(
+            'drayviaDepotDriverReviewDateFrom'
+        );
+        const dateTo = document.getElementById(
+            'drayviaDepotDriverReviewDateTo'
+        );
+        const route = document.getElementById(
+            'drayviaDepotDriverReviewRoute'
+        );
+
+        if (dateFrom) {
+            dateFrom.value = depotDriverReviewState.filters.dateFrom;
+        }
+
+        if (dateTo) {
+            dateTo.value = depotDriverReviewState.filters.dateTo;
+        }
+
+        if (route) {
+            route.value = depotDriverReviewState.filters.routeNumber;
+        }
+    };
+
+    const depotDriverReviewSummaryButton = (
+        status,
+        label,
+        value
+    ) => {
+        const active = depotDriverReviewState.filters.comparisonStatus
+            === status;
+
+        return `
+            <button
+                class="drayvia-record-review-summary-card${active ? ' is-active' : ''}"
+                type="button"
+                data-record-review-summary-status="${depotDriverReviewEscape(status)}"
+                aria-pressed="${active ? 'true' : 'false'}"
+            >
+                <span>${depotDriverReviewEscape(label)}</span>
+                <strong>${depotDriverReviewEscape(depotDriverReviewInteger(value))}</strong>
+            </button>
+        `;
+    };
+
+    const depotDriverReviewRenderSummary = () => {
+        const host = document.getElementById(
+            'drayviaDepotDriverReviewSummary'
+        );
+        const summary = depotDriverReviewState.data?.summary;
+
+        if (!host) {
+            return;
+        }
+
+        if (!summary) {
+            host.replaceChildren();
+            return;
+        }
+
+        host.innerHTML = [
+            depotDriverReviewSummaryButton(
+                '',
+                'Všechny záznamy',
+                summary.source_records
+            ),
+            depotDriverReviewSummaryButton(
+                'matching',
+                'Shoda',
+                summary.matching
+            ),
+            depotDriverReviewSummaryButton(
+                'different',
+                'Rozdíl hodnot',
+                summary.different
+            ),
+            depotDriverReviewSummaryButton(
+                'missing_driver_record',
+                'Chybí zápis',
+                summary.missing_driver_record
+            ),
+            depotDriverReviewSummaryButton(
+                'driver_mismatch',
+                'Jiný řidič',
+                summary.driver_mismatch
+            ),
+            depotDriverReviewSummaryButton(
+                'not_comparable',
+                'Nelze porovnat',
+                summary.not_comparable
+            ),
+        ].join('');
+
+        host.querySelectorAll(
+            '[data-record-review-summary-status]'
+        ).forEach((button) => {
+            button.addEventListener('click', () => {
+                depotDriverReviewState.filters.comparisonStatus =
+                    button.dataset.recordReviewSummaryStatus || '';
+                depotDriverReviewState.page = 1;
+
+                const select = document.getElementById(
+                    'drayviaDepotDriverReviewComparisonStatus'
+                );
+
+                if (select) {
+                    select.value =
+                        depotDriverReviewState.filters.comparisonStatus;
+                }
+
+                depotDriverReviewLoad();
+            });
+        });
+    };
+
+    const depotDriverReviewComparisonRows = (item) => {
+        const depot = item?.depot_record || {};
+        const driver = item?.driver_record || null;
+        const depotValues = depot.values || {};
+        const driverValues = driver?.values || {};
+        const differenceFields = new Set(
+            Array.isArray(item?.differences)
+                ? item.differences.map((difference) => difference.field)
+                : []
+        );
+        const assignedDriver = depot.assigned_driver?.name || '—';
+        const performedDriver =
+            driver?.performed_by_driver?.name || '—';
+        const driverDiffers = differenceFields.has(
+            'performed_by_driver_id'
+        );
+        const rows = [
+            `
+                <div class="drayvia-record-review-comparison-row${driverDiffers ? ' is-different' : ''}">
+                    <div>Přiřazený řidič</div>
+                    <div>${depotDriverReviewEscape(assignedDriver)}</div>
+                    <div>${depotDriverReviewEscape(performedDriver)}</div>
+                </div>
+            `,
+        ];
+
+        depotDriverReviewFields.forEach(([field, label]) => {
+            const differs = differenceFields.has(field);
+
+            rows.push(`
+                <div class="drayvia-record-review-comparison-row${differs ? ' is-different' : ''}">
+                    <div>${depotDriverReviewEscape(label)}</div>
+                    <div>${depotDriverReviewEscape(
+                        depotDriverReviewValue(field, depotValues[field])
+                    )}</div>
+                    <div>${depotDriverReviewEscape(
+                        depotDriverReviewValue(field, driverValues[field])
+                    )}</div>
+                </div>
+            `);
+        });
+
+        return `
+            <div class="drayvia-record-review-comparison">
+                <div class="drayvia-record-review-comparison-row drayvia-record-review-comparison-head">
+                    <div>Kontrolované pole</div>
+                    <div>Depo</div>
+                    <div>Řidič</div>
+                </div>
+                ${rows.join('')}
+            </div>
+        `;
+    };
+
+    const depotDriverReviewItem = (item) => {
+        const depot = item?.depot_record || {};
+        const driver = item?.driver_record || null;
+        const status = Object.prototype.hasOwnProperty.call(
+            depotDriverReviewStatuses,
+            item?.comparison_status
+        )
+            ? item.comparison_status
+            : 'not_comparable';
+        const statusLabel = depotDriverReviewStatuses[status];
+        const reason = depotDriverReviewReasons[item?.comparison_reason]
+            || 'Výsledek porovnání není blíže popsán.';
+        const differenceCount = depotDriverReviewInteger(
+            item?.difference_count || 0
+        );
+        const assignedDriver = depot.assigned_driver?.name
+            || depot.source_driver_name
+            || 'Nepřiřazený řidič';
+        const driverName = driver?.performed_by_driver?.name
+            || 'Bez zápisu řidiče';
+        const open = status === 'matching' ? '' : ' open';
+
+        return `
+            <details class="drayvia-record-review-item is-${status}"${open}>
+                <summary>
+                    <div class="drayvia-record-review-route">
+                        <strong>Trasa ${depotDriverReviewEscape(depot.route_number || '—')}</strong>
+                        <span>${depotDriverReviewEscape(
+                            depot.service_date_display
+                            || depotDriverReviewDate(depot.service_date)
+                        )} · řádek depa ${depotDriverReviewEscape(depot.source_row || '—')}</span>
+                    </div>
+                    <div>
+                        <span class="drayvia-record-review-badge is-${status}">
+                            ${depotDriverReviewEscape(statusLabel)}
+                        </span>
+                    </div>
+                    <div class="drayvia-record-review-driver">
+                        <strong>${depotDriverReviewEscape(assignedDriver)}</strong>
+                        <span>Řidičův zápis: ${depotDriverReviewEscape(driverName)} · rozdíly ${depotDriverReviewEscape(differenceCount)}</span>
+                    </div>
+                </summary>
+                <div class="drayvia-record-review-item-body">
+                    <p class="drayvia-record-review-reason">
+                        ${depotDriverReviewEscape(reason)}
+                    </p>
+                    ${depotDriverReviewComparisonRows(item)}
+                </div>
+            </details>
+        `;
+    };
+
+    const depotDriverReviewRenderResults = () => {
+        const host = document.getElementById(
+            'drayviaDepotDriverReviewList'
+        );
+        const count = document.getElementById(
+            'drayviaDepotDriverReviewResultCount'
+        );
+        const paginationHost = document.getElementById(
+            'drayviaDepotDriverReviewPagination'
+        );
+        const data = depotDriverReviewState.data;
+        const pagination = data?.pagination;
+        const items = Array.isArray(data?.items) ? data.items : [];
+
+        if (!host || !paginationHost) {
+            return;
+        }
+
+        if (count) {
+            count.textContent = pagination?.total
+                ? `Zobrazeno ${pagination.from}–${pagination.to} z ${pagination.total}`
+                : 'Žádný záznam neodpovídá zvoleným filtrům.';
+        }
+
+        if (items.length === 0) {
+            host.innerHTML = `
+                <div class="drayvia-record-review-empty">
+                    Pro tuto dávku a zvolené filtry není co zobrazit.<br>
+                    Změňte stav nebo vymažte filtry.
+                </div>
+            `;
+        } else {
+            host.innerHTML = items
+                .map((item) => depotDriverReviewItem(item))
+                .join('');
+        }
+
+        paginationHost.replaceChildren();
+
+        if (!pagination || pagination.last_page <= 1) {
+            return;
+        }
+
+        const previous = document.createElement('button');
+        previous.type = 'button';
+        previous.className = 'drayvia-preview-action';
+        previous.textContent = 'Předchozí';
+        previous.disabled = pagination.current_page <= 1;
+        previous.addEventListener('click', () => {
+            depotDriverReviewState.page = Math.max(
+                1,
+                pagination.current_page - 1
+            );
+            depotDriverReviewLoad();
+        });
+
+        const label = document.createElement('span');
+        label.textContent =
+            `Strana ${pagination.current_page} z ${pagination.last_page}`;
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'drayvia-preview-action';
+        next.textContent = 'Další';
+        next.disabled = pagination.current_page >= pagination.last_page;
+        next.addEventListener('click', () => {
+            depotDriverReviewState.page = Math.min(
+                pagination.last_page,
+                pagination.current_page + 1
+            );
+            depotDriverReviewLoad();
+        });
+
+        paginationHost.append(previous, label, next);
+    };
+
+    const depotDriverReviewRenderData = () => {
+        depotDriverReviewRenderBatches();
+        depotDriverReviewRenderFilterOptions();
+        depotDriverReviewRenderSummary();
+        depotDriverReviewRenderResults();
+    };
+
+    const depotDriverReviewLoad = async () => {
+        if (
+            !depotDriverReviewState.selectedBatch
+            || depotDriverReviewState.loading
+        ) {
+            return;
+        }
+
+        depotDriverReviewState.loading = true;
+        depotDriverReviewRenderBatches();
+        depotDriverReviewSetStatus(
+            'Načítám a ověřuji chráněné hodnoty depa…'
+        );
+
+        try {
+            const batch = encodeURIComponent(
+                depotDriverReviewState.selectedBatch
+            );
+            const body = await api(
+                `/api/v1/daily-reports/record-review/depot-driver/${batch}?${depotDriverReviewQuery()}`
+            );
+            const data = getPayload(body);
+
+            if (data?.workspace !== 'depot_driver_record_review') {
+                throw new Error(
+                    'API vrátilo neočekávaný formát porovnání.'
+                );
+            }
+
+            depotDriverReviewState.data = data;
+            depotDriverReviewState.page =
+                Number(data.pagination?.current_page) || 1;
+            depotDriverReviewRenderData();
+            depotDriverReviewSetStatus(
+                'Porovnání je načtené. Zdroj depa byl ověřen a zůstává beze změny.',
+                'success'
+            );
+        } catch (error) {
+            depotDriverReviewState.data = null;
+            depotDriverReviewRenderData();
+            depotDriverReviewSetStatus(
+                `Porovnání nelze načíst: ${error.message}`,
+                'error'
+            );
+        } finally {
+            depotDriverReviewState.loading = false;
+            depotDriverReviewRenderBatches();
+        }
+    };
+
+    const depotDriverReviewLoadBatches = async () => {
+        if (depotDriverReviewState.loading) {
+            return;
+        }
+
+        depotDriverReviewState.loading = true;
+        depotDriverReviewRenderBatches();
+        depotDriverReviewSetStatus('Načítám importované dávky depa…');
+
+        try {
+            const body = await api(
+                '/api/v1/daily-reports/depot-imports/drafts'
+            );
+            const batches = getPayload(body);
+
+            depotDriverReviewState.batches = Array.isArray(batches)
+                ? batches.filter((batch) => batch.status === 'imported')
+                : [];
+
+            const selectedStillExists = depotDriverReviewState.batches
+                .some(
+                    (batch) => batch.public_id
+                        === depotDriverReviewState.selectedBatch
+                );
+
+            if (!selectedStillExists) {
+                depotDriverReviewState.selectedBatch =
+                    depotDriverReviewState.batches[0]?.public_id || '';
+                depotDriverReviewResetFilters();
+            }
+
+            depotDriverReviewRenderBatches();
+
+            if (!depotDriverReviewState.selectedBatch) {
+                depotDriverReviewState.data = null;
+                depotDriverReviewRenderData();
+                depotDriverReviewSetStatus(
+                    'Nejprve dokončete alespoň jeden import zápisů z depa.',
+                    'error'
+                );
+                return;
+            }
+        } catch (error) {
+            depotDriverReviewState.batches = [];
+            depotDriverReviewState.data = null;
+            depotDriverReviewRenderData();
+            depotDriverReviewSetStatus(
+                `Importované dávky nelze načíst: ${error.message}`,
+                'error'
+            );
+            return;
+        } finally {
+            depotDriverReviewState.loading = false;
+            depotDriverReviewRenderBatches();
+        }
+
+        await depotDriverReviewLoad();
+    };
+
+    const depotDriverReviewReadFilters = () => {
+        const comparisonStatus = document.getElementById(
+            'drayviaDepotDriverReviewComparisonStatus'
+        )?.value || '';
+        const driverId = document.getElementById(
+            'drayviaDepotDriverReviewDriver'
+        )?.value || '';
+        const dateFrom = document.getElementById(
+            'drayviaDepotDriverReviewDateFrom'
+        )?.value || '';
+        const dateTo = document.getElementById(
+            'drayviaDepotDriverReviewDateTo'
+        )?.value || '';
+        const routeNumber = document.getElementById(
+            'drayviaDepotDriverReviewRoute'
+        )?.value.trim() || '';
+
+        if (dateFrom && dateTo && dateFrom > dateTo) {
+            throw new Error(
+                'Datum „Od“ nesmí být pozdější než datum „Do“.'
+            );
+        }
+
+        depotDriverReviewState.filters = {
+            comparisonStatus,
+            driverId,
+            dateFrom,
+            dateTo,
+            routeNumber,
+        };
+        depotDriverReviewState.page = 1;
+    };
+
+    const bindDepotDriverRecordReview = () => {
+        const batch = document.getElementById(
+            'drayviaDepotDriverReviewBatch'
+        );
+        const refresh = document.getElementById(
+            'drayviaDepotDriverReviewRefresh'
+        );
+        const form = document.getElementById(
+            'drayviaDepotDriverReviewFilters'
+        );
+        const reset = document.getElementById(
+            'drayviaDepotDriverReviewReset'
+        );
+
+        batch?.addEventListener('change', () => {
+            depotDriverReviewState.selectedBatch = batch.value;
+            depotDriverReviewState.data = null;
+            depotDriverReviewResetFilters();
+            depotDriverReviewLoad();
+        });
+
+        refresh?.addEventListener('click', () => {
+            depotDriverReviewLoadBatches();
+        });
+
+        form?.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            try {
+                depotDriverReviewReadFilters();
+                depotDriverReviewLoad();
+            } catch (error) {
+                depotDriverReviewSetStatus(error.message, 'error');
+            }
+        });
+
+        reset?.addEventListener('click', () => {
+            depotDriverReviewResetFilters();
+            depotDriverReviewRenderFilterOptions();
+            depotDriverReviewLoad();
+        });
+
+        depotDriverReviewLoadBatches();
+    };
+
+    const recordReview = () => `
+        <section class="drayvia-record-review">
+            <div class="drayvia-record-review-topbar">
+                <div>
+                    <div class="drayvia-preview-eyebrow">Trasy / provozní kontrola</div>
+                    <h1 class="drayvia-preview-title">Kontrola zápisů</h1>
+                    <p class="drayvia-preview-description">
+                        Fyzické porovnání neměnného zápisu depa se samostatným zápisem řidiče.
+                    </p>
+                </div>
+                <div class="drayvia-preview-actions">
+                    <button
+                        class="drayvia-preview-action"
+                        type="button"
+                        data-drayvia-page="routes"
+                    >
+                        Zpět na trasy
+                    </button>
+                </div>
+            </div>
+
+            <div class="drayvia-record-review-batch">
+                <label class="drayvia-record-review-field">
+                    Importovaná dávka depa
+                    <select id="drayviaDepotDriverReviewBatch" disabled>
+                        <option>Načítám importované dávky…</option>
+                    </select>
+                </label>
+                <div class="drayvia-record-review-batch-actions">
+                    <button
+                        id="drayviaDepotDriverReviewRefresh"
+                        class="drayvia-preview-action"
+                        type="button"
+                    >
+                        Obnovit data
+                    </button>
+                </div>
+            </div>
+
+            <div
+                id="drayviaDepotDriverReviewStatus"
+                class="drayvia-record-review-status"
+                role="status"
+                aria-live="polite"
+            ></div>
+
+            <div class="drayvia-record-review-readonly">
+                <strong>Pouze ke čtení.</strong>
+                <span>
+                    Obrazovka nic nepřijímá, neopravuje ani nerozděluje.
+                    Přesné hodnoty zůstávají v API; kilometry se zde zobrazují jako celá čísla.
+                </span>
+            </div>
+
+            <div
+                id="drayviaDepotDriverReviewSummary"
+                class="drayvia-record-review-summary"
+                aria-label="Souhrn výsledků porovnání"
+            ></div>
+
+            <form
+                id="drayviaDepotDriverReviewFilters"
+                class="drayvia-record-review-filter-panel"
+            >
+                <div class="drayvia-record-review-filter-grid">
+                    <label class="drayvia-record-review-field">
+                        Stav
+                        <select id="drayviaDepotDriverReviewComparisonStatus">
+                            <option value="">Všechny stavy</option>
+                            <option value="matching">Shoda</option>
+                            <option value="different">Rozdíl hodnot</option>
+                            <option value="missing_driver_record">Chybí zápis řidiče</option>
+                            <option value="driver_mismatch">Jiný řidič</option>
+                            <option value="not_comparable">Nelze porovnat</option>
+                        </select>
+                    </label>
+
+                    <label class="drayvia-record-review-field">
+                        Přiřazený řidič
+                        <select id="drayviaDepotDriverReviewDriver">
+                            <option value="">Všichni přiřazení řidiči</option>
+                        </select>
+                    </label>
+
+                    <label class="drayvia-record-review-field">
+                        Datum od
+                        <input id="drayviaDepotDriverReviewDateFrom" type="date">
+                    </label>
+
+                    <label class="drayvia-record-review-field">
+                        Datum do
+                        <input id="drayviaDepotDriverReviewDateTo" type="date">
+                    </label>
+
+                    <label class="drayvia-record-review-field">
+                        Trasa obsahuje
+                        <input
+                            id="drayviaDepotDriverReviewRoute"
+                            type="search"
+                            placeholder="např. 36"
+                            autocomplete="off"
+                        >
+                    </label>
+                </div>
+
+                <div class="drayvia-record-review-filter-actions">
+                    <button
+                        id="drayviaDepotDriverReviewReset"
+                        class="drayvia-preview-action"
+                        type="button"
+                    >
+                        Vymazat filtry
+                    </button>
+                    <button
+                        class="drayvia-preview-action primary"
+                        type="submit"
+                    >
+                        Použít filtry
+                    </button>
+                </div>
+            </form>
+
+            <section class="drayvia-record-review-results">
+                <div class="drayvia-record-review-results-head">
+                    <div>
+                        <h2>Depo × Řidič</h2>
+                        <p id="drayviaDepotDriverReviewResultCount">
+                            Vyberte importovanou dávku.
+                        </p>
+                    </div>
+                </div>
+                <div
+                    id="drayviaDepotDriverReviewList"
+                    class="drayvia-record-review-list"
+                >
+                    <div class="drayvia-record-review-empty">
+                        Načítám porovnání…
+                    </div>
+                </div>
+                <div
+                    id="drayviaDepotDriverReviewPagination"
+                    class="drayvia-record-review-pagination"
+                ></div>
+            </section>
+        </section>
+    `;
+
     const settings = () => `
         ${header(
             'Nastavení',
@@ -16868,6 +18232,7 @@ const templates = {
         finance,
         bank,
         imports,
+        'record-review': recordReview,
         settings
     };
 
@@ -23577,6 +24942,10 @@ const loadFinanceCustomers = async () => {
 
         if (page === 'imports') {
             bindDepotImportPreview();
+        }
+
+        if (page === 'record-review') {
+            bindDepotDriverRecordReview();
         }
 
 if (page === 'finance') {

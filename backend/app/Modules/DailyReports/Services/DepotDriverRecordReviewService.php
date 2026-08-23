@@ -154,6 +154,7 @@ final class DepotDriverRecordReviewService
                 'depot_only_fields' => [],
             ],
             'filters' => $this->filterPayload($filters),
+            'filter_options' => $this->filterOptions($sourceRows),
             'summary' => $summary,
             'items' => $items->all(),
             'pagination' => [
@@ -173,6 +174,48 @@ final class DepotDriverRecordReviewService
                 'route_split_available' => false,
                 'depot_source_revision_available' => false,
             ],
+        ];
+    }
+
+    /**
+     * @param  EloquentCollection<int, DepotImportRow>  $rows
+     * @return array{
+     *     comparison_statuses: list<string>,
+     *     drivers: list<array{id: int, name: string}>
+     * }
+     */
+    private function filterOptions(
+        EloquentCollection $rows,
+    ): array {
+        /** @var array<int, array{id: int, name: string}> $driversById */
+        $driversById = [];
+
+        foreach ($rows as $row) {
+            $driver = $row->assignedDriver;
+
+            if (! $driver instanceof Driver) {
+                continue;
+            }
+
+            $driverId = (int) $driver->getKey();
+            $driversById[$driverId] = [
+                'id' => $driverId,
+                'name' => $driver->full_name,
+            ];
+        }
+
+        $drivers = array_values($driversById);
+        usort(
+            $drivers,
+            static fn (array $left, array $right): int => strcmp(
+                mb_strtolower($left['name'], 'UTF-8'),
+                mb_strtolower($right['name'], 'UTF-8'),
+            ),
+        );
+
+        return [
+            'comparison_statuses' => self::COMPARISON_STATUSES,
+            'drivers' => $drivers,
         ];
     }
 

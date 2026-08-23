@@ -111,6 +111,39 @@ The summary is calculated after the business filters and before the optional
 comparison-status filter. This lets the future UI show stable overview counts
 while an operator opens one status bucket.
 
+The response also exposes additive `filter_options` containing the canonical
+comparison statuses and the complete set of drivers assigned anywhere in the
+selected immutable depot batch. This keeps the driver selector complete even
+when a batch contains more rows than one result page.
+
+## Operator UI
+
+Sprint 030 makes the read-only workspace physically available in the MVP
+application as the nested navigation entry:
+
+`Trasy -> Kontrola zapisu`
+
+The screen loads the latest imported depot batches from the existing depot
+import index. After an operator selects a batch, it displays:
+
+- stable summary counters for every comparison classification;
+- filters for status, assigned driver, service-date range and partial route
+  number;
+- paginated comparison cards with the route, date, assigned driver and result;
+  and
+- an expandable three-column matrix showing each field as
+  `Kontrolovane pole | Depo | Ridic`.
+
+The UI remains read-only and calls only the two existing GET contracts used to
+list imported batches and compare an exact batch. It contains no accept,
+correction, split or depot-source revision control.
+
+Kilometres are a presentation-only exception: `actual_km` and `planned_km`
+are formatted in Czech locale with zero fractional digits and the `km` unit.
+For example, `120.49` is displayed as `120 km` and `120.50` as `121 km`.
+The response values and their exact two-decimal comparison semantics remain
+unchanged, so rounding in the UI can never modify or authorize source data.
+
 ## Deliberately deferred mutations
 
 This slice does not yet allow quick acceptance, driver correction, route
