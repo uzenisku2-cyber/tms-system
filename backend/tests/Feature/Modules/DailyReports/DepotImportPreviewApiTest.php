@@ -113,6 +113,9 @@ final class DepotImportPreviewApiTest extends TestCase
                 )
                 ->assertJsonPath('data.detected.header_start_row', 1)
                 ->assertJsonPath('data.detected.header_end_row', 2)
+                ->assertJsonMissingPath(
+                    'data.detected.columns.reported_not_delivered_parcels',
+                )
                 ->assertJsonCount(3, 'data.carrier_values');
 
             $response = $this->organizationRequest($organization)
@@ -142,6 +145,13 @@ final class DepotImportPreviewApiTest extends TestCase
                 ->assertJsonPath('data.totals.computed_not_delivered_parcels', 7)
                 ->assertJsonPath('data.row_count', 3)
                 ->assertJsonPath('data.rows.2.status', 'no_run')
+                ->assertJsonPath(
+                    'data.rows.0.computed_not_delivered_parcels',
+                    5,
+                )
+                ->assertJsonMissingPath(
+                    'data.rows.0.reported_not_delivered_parcels',
+                )
                 ->assertJsonPath('data.import_enabled', false)
                 ->assertJsonPath('data.write_performed', false)
                 ->assertJsonCount(2, 'data.matched_carrier_values')
@@ -149,6 +159,103 @@ final class DepotImportPreviewApiTest extends TestCase
                 ->assertJsonCount(1, 'data.eligible_drivers');
 
             self::assertDatabaseCount('daily_reports', 0);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_preview_ignores_reported_not_delivered_and_financial_totals_but_requires_note_for_positive_surcharge(): void
+    {
+        $path = DepotWorkbookFactory::create([
+            [
+                'Datum',
+                'Trasa',
+                'Dopravce',
+                'Jméno řidiče',
+                'Poznámka',
+                'Naloženo',
+                'Doručeno na adresu',
+                'Doručeno na VM',
+                'Odmítnuté',
+                'Příplatek',
+                'Nerozvezeno',
+                'Náklady celkem Kč',
+            ],
+            [
+                '02.06.2025',
+                35,
+                'Kökörčený',
+                'Hrůza Vít',
+                null,
+                100,
+                80,
+                10,
+                5,
+                25,
+                999,
+                5000,
+            ],
+            [
+                '03.06.2025',
+                36,
+                'Kökörčený',
+                'Hrůza Vít',
+                'Mimořádný svoz potvrzený depem.',
+                50,
+                45,
+                2,
+                1,
+                25,
+                777,
+                7000,
+            ],
+        ]);
+
+        try {
+            [$actor, $organization] = $this->context('Kökörčený');
+            $this->grantPermissions(
+                $actor,
+                $organization,
+                ['daily-reports.view'],
+            );
+            Sanctum::actingAs($actor);
+
+            $response = $this->organizationRequest($organization)
+                ->post(
+                    self::URL.'/preview',
+                    [
+                        'workbook' => $this->upload($path),
+                        'carrier_alias' => 'Kökörčený',
+                        'carrier_alias_confirmed' => '1',
+                    ],
+                    ['Accept' => 'application/json'],
+                );
+
+            $response
+                ->assertOk()
+                ->assertJsonPath('data.totals.ready_rows', 1)
+                ->assertJsonPath('data.totals.invalid_rows', 1)
+                ->assertJsonPath('data.rows.0.status', 'invalid')
+                ->assertJsonPath(
+                    'data.rows.0.errors.0',
+                    'Poznámka je povinná, pokud je příplatek vyšší než nula.',
+                )
+                ->assertJsonPath(
+                    'data.rows.0.computed_not_delivered_parcels',
+                    5,
+                )
+                ->assertJsonPath('data.rows.1.status', 'ready')
+                ->assertJsonPath('data.rows.1.surcharge_amount', '25.00')
+                ->assertJsonPath(
+                    'data.rows.1.operational_notes',
+                    'Mimořádný svoz potvrzený depem.',
+                )
+                ->assertJsonMissingPath(
+                    'data.detected.columns.reported_not_delivered_parcels',
+                )
+                ->assertJsonMissingPath(
+                    'data.rows.0.reported_not_delivered_parcels',
+                );
         } finally {
             @unlink($path);
         }
@@ -215,7 +322,7 @@ final class DepotImportPreviewApiTest extends TestCase
                     10,
                     5,
                     0,
-                    5,
+                    999,
                     95,
                 ],
                 [
@@ -235,7 +342,7 @@ final class DepotImportPreviewApiTest extends TestCase
                     2,
                     1,
                     0,
-                    2,
+                    777,
                     48,
                 ],
                 [

@@ -120,12 +120,6 @@ final class DepotImportHeaderDetector
             'priplatek kc',
             'surcharge',
         ],
-        'reported_not_delivered_parcels' => [
-            'nerozvezeno',
-            'nedoruceno',
-            'nedorucene zasilky',
-            'not delivered',
-        ],
     ];
 
     /** @var array<string, list<string>> */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\DailyReports\Controllers\DailyReportController;
 use App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController;
+use App\Modules\DailyReports\Controllers\DepotDriverRecordReviewController;
 use App\Modules\DailyReports\Controllers\DepotImportDraftController;
 use App\Modules\DailyReports\Controllers\DepotImportPreviewController;
 use App\Modules\DailyReports\Controllers\DriverQualityProfileController;
@@ -94,6 +95,34 @@ Route::middleware([
         )
             ->whereUuid('batch')
             ->name('drafts.finalize');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| S029 DEPOT VERSUS DRIVER RECORD REVIEW
+|--------------------------------------------------------------------------
+|
+| This first reconciliation slice is read-only. It verifies one finalized
+| depot batch and compares it with independently maintained daily reports.
+| It creates no pairing, correction, split, allocation or report version.
+|
+*/
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:daily-reports.view',
+    'perm:daily-reports.review',
+])
+    ->prefix('daily-reports/record-review/depot-driver')
+    ->name('daily-reports.record-review.depot-driver.')
+    ->group(function (): void {
+        Route::get(
+            '/{batch}',
+            [DepotDriverRecordReviewController::class, 'show'],
+        )
+            ->whereUuid('batch')
+            ->name('show');
     });
 
 Route::middleware([

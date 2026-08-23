@@ -49,7 +49,6 @@ final class DepotImportRow extends Model
         'delivered_parcels',
         'redirected_parcels',
         'customer_rejected_parcels',
-        'reported_not_delivered_parcels',
         'computed_not_delivered_parcels',
         'surcharge_amount',
         'operational_notes',

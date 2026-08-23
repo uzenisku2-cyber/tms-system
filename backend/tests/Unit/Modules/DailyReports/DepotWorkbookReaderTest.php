@@ -109,6 +109,10 @@ final class DepotWorkbookReaderTest extends TestCase
                 'formula',
                 $detected['columns'],
             );
+            self::assertArrayNotHasKey(
+                'reported_not_delivered_parcels',
+                $detected['columns'],
+            );
         } finally {
             @unlink($path);
         }
@@ -268,6 +272,10 @@ final class DepotWorkbookReaderTest extends TestCase
             self::assertSame(
                 'Příplatky',
                 $detected['columns']['surcharge_amount']['header'],
+            );
+            self::assertArrayNotHasKey(
+                'reported_not_delivered_parcels',
+                $detected['columns'],
             );
         } finally {
             @unlink($path);
