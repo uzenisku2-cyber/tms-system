@@ -53,8 +53,18 @@ Required meanings are:
 
 Optional recognized meanings include year, month, notes, departure and
 arrival times, actual and planned kilometres, parcels delivered to a pickup
-point, customer-rejected parcels, surcharge and the depot's reported
-not-delivered balance.
+point, customer-rejected parcels and the basic customer-entered surcharge.
+
+The import contract is an explicit operational whitelist. It does not map
+calculated rewards, rates, quality bonuses, fuel bonuses, monthly billing
+totals, total costs or other financial calculation columns. A header such as
+`Příplatek` or `Příplatky` is the basic customer-entered surcharge; headers
+such as `Příplatek palivo Kč`, `Příplatek kvalita Kč` and `Náklady celkem Kč`
+remain outside the import contract.
+
+The workbook's own `Nerozvezeno`, `Nedoručeno` or equivalent column is also
+outside the import contract. Its position and value do not affect schema
+detection, row validity, persistence or reconciliation.
 
 Ambiguous duplicate mappings or equally likely import tables are rejected.
 They are never guessed.
@@ -81,10 +91,11 @@ not-delivered parcels as:
 
 `loaded - delivered_to_address - delivered_to_pickup_point - customer_rejected`
 
-When the workbook supplies its own not-delivered value, it must equal this
-server calculation. Negative balances, invalid numbers, invalid dates,
-calendar-column mismatches, duplicate date/route keys and formulas in mapped
-source fields block the affected row.
+The calculation is authoritative inside the application. A negative balance,
+invalid number, invalid date, calendar-column mismatch, duplicate date/route
+key or formula in a mapped source field blocks the affected row. A positive
+basic surcharge additionally requires a non-empty operational note explaining
+the surcharge.
 
 A row with route identity and a note but no operational values is classified
 as `no_run`; it is not represented as a zero daily report.
@@ -113,6 +124,14 @@ also requires `daily-reports.review`. The uploaded XLSX remains
 temporary request data. The application stores only validated values, source
 and schema SHA-256 fingerprints, the confirmed carrier alias and audit
 metadata. It never stores the workbook or formula output.
+
+Persisted route values are limited to route identity, source driver and
+carrier labels, service date, departure and arrival times, actual and planned
+kilometres, loaded parcels, address deliveries, pickup-point deliveries,
+customer rejections, the server-computed not-delivered balance, the basic
+surcharge and its operational note. The legacy nullable database column for a
+depot-reported not-delivered value is retained only so historical protected
+row hashes remain verifiable; new imports never populate or expose it.
 
 The source SHA-256 and normalized confirmed alias are unique within the
 organization. Repeating the same source therefore returns the existing-batch

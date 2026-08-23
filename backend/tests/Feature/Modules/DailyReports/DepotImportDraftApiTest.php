@@ -101,12 +101,22 @@ final class DepotImportDraftApiTest extends TestCase
                 ->assertJsonPath('data.source_records_locked', false)
                 ->assertJsonPath('data.reconciliation_available_here', false)
                 ->assertJsonCount(2, 'data.rows')
+                ->assertJsonMissingPath(
+                    'data.rows.0.values.reported_not_delivered_parcels',
+                )
                 ->assertJsonCount(1, 'data.events');
 
             self::assertDatabaseCount('depot_import_batches', 1);
             self::assertDatabaseCount('depot_import_rows', 2);
             self::assertDatabaseCount('depot_import_events', 1);
             self::assertDatabaseCount('daily_reports', 0);
+            self::assertSame(
+                [null, null],
+                DepotImportRow::query()
+                    ->orderBy('source_row')
+                    ->pluck('reported_not_delivered_parcels')
+                    ->all(),
+            );
 
             $batch = DepotImportBatch::query()->firstOrFail();
 
@@ -693,7 +703,7 @@ final class DepotImportDraftApiTest extends TestCase
                     10,
                     5,
                     0,
-                    5,
+                    999,
                     95,
                 ],
                 [
@@ -713,7 +723,7 @@ final class DepotImportDraftApiTest extends TestCase
                     2,
                     1,
                     0,
-                    2,
+                    777,
                     48,
                 ],
                 [

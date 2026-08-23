@@ -1015,9 +1015,6 @@ final class DepotImportDraftService
             'customer_rejected_parcels' => $row[
                 'customer_rejected_parcels'
             ] ?? null,
-            'reported_not_delivered_parcels' => $row[
-                'reported_not_delivered_parcels'
-            ] ?? null,
             'computed_not_delivered_parcels' => $row[
                 'computed_not_delivered_parcels'
             ] ?? null,
@@ -1073,9 +1070,6 @@ final class DepotImportDraftService
                 ),
                 'customer_rejected_parcels' => $row->getAttribute(
                     'customer_rejected_parcels',
-                ),
-                'reported_not_delivered_parcels' => $row->getAttribute(
-                    'reported_not_delivered_parcels',
                 ),
                 'computed_not_delivered_parcels' => $row->getAttribute(
                     'computed_not_delivered_parcels',

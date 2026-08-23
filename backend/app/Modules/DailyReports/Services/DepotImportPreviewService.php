@@ -30,7 +30,6 @@ final class DepotImportPreviewService
         'redirected_parcels',
         'customer_rejected_parcels',
         'surcharge_amount',
-        'reported_not_delivered_parcels',
     ];
 
     public function __construct(
@@ -439,7 +438,6 @@ final class DepotImportPreviewService
                 'delivered_parcels' => null,
                 'redirected_parcels' => null,
                 'customer_rejected_parcels' => null,
-                'reported_not_delivered_parcels' => null,
                 'computed_not_delivered_parcels' => null,
                 'surcharge_amount' => null,
                 'operational_notes' => $note,
@@ -475,12 +473,6 @@ final class DepotImportPreviewService
             $errors,
             true,
         );
-        $reportedNotDelivered = $this->parseParcelCount(
-            $raw['reported_not_delivered_parcels'] ?? '',
-            'Nerozvezeno',
-            $errors,
-            false,
-        );
         $computedNotDelivered = null;
 
         if (
@@ -496,13 +488,6 @@ final class DepotImportPreviewService
 
             if ($computedNotDelivered < 0) {
                 $errors[] = 'Součet koncových stavů zásilek je vyšší než počet naložených zásilek.';
-            }
-
-            if (
-                $reportedNotDelivered !== null
-                && $reportedNotDelivered !== $computedNotDelivered
-            ) {
-                $errors[] = 'Hodnota Nerozvezeno nesouhlasí se serverovým přepočtem zásilek.';
             }
         }
 
@@ -521,6 +506,11 @@ final class DepotImportPreviewService
             'Příplatek',
             $errors,
         );
+
+        if ($surcharge !== null && $surcharge > 0 && $note === '') {
+            $errors[] = 'Poznámka je povinná, pokud je příplatek vyšší než nula.';
+        }
+
         $departure = $this->parseTime(
             $raw['departure_time'] ?? '',
             'Čas odjezdu',
@@ -555,7 +545,6 @@ final class DepotImportPreviewService
             'delivered_parcels' => $delivered,
             'redirected_parcels' => $redirected,
             'customer_rejected_parcels' => $rejected,
-            'reported_not_delivered_parcels' => $reportedNotDelivered,
             'computed_not_delivered_parcels' => $computedNotDelivered,
             'surcharge_amount' => $this->decimalString($surcharge),
             'operational_notes' => $note === '' ? null : $note,
