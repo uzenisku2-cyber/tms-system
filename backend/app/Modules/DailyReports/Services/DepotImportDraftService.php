@@ -11,6 +11,7 @@ use App\Modules\DailyReports\Models\DepotImportEvent;
 use App\Modules\DailyReports\Models\DepotImportRow;
 use App\Modules\Drivers\Models\Driver;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
+use App\Modules\Organizations\Models\OrganizationRelationship;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -891,7 +892,14 @@ final class DepotImportDraftService
         string $serviceDate,
     ): DriverOrganizationAssignment {
         $assignment = DriverOrganizationAssignment::query()
-            ->where('organization_id', $organizationId)
+            ->whereIn(
+                'organization_id',
+                $this->eligibleOrganizationIds(
+                    $organizationId,
+                    $serviceDate,
+                    $serviceDate,
+                ),
+            )
             ->where('driver_id', $driverId)
             ->whereDate('valid_from', '<=', $serviceDate)
             ->where(function ($query) use ($serviceDate): void {
@@ -1096,9 +1104,13 @@ final class DepotImportDraftService
         $until = $this->dateAttribute($batch, 'period_until');
 
         return DriverOrganizationAssignment::query()
-            ->where(
+            ->whereIn(
                 'organization_id',
-                (int) $batch->getAttribute('organization_id'),
+                $this->eligibleOrganizationIds(
+                    (int) $batch->getAttribute('organization_id'),
+                    $from,
+                    $until,
+                ),
             )
             ->whereDate('valid_from', '<=', $until)
             ->where(function ($query) use ($from): void {
@@ -1141,6 +1153,39 @@ final class DepotImportDraftService
             })
             ->values()
             ->all();
+    }
+
+    /** @return list<int> */
+    private function eligibleOrganizationIds(
+        int $organizationId,
+        string $from,
+        string $until,
+    ): array {
+        $subordinateOrganizationIds = OrganizationRelationship::query()
+            ->where('source_organization_id', $organizationId)
+            ->where(
+                'relationship_type',
+                OrganizationRelationship::TYPE_SUBCONTRACTING,
+            )
+            ->where('status', OrganizationRelationship::STATUS_ACTIVE)
+            ->where(function ($query) use ($until): void {
+                $query
+                    ->whereNull('valid_from')
+                    ->orWhereDate('valid_from', '<=', $until);
+            })
+            ->where(function ($query) use ($from): void {
+                $query
+                    ->whereNull('valid_until')
+                    ->orWhereDate('valid_until', '>=', $from);
+            })
+            ->pluck('target_organization_id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->all();
+
+        return array_values(array_unique([
+            $organizationId,
+            ...$subordinateOrganizationIds,
+        ]));
     }
 
     private function actorId(User $actor): int

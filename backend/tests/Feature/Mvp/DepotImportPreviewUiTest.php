@@ -8,6 +8,58 @@ use Tests\TestCase;
 
 final class DepotImportPreviewUiTest extends TestCase
 {
+    public function test_import_error_reader_is_scoped_with_the_depot_import_api(): void
+    {
+        $source = file_get_contents(
+            resource_path('views/mvp/app.blade.php'),
+        );
+
+        self::assertIsString($source);
+
+        $start = strpos(
+            $source,
+            '// S028-01A DEPOT IMPORT READ-ONLY PREVIEW',
+        );
+        $end = strpos(
+            $source,
+            'const settings = () =>',
+            $start === false ? 0 : $start,
+        );
+
+        if (! is_int($start) || ! is_int($end)) {
+            self::fail(
+                'The isolated depot-import preview block was not found.',
+            );
+        }
+
+        $block = substr($source, $start, $end - $start);
+
+        self::assertStringContainsString(
+            'const depotImportReadError = (body, fallback) =>',
+            $block,
+        );
+        self::assertStringContainsString(
+            "return messages.join(' ');",
+            $block,
+        );
+        self::assertStringContainsString(
+            "typeof body.message === 'string'",
+            $block,
+        );
+        self::assertStringContainsString(
+            'depotImportReadError(',
+            $block,
+        );
+        self::assertSame(
+            1,
+            substr_count($block, 'depotImportReadError('),
+        );
+        self::assertStringNotContainsString(
+            'readError(',
+            $block,
+        );
+    }
+
     public function test_imports_page_requires_alias_confirmation_and_uses_read_only_preview_endpoints(): void
     {
         $source = file_get_contents(
