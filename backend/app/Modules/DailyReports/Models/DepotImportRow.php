@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class DepotImportRow extends Model
 {
@@ -93,6 +94,12 @@ final class DepotImportRow extends Model
             DriverOrganizationAssignment::class,
             'assigned_driver_organization_assignment_id',
         );
+    }
+
+    /** @return HasOne<DepotImportReviewResolution, $this> */
+    public function reviewResolution(): HasOne
+    {
+        return $this->hasOne(DepotImportReviewResolution::class);
     }
 
     /** @return HasMany<DepotImportEvent, $this> */

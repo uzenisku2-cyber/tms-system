@@ -21,12 +21,21 @@ final class DepotImportEvent extends Model
 
     public const TYPE_IMPORT_CANCELLED = 'import_cancelled';
 
+    public const TYPE_DRIVER_ATTRIBUTION_CORRECTED = 'driver_attribution_corrected';
+
+    public const TYPE_ZERO_VALUE_IGNORED = 'zero_value_ignored';
+
+    public const TYPE_REVIEW_RESOLUTION_REVERTED = 'review_resolution_reverted';
+
     /** @var list<string> */
     public const TYPES = [
         self::TYPE_DRAFT_CREATED,
         self::TYPE_SOURCE_DRIVER_MAPPED,
         self::TYPE_IMPORT_FINALIZED,
         self::TYPE_IMPORT_CANCELLED,
+        self::TYPE_DRIVER_ATTRIBUTION_CORRECTED,
+        self::TYPE_ZERO_VALUE_IGNORED,
+        self::TYPE_REVIEW_RESOLUTION_REVERTED,
     ];
 
     protected $table = 'depot_import_events';

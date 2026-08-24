@@ -8,7 +8,7 @@ use Tests\TestCase;
 
 final class DepotDriverRecordReviewUiTest extends TestCase
 {
-    public function test_routes_navigation_exposes_read_only_depot_driver_review(): void
+    public function test_routes_navigation_exposes_audited_depot_driver_resolutions(): void
     {
         $source = file_get_contents(
             resource_path('views/mvp/app.blade.php'),
@@ -36,7 +36,24 @@ final class DepotDriverRecordReviewUiTest extends TestCase
                 "'record-review': recordReview",
                 "if (page === 'record-review')",
                 'bindDepotDriverRecordReview();',
-                'Pouze ke čtení.',
+                'Zdroj depa je pouze ke čtení.',
+                'Opravit depo na',
+                'Ignorovat nulový záznam',
+                'Vrátit rozhodnutí',
+                '/correct-driver',
+                '/ignore-zero',
+                '/resolution',
+                "method: 'PATCH'",
+                "method: 'POST'",
+                "method: 'DELETE'",
+                "'ignored'",
+                'DRAYVIA · Provozní kontrola',
+                'drayvia-record-review-dialog',
+                'Důvod rozhodnutí',
+                'Potvrdit opravu',
+                'Potvrdit ignorování',
+                'Potvrdit vrácení',
+                'Důvod je povinný kvůli auditní stopě.',
             ] as $marker
         ) {
             self::assertStringContainsString($marker, $source);
@@ -46,13 +63,11 @@ final class DepotDriverRecordReviewUiTest extends TestCase
 
         foreach (
             [
-                "method: 'POST'",
-                "method: 'PATCH'",
                 "method: 'PUT'",
-                "method: 'DELETE'",
                 'Rychle přijmout',
                 'Rozdělit trasu',
-                'Upravit depo',
+                'Upravit číselné hodnoty depa',
+                'window.prompt(',
             ] as $forbiddenMarker
         ) {
             self::assertStringNotContainsString(
