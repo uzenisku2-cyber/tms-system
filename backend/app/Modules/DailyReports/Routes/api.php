@@ -7,6 +7,7 @@ use App\Modules\DailyReports\Controllers\DailyReportPerformancePolicyController;
 use App\Modules\DailyReports\Controllers\DepotDriverRecordReviewController;
 use App\Modules\DailyReports\Controllers\DepotImportDraftController;
 use App\Modules\DailyReports\Controllers\DepotImportPreviewController;
+use App\Modules\DailyReports\Controllers\DepotImportReviewResolutionController;
 use App\Modules\DailyReports\Controllers\DriverQualityProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -123,6 +124,10 @@ Route::middleware([
         )
             ->whereUuid('batch')
             ->name('show');
+
+        Route::patch('/{batch}/rows/{row}/correct-driver', [DepotImportReviewResolutionController::class, 'correctDriver'])->whereUuid('batch')->whereUuid('row')->name('correct-driver');
+        Route::post('/{batch}/rows/{row}/ignore-zero', [DepotImportReviewResolutionController::class, 'ignoreZeroValue'])->whereUuid('batch')->whereUuid('row')->name('ignore-zero');
+        Route::delete('/{batch}/rows/{row}/resolution', [DepotImportReviewResolutionController::class, 'revert'])->whereUuid('batch')->whereUuid('row')->name('resolution.revert');
     });
 
 Route::middleware([

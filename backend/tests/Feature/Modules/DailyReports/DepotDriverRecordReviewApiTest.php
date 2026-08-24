@@ -7,6 +7,8 @@ namespace Tests\Feature\Modules\DailyReports;
 use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\DailyReports\Models\DepotImportBatch;
+use App\Modules\DailyReports\Models\DepotImportEvent;
+use App\Modules\DailyReports\Models\DepotImportReviewResolution;
 use App\Modules\DailyReports\Models\DepotImportRow;
 use App\Modules\DailyReports\Services\DepotDriverRecordReviewService;
 use App\Modules\DailyReports\Services\DepotImportIntegrityService;
@@ -527,6 +529,63 @@ final class DepotDriverRecordReviewApiTest extends TestCase
 
         $this->organizationRequest($organization)
             ->getJson(self::URL.'/'.$batch->getRouteKey());
+    }
+
+    public function test_driver_attribution_correction_is_audited_reversible_and_keeps_depot_values_immutable(): void
+    {
+        [$actor, $organization] = $this->context();
+        [$depotDriver, $depotAssignment] = $this->driver($actor, $organization, 'Dominik', 'Kökörčený');
+        [$actualDriver] = $this->driver($actor, $organization, 'Miloš', 'Kökörčený');
+        $batch = $this->importedBatch($actor, $organization, [
+            $this->readyRow(10, '2025-06-02', '16', $depotDriver, $depotAssignment, 'Kökörčený Dominik'),
+        ]);
+        $row = $batch->rows()->firstOrFail();
+        $this->dailyReport($actor, $organization, $actualDriver, '2025-06-02', '16');
+        $this->grantPermissions($actor, $organization, ['daily-reports.view', 'daily-reports.review']);
+        Sanctum::actingAs($actor);
+        $rowHash = (string) $row->getAttribute('protected_values_sha256');
+        $totalsHash = (string) $batch->getAttribute('protected_totals_sha256');
+
+        $url = self::URL.'/'.$batch->getRouteKey().'/rows/'.$row->getRouteKey();
+        $this->organizationRequest($organization)->patchJson($url.'/correct-driver', [
+            'confirmed' => true, 'driver_id' => $actualDriver->getKey(), 'reason' => 'Depo uvedlo nesprávného řidiče.',
+        ])->assertOk()->assertJsonPath('data.type', DepotImportReviewResolution::TYPE_DRIVER_ATTRIBUTION_CORRECTED)
+            ->assertJsonPath('data.corrected_driver.id', $actualDriver->getKey());
+
+        self::assertSame($rowHash, (string) $row->fresh()?->getAttribute('protected_values_sha256'));
+        self::assertSame($totalsHash, (string) $batch->fresh()?->getAttribute('protected_totals_sha256'));
+        $this->assertDatabaseHas('depot_import_events', ['event_type' => DepotImportEvent::TYPE_DRIVER_ATTRIBUTION_CORRECTED]);
+
+        $this->organizationRequest($organization)->deleteJson($url.'/resolution', [
+            'confirmed' => true, 'reason' => 'Kontrolované vrácení opravy.',
+        ])->assertOk()->assertJsonPath('data.reverted', true);
+        $this->assertDatabaseCount('depot_import_review_resolutions', 0);
+        $this->assertDatabaseHas('depot_import_events', ['event_type' => DepotImportEvent::TYPE_REVIEW_RESOLUTION_REVERTED]);
+    }
+
+    public function test_only_a_missing_driver_record_with_zero_operational_and_financial_values_can_be_ignored(): void
+    {
+        [$actor, $organization] = $this->context();
+        [$driver, $assignment] = $this->driver($actor, $organization, 'Dominik', 'Kökörčený');
+        $batch = $this->importedBatch($actor, $organization, [
+            $this->readyRow(14, '2025-06-02', '37', $driver, $assignment, 'Kökörčený Dominik', [
+                'departure_time' => null, 'arrival_time' => null, 'actual_km' => null, 'planned_km' => null,
+                'loaded_parcels' => 0, 'delivered_parcels' => 0, 'redirected_parcels' => 0,
+                'customer_rejected_parcels' => 0, 'computed_not_delivered_parcels' => 0,
+                'surcharge_amount' => '0.00', 'operational_notes' => 'Evidenční nulová trasa.',
+            ]),
+        ]);
+        $row = $batch->rows()->firstOrFail();
+        $this->grantPermissions($actor, $organization, ['daily-reports.view', 'daily-reports.review']);
+        Sanctum::actingAs($actor);
+
+        $this->organizationRequest($organization)->postJson(
+            self::URL.'/'.$batch->getRouteKey().'/rows/'.$row->getRouteKey().'/ignore-zero',
+            ['confirmed' => true, 'reason' => 'Nulový evidenční záznam bez finančního dopadu.'],
+        )->assertOk()->assertJsonPath('data.type', DepotImportReviewResolution::TYPE_ZERO_VALUE_IGNORED);
+
+        $this->assertDatabaseHas('depot_import_events', ['event_type' => DepotImportEvent::TYPE_ZERO_VALUE_IGNORED]);
+        self::assertSame((string) $row->getAttribute('protected_values_sha256'), (string) $row->fresh()?->getAttribute('protected_values_sha256'));
     }
 
     /** @return array{User, Organization} */

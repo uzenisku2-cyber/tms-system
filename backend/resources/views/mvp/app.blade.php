@@ -2015,6 +2015,37 @@
             padding: 0 17px 17px;
         }
 
+        .drayvia-record-review-resolution-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .drayvia-record-review-resolution-note {
+            background: #ecfdf3;
+            border: 1px solid #86efac;
+            border-radius: 10px;
+            color: #166534;
+            margin: 12px 0;
+            padding: 10px 12px;
+        }
+
+        .drayvia-record-review-dialog-backdrop { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 20px; background: rgba(15, 27, 48, .58); }
+        .drayvia-record-review-dialog { width: min(560px, 100%); border: 1px solid #d8e0ea; border-radius: 16px; background: #fff; box-shadow: 0 24px 70px rgba(15, 27, 48, .28); overflow: hidden; }
+        .drayvia-record-review-dialog-header, .drayvia-record-review-dialog-body, .drayvia-record-review-dialog-actions { padding: 18px 20px; }
+        .drayvia-record-review-dialog-header { border-bottom: 1px solid #e8edf3; }
+        .drayvia-record-review-dialog-header small { display: block; margin-bottom: 5px; color: #65738a; font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+        .drayvia-record-review-dialog-header h3, .drayvia-record-review-dialog-body p { margin: 0; }
+        .drayvia-record-review-dialog-body { display: grid; gap: 14px; }
+        .drayvia-record-review-dialog-impact { padding: 11px 12px; border-left: 3px solid #2563eb; background: #eff6ff; color: #25446f; font-size: 12px; line-height: 1.5; }
+        .drayvia-record-review-dialog label { display: grid; gap: 6px; color: #15233a; font-size: 12px; font-weight: 800; }
+        .drayvia-record-review-dialog textarea { min-height: 96px; resize: vertical; border: 1px solid #b8c4d4; border-radius: 10px; padding: 11px 12px; color: #15233a; font: inherit; font-weight: 500; }
+        .drayvia-record-review-dialog textarea:focus { outline: 3px solid rgba(37, 99, 235, .16); border-color: #2563eb; }
+        .drayvia-record-review-dialog-error { color: #a5271f; font-size: 12px; font-weight: 700; }
+        .drayvia-record-review-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; border-top: 1px solid #e8edf3; background: #f8fafc; }
+        .drayvia-record-review-dialog-actions button:disabled { cursor: wait; opacity: .62; }
+
         .drayvia-record-review-reason {
             margin: 0 -17px 12px;
             background: #f7f9fb;
@@ -17303,6 +17334,7 @@ const fuel = () => `
         missing_driver_record: 'Chybí zápis řidiče',
         driver_mismatch: 'Jiný řidič',
         not_comparable: 'Nelze porovnat',
+        ignored: 'Ignorováno',
     };
 
     const depotDriverReviewReasons = {
@@ -17320,6 +17352,8 @@ const fuel = () => `
             'K řádku depa není přiřazený oprávněný řidič.',
         multiple_driver_records:
             'Pro datum a trasu existuje více zápisů řidiče; automatické porovnání není jednoznačné.',
+        zero_value_record_ignored:
+            'Nulový evidenční záznam byl auditovaně ignorován a nevytváří chybějící zápis řidiče.',
     };
 
     const depotDriverReviewFields = [
@@ -17651,6 +17685,11 @@ const fuel = () => `
                 'Nelze porovnat',
                 summary.not_comparable
             ),
+            depotDriverReviewSummaryButton(
+                'ignored',
+                'Ignorováno',
+                summary.ignored
+            ),
         ].join('');
 
         host.querySelectorAll(
@@ -17685,7 +17724,9 @@ const fuel = () => `
                 ? item.differences.map((difference) => difference.field)
                 : []
         );
-        const assignedDriver = depot.assigned_driver?.name || '—';
+        const assignedDriver = depot.effective_assigned_driver?.name
+            || depot.assigned_driver?.name
+            || '—';
         const performedDriver =
             driver?.performed_by_driver?.name || '—';
         const driverDiffers = differenceFields.has(
@@ -17744,12 +17785,32 @@ const fuel = () => `
         const differenceCount = depotDriverReviewInteger(
             item?.difference_count || 0
         );
-        const assignedDriver = depot.assigned_driver?.name
+        const assignedDriver = depot.effective_assigned_driver?.name
+            || depot.assigned_driver?.name
             || depot.source_driver_name
             || 'Nepřiřazený řidič';
         const driverName = driver?.performed_by_driver?.name
             || 'Bez zápisu řidiče';
         const open = status === 'matching' ? '' : ' open';
+        const resolution = depot.review_resolution || null;
+        const actions = item?.actions || {};
+        const actualDriver = driver?.performed_by_driver || null;
+        const resolutionNote = resolution
+            ? `<div class="drayvia-record-review-resolution-note">
+                Aktivní auditované řešení. Důvod: ${depotDriverReviewEscape(resolution.reason || '—')}
+            </div>`
+            : '';
+        const actionButtons = [
+            actions.driver_attribution_correction_available && actualDriver?.id
+                ? `<button type="button" class="drayvia-preview-action" data-review-correct-driver data-row-id="${depotDriverReviewEscape(depot.row_public_id)}" data-driver-id="${depotDriverReviewEscape(actualDriver.id)}" data-driver-name="${depotDriverReviewEscape(actualDriver.name)}">Opravit depo na ${depotDriverReviewEscape(actualDriver.name)}</button>`
+                : '',
+            actions.zero_value_ignore_available
+                ? `<button type="button" class="drayvia-preview-action" data-review-ignore-zero data-row-id="${depotDriverReviewEscape(depot.row_public_id)}">Ignorovat nulový záznam</button>`
+                : '',
+            actions.resolution_revert_available
+                ? `<button type="button" class="drayvia-preview-action" data-review-revert data-row-id="${depotDriverReviewEscape(depot.row_public_id)}">Vrátit rozhodnutí</button>`
+                : '',
+        ].filter(Boolean).join('');
 
         return `
             <details class="drayvia-record-review-item is-${status}"${open}>
@@ -17775,6 +17836,8 @@ const fuel = () => `
                     <p class="drayvia-record-review-reason">
                         ${depotDriverReviewEscape(reason)}
                     </p>
+                    ${resolutionNote}
+                    ${actionButtons ? `<div class="drayvia-record-review-resolution-actions">${actionButtons}</div>` : ''}
                     ${depotDriverReviewComparisonRows(item)}
                 </div>
             </details>
@@ -17816,6 +17879,7 @@ const fuel = () => `
             host.innerHTML = items
                 .map((item) => depotDriverReviewItem(item))
                 .join('');
+            depotDriverReviewBindResolutionActions(host);
         }
 
         paginationHost.replaceChildren();
@@ -17855,6 +17919,64 @@ const fuel = () => `
         });
 
         paginationHost.append(previous, label, next);
+    };
+
+    const depotDriverReviewResolutionDialog = ({ title, description, impact, confirmLabel, defaultReason }) => new Promise((resolve) => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'drayvia-record-review-dialog-backdrop';
+        backdrop.innerHTML = `
+            <section class="drayvia-record-review-dialog" role="dialog" aria-modal="true" aria-labelledby="drayviaReviewDialogTitle">
+                <header class="drayvia-record-review-dialog-header"><small>DRAYVIA · Provozní kontrola</small><h3 id="drayviaReviewDialogTitle">${depotDriverReviewEscape(title)}</h3></header>
+                <div class="drayvia-record-review-dialog-body">
+                    <p>${depotDriverReviewEscape(description)}</p><p class="drayvia-record-review-dialog-impact">${depotDriverReviewEscape(impact)}</p>
+                    <label>Důvod rozhodnutí <span aria-hidden="true">*</span><textarea data-review-dialog-reason maxlength="500" required>${depotDriverReviewEscape(defaultReason)}</textarea></label>
+                    <div class="drayvia-record-review-dialog-error" data-review-dialog-error hidden></div>
+                </div>
+                <footer class="drayvia-record-review-dialog-actions"><button type="button" class="drayvia-preview-action" data-review-dialog-cancel>Zrušit</button><button type="button" class="drayvia-primary-action" data-review-dialog-confirm>${depotDriverReviewEscape(confirmLabel)}</button></footer>
+            </section>`;
+        const reason = backdrop.querySelector('[data-review-dialog-reason]');
+        const errorHost = backdrop.querySelector('[data-review-dialog-error]');
+        const cancel = backdrop.querySelector('[data-review-dialog-cancel]');
+        const confirm = backdrop.querySelector('[data-review-dialog-confirm]');
+        const close = (result) => { document.removeEventListener('keydown', onKeydown); backdrop.remove(); resolve(result); };
+        const onKeydown = (event) => { if (event.key === 'Escape') close(null); };
+        cancel.addEventListener('click', () => close(null));
+        confirm.addEventListener('click', () => {
+            const value = reason.value.trim();
+            if (value === '') { errorHost.textContent = 'Důvod je povinný kvůli auditní stopě.'; errorHost.hidden = false; reason.focus(); return; }
+            close(value);
+        });
+        backdrop.addEventListener('click', (event) => { if (event.target === backdrop) close(null); });
+        document.addEventListener('keydown', onKeydown);
+        document.body.appendChild(backdrop);
+        reason.focus(); reason.select();
+    });
+
+    const depotDriverReviewResolutionRequest = async (path, method, dialog, extra = {}) => {
+        const reason = await depotDriverReviewResolutionDialog(dialog);
+        if (!reason) return;
+        try {
+            await api(path, { method, body: JSON.stringify({ confirmed: true, reason, ...extra }) });
+            await depotDriverReviewLoad();
+        } catch (error) { depotDriverReviewSetStatus(`Rozhodnutí nelze uložit: ${error.message}`, 'error'); }
+    };
+
+    const depotDriverReviewBindResolutionActions = (host) => {
+        const base = () => `/api/v1/daily-reports/record-review/depot-driver/${encodeURIComponent(depotDriverReviewState.selectedBatch)}`;
+
+        host.querySelectorAll('[data-review-correct-driver]').forEach((button) => button.addEventListener('click', () => depotDriverReviewResolutionRequest(
+            `${base()}/rows/${encodeURIComponent(button.dataset.rowId)}/correct-driver`, 'PATCH',
+            { title: 'Opravit přiřazení řidiče', description: `Depo uvedlo jiného řidiče. Pro kontrolu bude záznam přiřazen řidiči ${button.dataset.driverName}.`, impact: 'Původní zdroj depa ani žádná číselná hodnota se nezmění. Rozhodnutí bude auditované a vratné.', confirmLabel: 'Potvrdit opravu', defaultReason: 'Oprava po provozní kontrole' },
+            { driver_id: Number(button.dataset.driverId) }
+        )));
+        host.querySelectorAll('[data-review-ignore-zero]').forEach((button) => button.addEventListener('click', () => depotDriverReviewResolutionRequest(
+            `${base()}/rows/${encodeURIComponent(button.dataset.rowId)}/ignore-zero`, 'POST',
+            { title: 'Ignorovat nulový záznam', description: 'Záznam nemá samostatný zápis řidiče a splňuje podmínku nulových provozních i finančních hodnot.', impact: 'Záznam bude v kontrole označen jako ignorovaný. Zdroj depa zůstane nezměněný a rozhodnutí bude vratné.', confirmLabel: 'Potvrdit ignorování', defaultReason: 'Nulový evidenční záznam bez provozního a finančního dopadu' }
+        )));
+        host.querySelectorAll('[data-review-revert]').forEach((button) => button.addEventListener('click', () => depotDriverReviewResolutionRequest(
+            `${base()}/rows/${encodeURIComponent(button.dataset.rowId)}/resolution`, 'DELETE',
+            { title: 'Vrátit auditované rozhodnutí', description: 'Aktivní oprava nebo ignorování bude zrušeno a kontrola znovu použije původní stav záznamu.', impact: 'Vrácení se zapíše do auditní stopy. Zdroj depa ani číselné hodnoty se nezmění.', confirmLabel: 'Potvrdit vrácení', defaultReason: 'Vrácení po provozní kontrole' }
+        )));
     };
 
     const depotDriverReviewRenderData = () => {
@@ -18098,10 +18220,10 @@ const fuel = () => `
             ></div>
 
             <div class="drayvia-record-review-readonly">
-                <strong>Pouze ke čtení.</strong>
+                <strong>Zdroj depa je pouze ke čtení.</strong>
                 <span>
-                    Obrazovka nic nepřijímá, neopravuje ani nerozděluje.
-                    Přesné hodnoty zůstávají v API; kilometry se zde zobrazují jako celá čísla.
+                    Oprava řidiče a ignorování nulového záznamu jsou auditovaná rozhodnutí s možností vrácení.
+                    Číselné hodnoty se nemění; kilometry se zde zobrazují jako celá čísla.
                 </span>
             </div>
 
@@ -18125,6 +18247,7 @@ const fuel = () => `
                             <option value="missing_driver_record">Chybí zápis řidiče</option>
                             <option value="driver_mismatch">Jiný řidič</option>
                             <option value="not_comparable">Nelze porovnat</option>
+                            <option value="ignored">Ignorováno</option>
                         </select>
                     </label>
 

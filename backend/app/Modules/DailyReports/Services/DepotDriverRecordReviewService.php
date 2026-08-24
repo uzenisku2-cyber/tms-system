@@ -7,6 +7,7 @@ namespace App\Modules\DailyReports\Services;
 use App\Core\Organizations\OrganizationContext;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\DailyReports\Models\DepotImportBatch;
+use App\Modules\DailyReports\Models\DepotImportReviewResolution;
 use App\Modules\DailyReports\Models\DepotImportRow;
 use App\Modules\Drivers\Models\Driver;
 use Carbon\CarbonImmutable;
@@ -28,6 +29,8 @@ final class DepotDriverRecordReviewService
 
     public const STATUS_NOT_COMPARABLE = 'not_comparable';
 
+    public const STATUS_IGNORED = 'ignored';
+
     /** @var list<string> */
     public const COMPARISON_STATUSES = [
         self::STATUS_MATCHING,
@@ -35,6 +38,7 @@ final class DepotDriverRecordReviewService
         self::STATUS_MISSING_DRIVER_RECORD,
         self::STATUS_DRIVER_MISMATCH,
         self::STATUS_NOT_COMPARABLE,
+        self::STATUS_IGNORED,
     ];
 
     /** @var array<string, string> */
@@ -74,7 +78,10 @@ final class DepotDriverRecordReviewService
 
         /** @var EloquentCollection<int, DepotImportRow> $sourceRows */
         $sourceRows = $batch->rows()
-            ->with('assignedDriver')
+            ->with([
+                'assignedDriver',
+                'reviewResolution.correctedDriver',
+            ])
             ->orderByDesc('service_date')
             ->orderBy('route_number_normalized')
             ->orderBy('source_row')
@@ -173,6 +180,9 @@ final class DepotDriverRecordReviewService
                 'quick_accept_available' => false,
                 'route_split_available' => false,
                 'depot_source_revision_available' => false,
+                'driver_attribution_correction_available' => true,
+                'zero_value_ignore_available' => true,
+                'resolution_revert_available' => true,
             ],
         ];
     }
@@ -191,7 +201,12 @@ final class DepotDriverRecordReviewService
         $driversById = [];
 
         foreach ($rows as $row) {
-            $driver = $row->assignedDriver;
+            $resolution = $row->reviewResolution;
+            $driver = $resolution instanceof DepotImportReviewResolution
+                && $resolution->getAttribute('resolution_type')
+                    === DepotImportReviewResolution::TYPE_DRIVER_ATTRIBUTION_CORRECTED
+                ? $resolution->correctedDriver
+                : $row->assignedDriver;
 
             if (! $driver instanceof Driver) {
                 continue;
@@ -267,9 +282,7 @@ final class DepotDriverRecordReviewService
                     if (
                         is_int($driverId)
                         && $driverId > 0
-                        && (int) $row->getAttribute(
-                            'assigned_driver_id',
-                        ) !== $driverId
+                        && $this->effectiveAssignedDriverId($row) !== $driverId
                     ) {
                         return false;
                     }
@@ -370,6 +383,21 @@ final class DepotDriverRecordReviewService
         Collection $driverRecords,
     ): array {
         $depot = $this->depotPayload($batch, $row);
+        $resolution = $row->reviewResolution;
+
+        if (
+            $resolution instanceof DepotImportReviewResolution
+            && $resolution->getAttribute('resolution_type')
+                === DepotImportReviewResolution::TYPE_ZERO_VALUE_IGNORED
+        ) {
+            return $this->comparisonPayload(
+                self::STATUS_IGNORED,
+                'zero_value_record_ignored',
+                $depot,
+                null,
+                [],
+            );
+        }
 
         if (
             $row->getAttribute('status')
@@ -384,9 +412,7 @@ final class DepotDriverRecordReviewService
             );
         }
 
-        $assignedDriverId = $row->getAttribute(
-            'assigned_driver_id',
-        );
+        $assignedDriverId = $this->effectiveAssignedDriverId($row);
 
         if ($assignedDriverId === null) {
             return $this->comparisonPayload(
@@ -514,6 +540,12 @@ final class DepotDriverRecordReviewService
         DepotImportRow $row,
     ): array {
         $assignedDriver = $row->assignedDriver;
+        $resolution = $row->reviewResolution;
+        $effectiveDriver = $resolution instanceof DepotImportReviewResolution
+            && $resolution->getAttribute('resolution_type')
+                === DepotImportReviewResolution::TYPE_DRIVER_ATTRIBUTION_CORRECTED
+            ? $resolution->correctedDriver
+            : $assignedDriver;
         $serviceDate = $this->dateValue(
             $row->getAttribute('service_date'),
         );
@@ -539,6 +571,15 @@ final class DepotDriverRecordReviewService
                         'assigned_driver_organization_assignment_id',
                     ),
                 ]
+                : null,
+            'effective_assigned_driver' => $effectiveDriver instanceof Driver
+                ? [
+                    'id' => (int) $effectiveDriver->getKey(),
+                    'name' => $effectiveDriver->full_name,
+                ]
+                : null,
+            'review_resolution' => $resolution instanceof DepotImportReviewResolution
+                ? $this->resolutionPayload($resolution)
                 : null,
             'values' => $this->depotValues($row),
             'protected_values_sha256' => (string) $row->getAttribute(
@@ -718,6 +759,14 @@ final class DepotDriverRecordReviewService
                 'quick_accept_available' => false,
                 'route_split_available' => false,
                 'depot_source_revision_available' => false,
+                'driver_attribution_correction_available' => $status
+                    === self::STATUS_DRIVER_MISMATCH,
+                'zero_value_ignore_available' => $status
+                    === self::STATUS_MISSING_DRIVER_RECORD
+                    && $this->zeroValuePayload($depot),
+                'resolution_revert_available' => is_array(
+                    $depot['review_resolution'] ?? null,
+                ),
             ],
         ];
     }
@@ -735,6 +784,7 @@ final class DepotDriverRecordReviewService
             self::STATUS_MISSING_DRIVER_RECORD => 0,
             self::STATUS_DRIVER_MISMATCH => 0,
             self::STATUS_NOT_COMPARABLE => 0,
+            self::STATUS_IGNORED => 0,
             'difference_fields' => 0,
         ];
 
@@ -768,6 +818,78 @@ final class DepotDriverRecordReviewService
             'service_date_to' => $filters['service_date_to'] ?? null,
             'route_number' => $filters['route_number'] ?? null,
         ];
+    }
+
+    private function effectiveAssignedDriverId(DepotImportRow $row): ?int
+    {
+        $resolution = $row->reviewResolution;
+
+        if (
+            $resolution instanceof DepotImportReviewResolution
+            && $resolution->getAttribute('resolution_type')
+                === DepotImportReviewResolution::TYPE_DRIVER_ATTRIBUTION_CORRECTED
+        ) {
+            return (int) $resolution->getAttribute('corrected_driver_id');
+        }
+
+        $driverId = $row->getAttribute('assigned_driver_id');
+
+        return $driverId === null ? null : (int) $driverId;
+    }
+
+    /** @return array<string, mixed> */
+    private function resolutionPayload(
+        DepotImportReviewResolution $resolution,
+    ): array {
+        $correctedDriver = $resolution->correctedDriver;
+        $createdAt = $resolution->getAttribute('created_at');
+
+        return [
+            'type' => (string) $resolution->getAttribute('resolution_type'),
+            'corrected_driver' => $correctedDriver instanceof Driver
+                ? [
+                    'id' => (int) $correctedDriver->getKey(),
+                    'name' => $correctedDriver->full_name,
+                ]
+                : null,
+            'reason' => (string) $resolution->getAttribute('reason'),
+            'resolved_by_user_id' => (int) $resolution->getAttribute(
+                'resolved_by_user_id',
+            ),
+            'created_at' => $createdAt instanceof DateTimeInterface
+                ? $createdAt->format(DateTimeInterface::ATOM)
+                : (string) $createdAt,
+        ];
+    }
+
+    /** @param array<string, mixed> $depot */
+    private function zeroValuePayload(array $depot): bool
+    {
+        $values = $depot['values'] ?? null;
+
+        if (! is_array($values)) {
+            return false;
+        }
+
+        foreach (
+            [
+                'loaded_parcels',
+                'delivered_parcels',
+                'redirected_parcels',
+                'customer_rejected_parcels',
+                'computed_not_delivered_parcels',
+                'actual_km',
+                'planned_km',
+                'surcharge_amount',
+            ] as $field
+        ) {
+            if (abs((float) ($values[$field] ?? 0)) > 0.00001) {
+                return false;
+            }
+        }
+
+        return ($values['departure_time'] ?? null) === null
+            && ($values['arrival_time'] ?? null) === null;
     }
 
     private function recordKey(
