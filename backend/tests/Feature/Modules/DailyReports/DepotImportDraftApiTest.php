@@ -12,6 +12,7 @@ use App\Modules\Drivers\Models\Driver;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
+use App\Modules\Organizations\Models\OrganizationRelationship;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
@@ -216,6 +217,108 @@ final class DepotImportDraftApiTest extends TestCase
             $this->organizationRequest($firstOrganization)
                 ->getJson(self::URL.'/'.$secondPublicId)
                 ->assertNotFound();
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_master_import_lists_and_maps_drivers_of_active_subordinate_carriers_only(): void
+    {
+        $path = $this->workbook();
+
+        try {
+            [$actor, $organization] = $this->context();
+            $this->grantPermissions(
+                $actor,
+                $organization,
+                [
+                    'daily-reports.view',
+                    'daily-reports.enter-for-driver',
+                ],
+            );
+            $ownDriver = $this->eligibleDriver(
+                $actor,
+                $organization,
+                'Dominik',
+                'KĂ¶kĂ¶rÄŤenĂ˝',
+                'DEPOT-OWN',
+            );
+            $subordinate = Organization::query()->create([
+                'name' => 'VĂ­t HrĹŻza',
+                'type' => Organization::TYPE_SUBCONTRACTOR,
+                'status' => Organization::STATUS_ACTIVE,
+            ]);
+            OrganizationRelationship::query()->create([
+                'source_organization_id' => $organization->getKey(),
+                'target_organization_id' => $subordinate->getKey(),
+                'relationship_type' => OrganizationRelationship::TYPE_SUBCONTRACTING,
+                'status' => OrganizationRelationship::STATUS_ACTIVE,
+                'valid_from' => '2025-01-01',
+                'valid_until' => null,
+            ]);
+            $subordinateDriver = $this->eligibleDriver(
+                $actor,
+                $subordinate,
+                'VĂ­t',
+                'HrĹŻza',
+                'DEPOT-SUBORDINATE',
+            );
+            $unrelated = Organization::query()->create([
+                'name' => 'NesouvisejĂ­cĂ­ dopravce',
+                'type' => Organization::TYPE_SUBCONTRACTOR,
+                'status' => Organization::STATUS_ACTIVE,
+            ]);
+            $unrelatedDriver = $this->eligibleDriver(
+                $actor,
+                $unrelated,
+                'CizĂ­',
+                'ĹidiÄŤ',
+                'DEPOT-UNRELATED',
+            );
+            Sanctum::actingAs($actor);
+
+            $created = $this->organizationRequest($organization)
+                ->post(
+                    self::URL,
+                    $this->draftPayload($path),
+                    ['Accept' => 'application/json'],
+                )
+                ->assertCreated();
+
+            $sourceDriverName = (string) $created->json(
+                'data.rows.0.source_driver_name',
+            );
+            $eligibleDriverIds = collect(
+                $created->json('data.eligible_drivers'),
+            )->pluck('driver_id')->all();
+
+            self::assertContains($ownDriver->getKey(), $eligibleDriverIds);
+            self::assertContains(
+                $subordinateDriver->getKey(),
+                $eligibleDriverIds,
+            );
+            self::assertNotContains(
+                $unrelatedDriver->getKey(),
+                $eligibleDriverIds,
+            );
+
+            $batchPublicId = (string) $created->json('data.public_id');
+
+            $this->organizationRequest($organization)
+                ->patchJson(
+                    self::URL.'/'.$batchPublicId.'/source-driver',
+                    [
+                        'source_driver_name' => $sourceDriverName,
+                        'driver_id' => $subordinateDriver->getKey(),
+                        'expected_lock_version' => 1,
+                        'reason' => 'PĹ™iĹ™azenĂ­ Ĺ™idiÄŤe podĹ™Ă­zenĂ©ho dopravce.',
+                    ],
+                )
+                ->assertOk()
+                ->assertJsonPath(
+                    'data.rows.0.assigned_driver.id',
+                    $subordinateDriver->getKey(),
+                );
         } finally {
             @unlink($path);
         }

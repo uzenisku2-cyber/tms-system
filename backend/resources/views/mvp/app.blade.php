@@ -15924,6 +15924,31 @@ const fuel = () => `
         draft: null,
     };
 
+    const depotImportReadError = (body, fallback) => {
+        if (!body) {
+            return fallback;
+        }
+
+        if (body.errors && typeof body.errors === 'object') {
+            const messages = Object.values(body.errors)
+                .flat()
+                .filter(Boolean);
+
+            if (messages.length > 0) {
+                return messages.join(' ');
+            }
+        }
+
+        if (
+            typeof body.message === 'string'
+            && body.message.trim() !== ''
+        ) {
+            return body.message;
+        }
+
+        return fallback;
+    };
+
     const depotImportApi = async (
         path,
         {method = 'GET', formData = null, json = null} = {}
@@ -15957,7 +15982,7 @@ const fuel = () => `
 
         if (!response.ok) {
             throw new Error(
-                readError(
+                depotImportReadError(
                     body,
                     `Operace importu skončila chybou HTTP ${response.status}.`
                 )
