@@ -7914,10 +7914,6 @@ summaryParts.push(
 
     /* DRAYVIA-16G PERIOD SELECTOR */
 
-    let periodMode = 'month';
-    let selectedMonth = '2026-07';
-    let selectedYear = '2026';
-
     const currentMonthValue = () => {
         const now = new Date();
 
@@ -7932,6 +7928,10 @@ summaryParts.push(
             new Date().getFullYear()
         );
     };
+
+    let periodMode = 'month';
+    let selectedMonth = currentMonthValue();
+    let selectedYear = currentYearValue();
 
     const monthLabelFromValue = (value) => {
         const [year, month] =
@@ -14632,6 +14632,96 @@ const fuel = () => `
                         font-weight: 700;
                     }
 
+                    .drayvia-billing-toolbar,
+                    .drayvia-billing-summary,
+                    .drayvia-billing-notice {
+                        display: grid;
+                        gap: 12px;
+                    }
+
+                    .drayvia-billing-toolbar {
+                        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                        align-items: end;
+                        margin: 16px 0;
+                    }
+
+                    .drayvia-billing-quick-filters {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                        margin: 16px 0 0;
+                    }
+
+                    .drayvia-billing-quick-filter {
+                        border: 1px solid #cbd5e1;
+                        border-radius: 999px;
+                        padding: 8px 12px;
+                        background: #fff;
+                        color: #0f172a;
+                        font-weight: 700;
+                        cursor: pointer;
+                    }
+
+                    .drayvia-billing-quick-filter.is-active {
+                        border-color: #0f172a;
+                        background: #0f172a;
+                        color: #fff;
+                    }
+
+                    .drayvia-billing-summary {
+                        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+                        margin: 16px 0;
+                    }
+
+                    .drayvia-billing-summary-card {
+                        border: 1px solid #dbe3ed;
+                        border-radius: 12px;
+                        padding: 14px;
+                        background: #f8fafc;
+                    }
+
+                    .drayvia-billing-summary-card span,
+                    .drayvia-billing-summary-card small {
+                        display: block;
+                        color: #64748b;
+                    }
+
+                    .drayvia-billing-summary-card strong {
+                        display: block;
+                        margin: 6px 0;
+                        font-size: 22px;
+                    }
+
+                    .drayvia-billing-table-wrap {
+                        overflow-x: auto;
+                        margin-top: 16px;
+                    }
+
+                    .drayvia-billing-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+
+                    .drayvia-billing-table th,
+                    .drayvia-billing-table td {
+                        border-bottom: 1px solid #e5e7eb;
+                        padding: 10px 8px;
+                        text-align: left;
+                        white-space: nowrap;
+                    }
+
+                    .drayvia-billing-notice {
+                        border-left: 4px solid #2563eb;
+                        padding: 12px 14px;
+                        background: #eff6ff;
+                    }
+
+                    .drayvia-billing-error {
+                        border-left-color: #dc2626;
+                        background: #fef2f2;
+                        color: #991b1b;
+                    }
+
                     .drayvia-price-table,
                     .drayvia-customer-table {
                         width: 100%;
@@ -15851,13 +15941,53 @@ const fuel = () => `
                         <section
                             class="drayvia-finance-panel drayvia-finance-panel-billing"
                             data-finance-panel="billing"
+                            data-billing-overview-root
+                            data-billing-overview-endpoint="/api/v1/billing-overview"
                         >
                             <div class="drayvia-finance-card">
                                 <h3>Fakturace</h3>
                                 <p>
-                                    Přehled odběratelů, období, tras a částek
-                                    připravených k vyúčtování.
+                                    Firemní fakturace, vyúčtování externích dopravců
+                                    a odměny řidičů podle oprávnění přihlášeného uživatele.
                                 </p>
+
+                                <div class="drayvia-billing-notice" data-billing-visibility-note>
+                                    Načítám oprávněný finanční pohled…
+                                </div>
+
+                                <div class="drayvia-billing-period-navigation" aria-label="Dostupná období fakturace">
+                                    <div class="drayvia-billing-quick-filters" data-billing-available-years></div>
+                                    <div class="drayvia-billing-quick-filters" data-billing-available-quarters></div>
+                                    <div class="drayvia-billing-quick-filters" data-billing-available-months></div>
+                                    <div class="drayvia-billing-quick-filters">
+                                        <button class="drayvia-billing-quick-filter" type="button" data-billing-period-preset="all">Všechna období</button>
+                                        <button class="drayvia-billing-quick-filter" type="button" data-billing-period-preset="custom">Vlastní období</button>
+                                    </div>
+                                </div>
+
+                                <form class="drayvia-billing-toolbar" data-billing-filter-form>
+                                    <div class="drayvia-finance-field">
+                                        <label for="billing-period-from">Období od</label>
+                                        <input id="billing-period-from" type="date" data-billing-period-from>
+                                    </div>
+                                    <div class="drayvia-finance-field">
+                                        <label for="billing-period-until">Období do</label>
+                                        <input id="billing-period-until" type="date" data-billing-period-until>
+                                    </div>
+                                    <div class="drayvia-finance-field">
+                                        <label for="billing-document-type">Druh přehledu</label>
+                                        <select id="billing-document-type" data-billing-document-type>
+                                            <option value="">Všechny položky</option>
+                                            <option value="customer_invoice">Fakturace odběratelům</option>
+                                            <option value="external_carrier_settlement">Externí dopravci</option>
+                                            <option value="driver_remuneration">Odměny řidičů</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit">Použít filtry</button>
+                                </form>
+
+                                <div class="drayvia-billing-summary" data-billing-summary></div>
+                                <div class="drayvia-billing-table-wrap" data-billing-items></div>
                             </div>
                         </section>
 
@@ -15865,11 +15995,11 @@ const fuel = () => `
                             class="drayvia-finance-panel drayvia-finance-panel-comparison"
                             data-finance-panel="comparison"
                         >
-                            <div class="drayvia-finance-card">
+                            <div class="drayvia-finance-card" data-billing-comparison>
                                 <h3>Srovnání</h3>
                                 <p>
-                                    Fakturace odběrateli versus náklad řidiče,
-                                    v korunách i procentech.
+                                    Srovnání firemní fakturace s náklady externích
+                                    dopravců a řidičů je dostupné pouze hlavnímu dopravci.
                                 </p>
                             </div>
                         </section>
@@ -15878,7 +16008,7 @@ const fuel = () => `
                             class="drayvia-finance-panel drayvia-finance-panel-profitability"
                             data-finance-panel="profitability"
                         >
-                            <div class="drayvia-finance-card">
+                            <div class="drayvia-finance-card" data-billing-profitability>
                                 <h3>Ziskovost</h3>
                                 <p>
                                     První úroveň je Hrubá marže Kč a Marže %.
@@ -25096,6 +25226,378 @@ const loadFinanceCustomers = async () => {
             bindDepotDriverRecordReview();
         }
 
+        // S033-02A ROLE-SCOPED BILLING, VAT AND MARGIN OVERVIEW
+        const billingOverviewState = {
+            data: null,
+            loaded: false,
+            navigationYear: selectedYear,
+            activePreset: `month:${selectedMonth}`,
+        };
+
+        const billingMoney = (value, currency = 'CZK') => new Intl.NumberFormat(
+            'cs-CZ',
+            {
+                style: 'currency',
+                currency,
+                minimumFractionDigits: 2,
+            }
+        ).format(Number(value || 0));
+
+        const billingPeriod = (item) =>
+            `${item.period_from || '—'} – ${item.period_until || '—'}`;
+
+        const billingDocumentLabel = (type) => ({
+            customer_invoice: 'Fakturace odběrateli',
+            external_carrier_settlement: 'Vyúčtování externího dopravce',
+            driver_remuneration: 'Odměna řidiče',
+        })[type] || type;
+
+        const billingSummaryCard = (label, total, vatLabel, vatApplicable = true) => `
+            <div class="drayvia-billing-summary-card">
+                <span>${label}</span>
+                <strong>${billingMoney(total.net)}</strong>
+                <small>${vatApplicable ? `${vatLabel}: ${billingMoney(total.vat)}` : vatLabel}</small>
+                <small>Celkem: ${billingMoney(total.gross)}</small>
+            </div>
+        `;
+
+        const billingStatusLabel = (status) => ({
+            draft: 'Koncept',
+            approved: 'Schváleno',
+            cancelled: 'Zrušeno',
+        })[status] || status;
+
+        const billingVatRate = (value) => `${Number(value || 0).toLocaleString(
+            'cs-CZ',
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }
+        )} %`;
+
+        const renderBillingCompanySummary = (summaryHost, data) => {
+            const summary = data.summary;
+
+            if (!summary) {
+                summaryHost.replaceChildren();
+                return;
+            }
+
+            summaryHost.innerHTML = [
+                billingSummaryCard(
+                    'Fakturace odběratelům bez DPH',
+                    summary.customer_billing,
+                    'DPH na výstupu'
+                ),
+                billingSummaryCard(
+                    'Externí dopravci – konečný náklad',
+                    summary.external_carrier_cost,
+                    'DPH se neuplatňuje',
+                    false
+                ),
+                billingSummaryCard(
+                    'Odměny řidičů',
+                    summary.driver_cost,
+                    'DPH se neuplatňuje',
+                    false
+                ),
+                `<div class="drayvia-billing-summary-card">
+                    <span>Hrubá marže bez DPH</span>
+                    <strong>${billingMoney(summary.gross_margin_net)}</strong>
+                    <small>Výnos bez DPH mínus náklady dopravců a řidičů.</small>
+                </div>`,
+            ].join('');
+        };
+
+        const renderBillingItems = (host, data) => {
+            const companyView = data.visibility === 'company';
+            const headings = companyView
+                ? '<th>Základ bez DPH</th><th>Sazba DPH</th><th>DPH</th><th>Celkem s DPH</th>'
+                : '<th>Konečná částka</th>';
+            const rows = (data.items || []).map((item) => {
+                const party = item.counterparty_name || item.driver_name || '—';
+                const amounts = companyView
+                    ? `<td>${billingMoney(item.net_amount, item.currency)}</td>
+                        <td>${item.vat_treatment === 'not_applicable' ? 'Neuplatňuje se' : billingVatRate(item.vat_rate)}</td>
+                        <td>${billingMoney(item.vat_amount, item.currency)}</td>
+                        <td>${billingMoney(item.gross_amount, item.currency)}</td>`
+                    : `<td>${billingMoney(item.amount, item.currency)}</td>`;
+
+                return `<tr>
+                    <td>${billingDocumentLabel(item.document_type)}</td>
+                    <td>${party}</td>
+                    <td>${billingPeriod(item)}</td>
+                    <td>${billingStatusLabel(item.status)}</td>
+                    ${amounts}
+                </tr>`;
+            }).join('');
+
+            host.innerHTML = `<table class="drayvia-billing-table">
+                <thead><tr>
+                    <th>Druh</th><th>Protistrana</th><th>Období</th><th>Stav</th>${headings}
+                </tr></thead>
+                <tbody>${rows || `<tr><td colspan="${companyView ? 8 : 5}">Pro zvolené období nejsou žádné položky.</td></tr>`}</tbody>
+            </table>`;
+        };
+
+        const renderBillingRestrictedPanels = (data) => {
+            const comparison = document.querySelector('[data-billing-comparison]');
+            const profitability = document.querySelector('[data-billing-profitability]');
+
+            if (!comparison || !profitability) {
+                return;
+            }
+
+            if (data.visibility !== 'company') {
+                comparison.innerHTML = '<h3>Srovnání</h3><div class="drayvia-billing-notice">Tento pohled není pro váš účet dostupný. Vidíte pouze vlastní vyúčtování nebo odměnu.</div>';
+                profitability.innerHTML = '<h3>Ziskovost</h3><div class="drayvia-billing-notice">Firemní marže a daňové údaje jsou dostupné pouze hlavnímu dopravci.</div>';
+                return;
+            }
+
+            const summary = data.summary;
+            comparison.innerHTML = `<h3>Srovnání fakturace a nákladů</h3>
+                <div class="drayvia-billing-summary">
+                    <div class="drayvia-billing-summary-card"><span>Výnos bez DPH</span><strong>${billingMoney(summary.customer_billing.net)}</strong></div>
+                    <div class="drayvia-billing-summary-card"><span>Externí dopravci</span><strong>${billingMoney(summary.external_carrier_cost.net)}</strong><small>U neplátců konečná částka, DPH se neuplatňuje.</small></div>
+                    <div class="drayvia-billing-summary-card"><span>Řidiči</span><strong>${billingMoney(summary.driver_cost.net)}</strong><small>Odměna bez DPH.</small></div>
+                </div>`;
+            profitability.innerHTML = `<h3>Ziskovost</h3>
+                <div class="drayvia-billing-summary-card">
+                    <span>Hrubá marže bez DPH</span>
+                    <strong>${billingMoney(summary.gross_margin_net)}</strong>
+                    <small>Nejde o čistý zisk; nejsou zde zahrnuty všechny režijní náklady.</small>
+                </div>`;
+        };
+
+        const renderBillingOverview = (data) => {
+            const note = document.querySelector('[data-billing-visibility-note]');
+            const summary = document.querySelector('[data-billing-summary]');
+            const items = document.querySelector('[data-billing-items]');
+
+            if (!note || !summary || !items) {
+                return;
+            }
+
+            note.classList.remove('drayvia-billing-error');
+            note.textContent = data.visibility === 'company'
+                ? 'Firemní pohled DRAYVIA: fakturace odběratelům je vedena bez DPH, se samostatnou DPH a částkou celkem. Náklady neplátců a odměny řidičů jsou konečné bez DPH.'
+                : 'Vlastní pohled: zobrazena je pouze vaše konečná částka. Údaje o DPH, firemních nákladech a marži API neposkytuje.';
+            renderBillingCompanySummary(summary, data);
+            renderBillingItems(items, data);
+            renderBillingRestrictedPanels(data);
+            renderBillingPeriodNavigation(data);
+        };
+
+        const loadBillingOverview = async () => {
+            const root = document.querySelector('[data-billing-overview-root]');
+
+            if (!root) {
+                return;
+            }
+
+            const params = new URLSearchParams();
+            const periodFrom = root.querySelector('[data-billing-period-from]')?.value;
+            const periodUntil = root.querySelector('[data-billing-period-until]')?.value;
+            const documentType = root.querySelector('[data-billing-document-type]')?.value;
+
+            if (periodFrom) params.set('period_from', periodFrom);
+            if (periodUntil) params.set('period_until', periodUntil);
+            if (documentType) params.set('document_type', documentType);
+            params.set('per_page', '100');
+
+            try {
+                const body = await api(`${root.dataset.billingOverviewEndpoint}?${params}`);
+                const data = getPayload(body);
+                billingOverviewState.data = data;
+                billingOverviewState.loaded = true;
+                renderBillingOverview(data);
+            } catch (error) {
+                const note = root.querySelector('[data-billing-visibility-note]');
+
+                if (note) {
+                    note.classList.add('drayvia-billing-error');
+                    note.textContent = `Fakturační přehled nelze načíst: ${error.message}`;
+                }
+            }
+        };
+
+        const billingGlobalPeriodRange = () => {
+            if (periodMode === 'all') {
+                return null;
+            }
+
+            const monthValue = periodMode === 'current_month'
+                ? currentMonthValue()
+                : selectedMonth;
+            const yearValue = periodMode === 'current_year'
+                ? currentYearValue()
+                : selectedYear;
+
+            if (['month', 'current_month'].includes(periodMode)) {
+                const [year, month] = monthValue.split('-').map(Number);
+                const lastDay = new Date(year, month, 0).getDate();
+
+                return {
+                    from: `${monthValue}-01`,
+                    until: `${monthValue}-${String(lastDay).padStart(2, '0')}`,
+                };
+            }
+
+            return {
+                from: `${yearValue}-01-01`,
+                until: `${yearValue}-12-31`,
+            };
+        };
+
+        const syncBillingFiltersWithGlobalPeriod = () => {
+            const root = document.querySelector('[data-billing-overview-root]');
+            const range = billingGlobalPeriodRange();
+
+            if (!root || !range) {
+                return;
+            }
+
+            const periodFrom = root.querySelector('[data-billing-period-from]');
+            const periodUntil = root.querySelector('[data-billing-period-until]');
+
+            if (periodFrom) periodFrom.value = range.from;
+            if (periodUntil) periodUntil.value = range.until;
+        };
+
+        const billingPresetRange = (preset) => {
+            const completeMonth = (monthValue) => {
+                const [rangeYear, rangeMonth] = monthValue.split('-').map(Number);
+                const lastDay = new Date(rangeYear, rangeMonth, 0).getDate();
+
+                return {
+                    from: `${monthValue}-01`,
+                    until: `${monthValue}-${String(lastDay).padStart(2, '0')}`,
+                };
+            };
+
+            if (preset.startsWith('month:')) return completeMonth(preset.slice(6));
+
+            if (preset.startsWith('quarter:')) {
+                const [year, quarter] = preset.slice(8).split('-Q').map(Number);
+                const firstMonth = ((quarter - 1) * 3) + 1;
+                const lastMonth = firstMonth + 2;
+                const lastDay = new Date(year, lastMonth, 0).getDate();
+
+                return {
+                    from: `${year}-${String(firstMonth).padStart(2, '0')}-01`,
+                    until: `${year}-${String(lastMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+                };
+            }
+
+            if (preset.startsWith('year:')) {
+                const year = Number(preset.slice(5));
+
+                return { from: `${year}-01-01`, until: `${year}-12-31` };
+            }
+            if (preset === 'all') return { from: '', until: '' };
+
+            return null;
+        };
+
+        const renderBillingPeriodNavigation = (data) => {
+            const root = document.querySelector('[data-billing-overview-root]');
+            const yearsHost = root?.querySelector('[data-billing-available-years]');
+            const quartersHost = root?.querySelector('[data-billing-available-quarters]');
+            const monthsHost = root?.querySelector('[data-billing-available-months]');
+
+            if (!yearsHost || !quartersHost || !monthsHost) return;
+
+            const years = data.available_periods?.years || [];
+            const months = data.available_periods?.months || [];
+
+            if (!years.includes(Number(billingOverviewState.navigationYear))) {
+                billingOverviewState.navigationYear = String(years[0] || selectedYear);
+            }
+
+            const navigationYear = String(billingOverviewState.navigationYear);
+            const visibleMonths = months.filter((monthValue) => monthValue.startsWith(`${navigationYear}-`));
+            const quarters = [...new Set(visibleMonths.map((monthValue) =>
+                Math.floor((Number(monthValue.slice(5, 7)) - 1) / 3) + 1
+            ))];
+            const button = (label, preset, active = false) => `
+                <button
+                    class="drayvia-billing-quick-filter${active ? ' is-active' : ''}"
+                    type="button"
+                    data-billing-period-preset="${preset}"
+                >${label}</button>`;
+
+            yearsHost.innerHTML = years.map((year) => button(
+                String(year),
+                `year:${year}`,
+                String(year) === navigationYear,
+            )).join('');
+            quartersHost.innerHTML = quarters.map((quarter) => button(
+                `${quarter}. kvartál`,
+                `quarter:${navigationYear}-Q${quarter}`,
+                billingOverviewState.activePreset === `quarter:${navigationYear}-Q${quarter}`,
+            )).join('');
+            monthsHost.innerHTML = visibleMonths.map((monthValue) => button(
+                monthNames[Number(monthValue.slice(5, 7)) - 1],
+                `month:${monthValue}`,
+                billingOverviewState.activePreset === `month:${monthValue}`,
+            )).join('');
+        };
+
+        const applyBillingPeriodPreset = (preset) => {
+            const root = document.querySelector('[data-billing-overview-root]');
+            const range = billingPresetRange(preset);
+
+            if (!root) return;
+
+            if (preset.startsWith('year:')) {
+                billingOverviewState.navigationYear = preset.slice(5);
+            } else if (preset.startsWith('month:') || preset.startsWith('quarter:')) {
+                billingOverviewState.navigationYear = preset.split(':')[1].slice(0, 4);
+            }
+
+            billingOverviewState.activePreset = preset;
+
+            root.querySelectorAll('[data-billing-period-preset]').forEach((button) => {
+                button.classList.toggle('is-active', button.dataset.billingPeriodPreset === preset);
+            });
+
+            if (preset === 'custom') {
+                root.querySelector('[data-billing-period-from]')?.focus();
+                return;
+            }
+
+            if (!range) return;
+
+            const periodFrom = root.querySelector('[data-billing-period-from]');
+            const periodUntil = root.querySelector('[data-billing-period-until]');
+
+            if (periodFrom) periodFrom.value = range.from;
+            if (periodUntil) periodUntil.value = range.until;
+            loadBillingOverview();
+        };
+
+        const bindBillingOverview = () => {
+            const form = document.querySelector('[data-billing-filter-form]');
+
+            if (!form || form.dataset.billingBound === '1') {
+                return;
+            }
+
+            form.dataset.billingBound = '1';
+            syncBillingFiltersWithGlobalPeriod();
+            form.closest('[data-billing-overview-root]')?.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-billing-period-preset]');
+
+                if (!button) return;
+
+                applyBillingPeriodPreset(button.dataset.billingPeriodPreset);
+            });
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                loadBillingOverview();
+            });
+        };
+
 if (page === 'finance') {
             bindFinanceCustomerCreate();
             bindFinanceUnifiedPriceListAdministration();
@@ -25108,6 +25610,8 @@ if (page === 'finance') {
             loadFinanceDriverPriceLists();
             loadFinanceExternalCarrierPriceLists();
             loadFinanceCustomers();
+            bindBillingOverview();
+            loadBillingOverview();
         }
 
         const scroll = layer.querySelector('.drayvia-preview-scroll');

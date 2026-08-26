@@ -2,10 +2,22 @@
 
 declare(strict_types=1);
 
+use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.view',
+])
+    ->get(
+        'billing-overview',
+        [BillingOverviewController::class, 'index'],
+    )
+    ->name('billing-overview.index');
 
 Route::middleware([
     'auth:sanctum',
