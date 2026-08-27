@@ -32,4 +32,9 @@ final class FuelCard extends Model
     {
         return $this->hasMany(FuelCardEvent::class);
     }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(FuelTransaction::class);
+    }
 }

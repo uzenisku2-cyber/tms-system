@@ -33,3 +33,14 @@ The module keeps card identity, owner, responsible organization, driver, vehicle
 - `POST /api/v1/fuel-cards/{fuelCard}/assignments`
 - `POST /api/v1/fuel-cards/{fuelCard}/assignments/{assignment}/end`
 - `POST /api/v1/fuel-cards/{fuelCard}/settlement-policies`
+
+## Fuel transaction imports
+
+- `POST /api/v1/fuel-imports` accepts a real ORLEN CSV or MOL XLSX source file.
+- `GET /api/v1/fuel-imports` lists batches visible to the active organization.
+- `GET /api/v1/fuel-imports/{batch}` returns preserved raw rows, normalized values and matching results.
+- Reimport of the same provider file is rejected by organization/provider/SHA-256 identity.
+- ORLEN receipt number is preserved as the provider transaction identifier. MOL receipt number is preserved, while deduplication uses a composite transaction fingerprint.
+- Card identifiers remain strings and are normalized only by removing provider whitespace, including NBSP characters.
+- Matching resolves the fuel-card assignment effective at transaction time; a current assignment never rewrites historical responsibility.
+- Unknown cards, missing assignments and conflicting assignments remain visible with `match_status=review`.
