@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Modules\Fuel\Controllers\FuelCardController;
+use App\Modules\Fuel\Controllers\FuelTransactionImportController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'organization'])->prefix('fuel-cards')->name('fuel-cards.')->group(function (): void {
@@ -16,4 +17,12 @@ Route::middleware(['auth:sanctum', 'organization'])->prefix('fuel-cards')->name(
         Route::post('/{fuelCard}/assignments/{assignment}/end', [FuelCardController::class, 'endAssignment'])->whereUuid('fuelCard')->whereUuid('assignment')->name('assignments.end');
         Route::post('/{fuelCard}/settlement-policies', [FuelCardController::class, 'storePolicy'])->whereUuid('fuelCard')->name('settlement-policies.store');
     });
+});
+
+Route::middleware(['auth:sanctum', 'organization'])->prefix('fuel-imports')->name('fuel-imports.')->group(function (): void {
+    Route::middleware('perm:compensation.view')->group(function (): void {
+        Route::get('/', [FuelTransactionImportController::class, 'index'])->name('index');
+        Route::get('/{batch}', [FuelTransactionImportController::class, 'show'])->whereUuid('batch')->name('show');
+    });
+    Route::middleware('perm:users.manage')->post('/', [FuelTransactionImportController::class, 'store'])->name('store');
 });
