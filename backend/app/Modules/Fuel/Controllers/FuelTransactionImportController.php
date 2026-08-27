@@ -8,6 +8,8 @@ use App\Core\Organizations\OrganizationContext;
 use App\Models\User;
 use App\Modules\Fuel\Models\FuelImportBatch;
 use App\Modules\Fuel\Requests\StoreFuelImportRequest;
+use App\Modules\Fuel\Requests\StoreFuelImportRowCorrectionRequest;
+use App\Modules\Fuel\Services\FuelImportReviewService;
 use App\Modules\Fuel\Services\FuelTransactionImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +41,16 @@ final class FuelTransactionImportController
         }
 
         return response()->json(['data' => $service->import($context->requireId(), $this->actor($request), (string) $request->validated('provider'), $file->getClientOriginalName(), $path)], 201);
+    }
+
+    public function row(FuelImportBatch $batch, int $sourceRow, OrganizationContext $context, FuelImportReviewService $service): JsonResponse
+    {
+        return response()->json(['data' => $service->row($batch, $sourceRow, $context->requireId())]);
+    }
+
+    public function correct(StoreFuelImportRowCorrectionRequest $request, FuelImportBatch $batch, int $sourceRow, OrganizationContext $context, FuelImportReviewService $service): JsonResponse
+    {
+        return response()->json(['data' => $service->correct($batch, $sourceRow, $context->requireId(), $this->actor($request), $request->validated('corrected_payload'), (string) $request->validated('reason'))], 201);
     }
 
     private function actor(Request $request): User
