@@ -39,6 +39,7 @@
             <h2>Nastavení tras</h2>
             <p>Obtížnost tras, výchozí tolerance a pravidla provozního hodnocení.</p>
         </a>
+        <a class="card" href="/settings/fuel-imports" data-testid="settings-fuel-imports"><h2>Importy paliva</h2><p>ORLEN a MOL, kontrola problematickĂ˝ch Ĺ™ĂˇdkĹŻ a auditovanĂ© opravy.</p></a>
     </div>
 </div>
 </body>

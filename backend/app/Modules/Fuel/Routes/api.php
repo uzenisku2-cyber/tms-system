@@ -23,6 +23,10 @@ Route::middleware(['auth:sanctum', 'organization'])->prefix('fuel-imports')->nam
     Route::middleware('perm:compensation.view')->group(function (): void {
         Route::get('/', [FuelTransactionImportController::class, 'index'])->name('index');
         Route::get('/{batch}', [FuelTransactionImportController::class, 'show'])->whereUuid('batch')->name('show');
+        Route::get('/{batch}/rows/{sourceRow}', [FuelTransactionImportController::class, 'row'])->whereUuid('batch')->whereNumber('sourceRow')->name('rows.show');
     });
-    Route::middleware('perm:users.manage')->post('/', [FuelTransactionImportController::class, 'store'])->name('store');
+    Route::middleware('perm:users.manage')->group(function (): void {
+        Route::post('/', [FuelTransactionImportController::class, 'store'])->name('store');
+        Route::post('/{batch}/rows/{sourceRow}/corrections', [FuelTransactionImportController::class, 'correct'])->whereUuid('batch')->whereNumber('sourceRow')->name('rows.corrections.store');
+    });
 });
