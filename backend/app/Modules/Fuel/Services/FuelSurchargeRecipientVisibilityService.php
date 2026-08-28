@@ -26,7 +26,6 @@ final class FuelSurchargeRecipientVisibilityService
             ): void {
                 $query->where(function ($driverQuery) use (
                     $actor,
-                    $organizationId,
                 ): void {
                     $driverQuery
                         ->where(
@@ -92,8 +91,7 @@ final class FuelSurchargeRecipientVisibilityService
         return [
             'public_id' => $rate->public_id,
             'recipient_type' => $rate->recipient_type,
-            'payout_rate_per_actual_km' =>
-                $rate->payout_rate_per_actual_km,
+            'payout_rate_per_actual_km' => $rate->payout_rate_per_actual_km,
             'currency' => 'CZK',
             'quantity_source' => 'actual_km',
             'valid_from' => $rate->valid_from?->toDateString(),

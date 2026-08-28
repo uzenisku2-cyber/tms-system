@@ -88,10 +88,8 @@ final class FuelSurchargeManagementService
             $surcharge = FuelSurcharge::query()->create([
                 'public_id' => (string) Str::uuid(),
                 'owner_organization_id' => $organizationId,
-                'customer_relationship_id' =>
-                    (int) $data['customer_relationship_id'],
-                'billing_rate_per_actual_km' =>
-                    $data['billing_rate_per_actual_km'],
+                'customer_relationship_id' => (int) $data['customer_relationship_id'],
+                'billing_rate_per_actual_km' => $data['billing_rate_per_actual_km'],
                 'currency' => 'CZK',
                 'valid_from' => $data['valid_from'],
                 'valid_until' => $data['valid_until'] ?? null,
@@ -106,12 +104,9 @@ final class FuelSurchargeManagementService
                     'public_id' => (string) Str::uuid(),
                     'fuel_surcharge_id' => $surcharge->getKey(),
                     'recipient_type' => $recipient['recipient_type'],
-                    'driver_organization_assignment_id' =>
-                        $recipient['driver_organization_assignment_id'] ?? null,
-                    'carrier_relationship_id' =>
-                        $recipient['carrier_relationship_id'] ?? null,
-                    'payout_rate_per_actual_km' =>
-                        $recipient['payout_rate_per_actual_km'],
+                    'driver_organization_assignment_id' => $recipient['driver_organization_assignment_id'] ?? null,
+                    'carrier_relationship_id' => $recipient['carrier_relationship_id'] ?? null,
+                    'payout_rate_per_actual_km' => $recipient['payout_rate_per_actual_km'],
                     'valid_from' => $data['valid_from'],
                     'valid_until' => $data['valid_until'] ?? null,
                     'status' => FuelSurchargeRecipientRate::STATUS_ACTIVE,
@@ -128,10 +123,8 @@ final class FuelSurchargeManagementService
     {
         return [
             'public_id' => $surcharge->public_id,
-            'customer_relationship_id' =>
-                (int) $surcharge->customer_relationship_id,
-            'billing_rate_per_actual_km' =>
-                $surcharge->billing_rate_per_actual_km,
+            'customer_relationship_id' => (int) $surcharge->customer_relationship_id,
+            'billing_rate_per_actual_km' => $surcharge->billing_rate_per_actual_km,
             'currency' => $surcharge->currency,
             'valid_from' => $surcharge->valid_from?->toDateString(),
             'valid_until' => $surcharge->valid_until?->toDateString(),
@@ -141,11 +134,9 @@ final class FuelSurchargeManagementService
                 fn (FuelSurchargeRecipientRate $rate): array => [
                     'public_id' => $rate->public_id,
                     'recipient_type' => $rate->recipient_type,
-                    'driver_organization_assignment_id' =>
-                        $rate->driver_organization_assignment_id,
+                    'driver_organization_assignment_id' => $rate->driver_organization_assignment_id,
                     'carrier_relationship_id' => $rate->carrier_relationship_id,
-                    'payout_rate_per_actual_km' =>
-                        $rate->payout_rate_per_actual_km,
+                    'payout_rate_per_actual_km' => $rate->payout_rate_per_actual_km,
                     'margin_per_actual_km' => bcsub(
                         (string) $surcharge->billing_rate_per_actual_km,
                         (string) $rate->payout_rate_per_actual_km,

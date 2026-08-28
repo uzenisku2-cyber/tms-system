@@ -21,8 +21,7 @@ final class FuelSurchargeController
         FuelSurchargeManagementService $service,
     ): JsonResponse {
         $items = $service->internalIndex($context->requireId())
-            ->map(fn (FuelSurcharge $item): array =>
-                $service->internalPayload($item));
+            ->map(fn (FuelSurcharge $item): array => $service->internalPayload($item));
 
         return response()->json(['data' => ['items' => $items]]);
     }

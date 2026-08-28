@@ -122,8 +122,7 @@ final class FuelSurchargePreviewSeeder extends Seeder
     private function grantPreviewPermissions(
         User $user,
         int $organizationId,
-    ): void
-    {
+    ): void {
         $registrar = app(PermissionRegistrar::class);
         $registrar->setPermissionsTeamId($organizationId);
 
@@ -172,6 +171,7 @@ final class FuelSurchargePreviewSeeder extends Seeder
 
         if ($existing !== null) {
             DB::table('organizations')->where('id', $existing)->update($values);
+
             return (int) $existing;
         }
 
@@ -239,6 +239,7 @@ final class FuelSurchargePreviewSeeder extends Seeder
 
         if ($existing !== null) {
             DB::table('drivers')->where('id', $existing)->update($values);
+
             return (int) $existing;
         }
 

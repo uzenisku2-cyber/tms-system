@@ -64,7 +64,7 @@ final class FuelSurchargeAuthorizationContractTest extends TestCase
         self::assertStringContainsString('lockForUpdate()', $management);
         self::assertStringContainsString("'valid_until' => \$validFrom->subDay()->toDateString()", $management);
         self::assertStringContainsString("'status' => FuelSurcharge::STATUS_ENDED", $management);
-        self::assertStringContainsString("FuelSurchargeRecipientRate::STATUS_ENDED", $management);
+        self::assertStringContainsString('FuelSurchargeRecipientRate::STATUS_ENDED', $management);
         self::assertStringContainsString("where('fuel_surcharge_id', \$existing->getKey())", $management);
     }
 

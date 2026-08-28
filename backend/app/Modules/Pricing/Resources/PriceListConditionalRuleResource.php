@@ -80,8 +80,7 @@ final class PriceListConditionalRuleResource extends JsonResource
 
         $rewardQuantitySources = $rule->rewardComponents
             ->filter(
-                static fn (mixed $component): bool =>
-                    $component instanceof PriceListConditionalRuleRewardComponent,
+                static fn (mixed $component): bool => $component instanceof PriceListConditionalRuleRewardComponent,
             )
             ->pluck('metric_source')
             ->filter(static fn (mixed $source): bool => is_string($source))

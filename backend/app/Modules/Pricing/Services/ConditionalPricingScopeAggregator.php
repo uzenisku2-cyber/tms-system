@@ -212,8 +212,7 @@ final class ConditionalPricingScopeAggregator
     ): array {
         $components = $rule->relationLoaded('metricComponents')
             ? $rule->getRelation('metricComponents')->filter(
-                static fn (mixed $component): bool =>
-                    $component->getAttribute('component_role') === $role,
+                static fn (mixed $component): bool => $component->getAttribute('component_role') === $role,
             )
             : (! $rule->exists
                 ? new Collection

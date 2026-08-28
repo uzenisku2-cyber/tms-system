@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 final class FuelSurchargeRecipientRate extends Model
 {
     public const TYPE_OWN_DRIVER = 'own_driver';
+
     public const TYPE_EXTERNAL_CARRIER = 'external_carrier';
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_ENDED = 'ended';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [

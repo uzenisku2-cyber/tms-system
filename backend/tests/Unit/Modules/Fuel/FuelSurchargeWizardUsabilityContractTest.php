@@ -83,6 +83,7 @@ final class FuelSurchargeWizardUsabilityContractTest extends TestCase
     {
         $source = file_get_contents(base_path($relativePath));
         self::assertIsString($source);
+
         return $source;
     }
 }

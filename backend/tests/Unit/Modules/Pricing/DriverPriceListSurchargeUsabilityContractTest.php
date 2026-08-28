@@ -25,10 +25,10 @@ final class DriverPriceListSurchargeUsabilityContractTest extends TestCase
             'P\u0159i v\u00fdsledku',
             "rewardMethod.value = 'amount_per_unit'",
             'rewardMethodField.hidden = true',
-            "rewardSources: [",
+            'rewardSources: [',
             '[data-monthly-price-list-scope]',
             '[data-monthly-driver-scope]',
-            "const rewardQuantitySources = Array.from(",
+            'const rewardQuantitySources = Array.from(',
             "const payoutBlock = payoutLegend?.closest('fieldset')",
             '<strong>Rozsah podm\u00ednky</strong>',
         ] as $marker) {

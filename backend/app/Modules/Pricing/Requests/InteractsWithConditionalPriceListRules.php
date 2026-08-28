@@ -217,12 +217,9 @@ trait InteractsWithConditionalPriceListRules
             }
 
             $valid = match ($value) {
-                PriceListConditionalRule::REWARD_METHOD_AMOUNT_PER_UNIT =>
-                    $sources !== [] && $target === null,
-                PriceListConditionalRule::REWARD_METHOD_FIXED_AMOUNT =>
-                    $sources === [] && $target === null,
-                PriceListConditionalRule::REWARD_METHOD_PERCENTAGE_OF_ITEM =>
-                    $sources === []
+                PriceListConditionalRule::REWARD_METHOD_AMOUNT_PER_UNIT => $sources !== [] && $target === null,
+                PriceListConditionalRule::REWARD_METHOD_FIXED_AMOUNT => $sources === [] && $target === null,
+                PriceListConditionalRule::REWARD_METHOD_PERCENTAGE_OF_ITEM => $sources === []
                     && is_string($target)
                     && $target !== '',
                 default => false,
