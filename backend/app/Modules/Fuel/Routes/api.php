@@ -29,4 +29,7 @@ Route::middleware(['auth:sanctum', 'organization'])->prefix('fuel-imports')->nam
         Route::post('/', [FuelTransactionImportController::class, 'store'])->name('store');
         Route::post('/{batch}/rows/{sourceRow}/corrections', [FuelTransactionImportController::class, 'correct'])->whereUuid('batch')->whereNumber('sourceRow')->name('rows.corrections.store');
     });
+    Route::middleware('perm:compensation.manage')->group(function (): void {
+        Route::post('/{batch}/rows/{sourceRow}/finalization', [FuelTransactionImportController::class, 'finalize'])->whereUuid('batch')->whereNumber('sourceRow')->name('rows.finalization.store');
+    });
 });

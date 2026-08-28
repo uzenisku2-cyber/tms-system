@@ -7,6 +7,7 @@ namespace App\Modules\Fuel\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class FuelImportRow extends Model
 {
@@ -23,5 +24,10 @@ final class FuelImportRow extends Model
     public function batch(): BelongsTo
     {
         return $this->belongsTo(FuelImportBatch::class, 'fuel_import_batch_id');
+    }
+
+    public function finalization(): HasOne
+    {
+        return $this->hasOne(FuelImportRowFinalization::class, 'fuel_import_row_id');
     }
 }

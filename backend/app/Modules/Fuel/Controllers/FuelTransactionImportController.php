@@ -7,8 +7,10 @@ namespace App\Modules\Fuel\Controllers;
 use App\Core\Organizations\OrganizationContext;
 use App\Models\User;
 use App\Modules\Fuel\Models\FuelImportBatch;
+use App\Modules\Fuel\Requests\FinalizeFuelImportRowRequest;
 use App\Modules\Fuel\Requests\StoreFuelImportRequest;
 use App\Modules\Fuel\Requests\StoreFuelImportRowCorrectionRequest;
+use App\Modules\Fuel\Services\FuelImportFinalizationService;
 use App\Modules\Fuel\Services\FuelImportReviewService;
 use App\Modules\Fuel\Services\FuelTransactionImportService;
 use Illuminate\Http\JsonResponse;
@@ -51,6 +53,11 @@ final class FuelTransactionImportController
     public function correct(StoreFuelImportRowCorrectionRequest $request, FuelImportBatch $batch, int $sourceRow, OrganizationContext $context, FuelImportReviewService $service): JsonResponse
     {
         return response()->json(['data' => $service->correct($batch, $sourceRow, $context->requireId(), $this->actor($request), $request->validated('corrected_payload'), (string) $request->validated('reason'))], 201);
+    }
+
+    public function finalize(FinalizeFuelImportRowRequest $request, FuelImportBatch $batch, int $sourceRow, OrganizationContext $context, FuelImportFinalizationService $service): JsonResponse
+    {
+        return response()->json(['data' => $service->finalize($batch, $sourceRow, $context->requireId(), $this->actor($request), (int) $request->validated('expected_correction_revision'), (string) $request->validated('reason'))]);
     }
 
     private function actor(Request $request): User
