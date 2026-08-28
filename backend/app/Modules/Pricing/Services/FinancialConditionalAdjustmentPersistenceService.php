@@ -145,7 +145,11 @@ final class FinancialConditionalAdjustmentPersistenceService
                 }
 
                 $rule = PriceListConditionalRule::query()
-                    ->with('bands')
+                    ->with([
+                        'bands',
+                        'metricComponents',
+                        'rewardComponents',
+                    ])
                     ->whereKey($conditionalRuleId)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -713,6 +717,7 @@ final class FinancialConditionalAdjustmentPersistenceService
                         'evaluation_scope' => $evaluationScope,
                         'reward_method' => $rule->getAttribute('reward_method'),
                         'reward_quantity_source' => $rule->getAttribute('reward_quantity_source'),
+                        'reward_quantity_sources' => $aggregate['reward_quantity_sources'] ?? [],
                         'reward_target_item_code' => $rule->getAttribute('reward_target_item_code'),
                         'rounding_scale' => $rule->getAttribute('rounding_scale'),
                         'rounding_method' => $rule->getAttribute('rounding_method'),

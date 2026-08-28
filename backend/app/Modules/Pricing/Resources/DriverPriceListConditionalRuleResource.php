@@ -25,6 +25,7 @@ final class DriverPriceListConditionalRuleResource extends JsonResource
 
         $rule->loadMissing([
             'metricComponents',
+            'rewardComponents',
             'bands',
         ]);
 
@@ -76,6 +77,22 @@ final class DriverPriceListConditionalRuleResource extends JsonResource
             }
         }
 
+        $rewardQuantitySources = $rule->rewardComponents
+            ->pluck('metric_source')
+            ->filter(static fn (mixed $source): bool => is_string($source))
+            ->values()
+            ->all();
+
+        if ($rewardQuantitySources === []) {
+            $legacyRewardQuantitySource = $rule->getAttribute(
+                'reward_quantity_source',
+            );
+
+            if (is_string($legacyRewardQuantitySource)) {
+                $rewardQuantitySources[] = $legacyRewardQuantitySource;
+            }
+        }
+
         return [
             'code' => (string) $rule->getAttribute('code'),
             'name' => (string) $rule->getAttribute('name'),
@@ -97,6 +114,7 @@ final class DriverPriceListConditionalRuleResource extends JsonResource
             'reward_quantity_source' => $rule->getAttribute(
                 'reward_quantity_source',
             ),
+            'reward_quantity_sources' => $rewardQuantitySources,
             'reward_target_item_code' => $rule->getAttribute(
                 'reward_target_item_code',
             ),

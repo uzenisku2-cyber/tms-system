@@ -488,6 +488,7 @@ final class DriverPriceListConditionalLifecycleTest extends TestCase
             'metric_denominator_sources' => ['loaded_parcels'],
             'evaluation_scope' => 'monthly_price_list',
             'reward_method' => 'fixed_amount',
+            'reward_quantity_sources' => [],
             'reward_quantity_source' => null,
             'reward_target_item_code' => null,
             'rounding_scale' => 2,

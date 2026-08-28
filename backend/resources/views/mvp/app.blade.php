@@ -4168,6 +4168,7 @@
             'use strict';
 
             const tokenKey = 'tms_mvp_token';
+            const organizationKey = 'tms_mvp_organization_id';
 
             const loginPage = document.getElementById('loginPage');
             const appShell = document.getElementById('appShell');
@@ -4199,6 +4200,7 @@
             const dailyServiceDateLabel = document.getElementById('dailyServiceDateLabel');
 
             let token = sessionStorage.getItem(tokenKey) || '';
+            let organizationId = sessionStorage.getItem(organizationKey) || '';
             let currentDriver = null;
             let effectiveDailyReportConfiguration = null;
             let dailyReportConfigurationRequestSerial = 0;
@@ -4247,9 +4249,9 @@
                     headers.Authorization = `Bearer ${token}`;
                 }
 
-                // Pilot organization context. The backend still verifies that
-                // the authenticated user has an active membership in it.
-                headers['X-Organization-ID'] = '1';
+                if (organizationId) {
+                    headers['X-Organization-ID'] = organizationId;
+                }
 
                 const response = await fetch(path, {
                     ...options,
@@ -4295,7 +4297,9 @@
 
             const clearSession = () => {
                 token = '';
+                organizationId = '';
                 sessionStorage.removeItem(tokenKey);
+                sessionStorage.removeItem(organizationKey);
             };
 
             const createCell = (value, className = '') => {
@@ -6880,6 +6884,15 @@ summaryParts.push(
                 const body = await api('/api/v1/auth/me');
                 const user = getPayload(body) || {};
 
+                const availableOrganization = Array.isArray(user.organizations)
+                    ? user.organizations.find((organization) => organization?.id)
+                    : null;
+
+                if (availableOrganization) {
+                    organizationId = String(availableOrganization.id);
+                    sessionStorage.setItem(organizationKey, organizationId);
+                }
+
                 const identity = user.email
                     || user.name
                     || user.public_id
@@ -7671,6 +7684,9 @@ summaryParts.push(
 
                     const payload = getPayload(body) || {};
                     const receivedToken = payload.token;
+                    const loginOrganization = Array.isArray(payload.user?.organizations)
+                        ? payload.user.organizations.find((organization) => organization?.id)
+                        : null;
 
                     if (typeof receivedToken !== 'string' || receivedToken.length === 0) {
                         throw new Error('API nevrátilo přístupový token.');
@@ -7678,6 +7694,11 @@ summaryParts.push(
 
                     token = receivedToken;
                     sessionStorage.setItem(tokenKey, token);
+
+                    if (loginOrganization) {
+                        organizationId = String(loginOrganization.id);
+                        sessionStorage.setItem(organizationKey, organizationId);
+                    }
                     document.getElementById('password').value = '';
 
                     await bootstrapApp();
@@ -9697,7 +9718,7 @@ const calendarJuly2026 = {
 
         headers.set(
             'X-Organization-ID',
-            '1'
+            sessionStorage.getItem('tms_mvp_organization_id') || ''
         );
 
         if (
@@ -14637,28 +14658,44 @@ const bindFuelWorkspace = () => {
         frame?.addEventListener('load', () => {
             if (status) status.textContent = 'PHM PŘIPRAVENO';
         });
+
+        window.DrayviaFuelSurcharge?.mount();
     };
 
     const fuel = () => `
         ${header(
             'PHM',
-            'Import a kontrola tankování MOL a ORLEN, auditované opravy a finální potvrzení.'
+            'Palivové příplatky, tankování MOL a ORLEN a kontrola skutečných kilometrů.'
         )}
 
-        <div class="drayvia-preview-actions">
-            <button id="drayviaFuelWorkspaceReload" class="drayvia-preview-action primary" type="button">OBNOVIT PHM</button>
-            <a class="drayvia-preview-action" href="/settings/fuel-imports" target="_blank" rel="noopener">OTEVŘÍT V NOVÉ KARTĚ</a>
-            <span id="drayviaFuelWorkspaceStatus" class="drayvia-preview-action">NAČÍTÁM PHM…</span>
-        </div>
+        <style>
+            .s039-fuel-shell{display:grid;gap:18px}.s039-fuel-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.s039-fuel-head h3,.s039-fuel-head p{margin:0}.s039-fuel-filters{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;margin:18px 0}.s039-fuel-filters label,.s039-grid label,.s039-rate-label{display:grid;gap:6px;font-weight:700}.s039-fuel-filters select,.s039-fuel-filters input,.s039-grid select,.s039-grid input,.s039-rate-label input,.s039-payout-list input{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:10px;background:#fff}.s039-fuel-table{width:100%;border-collapse:collapse}.s039-fuel-table th,.s039-fuel-table td{padding:11px 9px;text-align:left;border-bottom:1px solid #e2e8f0;vertical-align:top}.s039-fuel-table small{display:block;color:#64748b;margin-top:3px}.s039-empty{padding:20px!important;text-align:center!important;color:#64748b}.s039-state{display:inline-block;padding:4px 8px;border-radius:999px;background:#e2e8f0}.s039-state-active{background:#dcfce7;color:#166534}.s039-fuel-status{color:#475569}.s039-fuel-status.is-error{color:#b91c1c}.s039-modal-layer{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.62);display:grid;place-items:center;padding:24px}.s039-modal{width:min(940px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.3)}.s039-modal header,.s039-modal footer{padding:20px 24px;border-bottom:1px solid #e2e8f0}.s039-modal header small{color:#64748b;font-weight:700}.s039-modal header h3{margin:5px 0 0}.s039-modal-body{padding:24px}.s039-modal footer{border:0;border-top:1px solid #e2e8f0;display:grid;grid-template-columns:auto 1fr auto auto;gap:10px}.s039-modal button{border:1px solid #94a3b8;border-radius:8px;padding:9px 14px;background:#fff}.s039-modal button.primary{background:#172033;color:#fff;border-color:#172033}.s039-grid{display:grid;gap:14px}.s039-grid-3{grid-template-columns:repeat(3,1fr)}.s039-net-note{border-left:4px solid #2563eb;background:#eff6ff;padding:13px 15px;margin:16px 0}.s039-rate-label{max-width:520px}.s039-recipient-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.s039-recipient-card,.s039-confirm-card{display:flex;gap:10px;align-items:flex-start;border:1px solid #cbd5e1;border-radius:10px;padding:13px}.s039-recipient-card:has(input:checked),.s039-confirm-card:has(input:checked){border-color:#2563eb;background:#eff6ff}.s039-recipient-card small,.s039-confirm-card small,.s039-payout-list small{display:block;color:#64748b;margin-top:3px}.s039-payout-list{display:grid;gap:10px}.s039-payout-list label{display:grid;grid-template-columns:1fr 180px 130px;gap:12px;align-items:center;border-bottom:1px solid #e2e8f0;padding:10px 0}.s039-payout-list em{font-style:normal;color:#475569}.s039-summary{background:#f8fafc;border-radius:12px;padding:20px}.s039-summary dl{display:grid;grid-template-columns:180px 1fr;gap:8px}.s039-summary dt{font-weight:700}.s039-summary dd{margin:0}@media(max-width:800px){.s039-fuel-filters,.s039-grid-3,.s039-recipient-grid{grid-template-columns:1fr}.s039-fuel-table{display:block;overflow:auto}.s039-payout-list label{grid-template-columns:1fr}.s039-modal-layer{padding:8px}}
+        </style>
 
-        <section class="drayvia-preview-panel" style="padding:0;overflow:hidden;margin-top:18px;">
-            <iframe
-                id="drayviaFuelWorkspaceFrame"
-                title="Importy a kontrola PHM"
-                src="/settings/fuel-imports"
-                style="display:block;width:100%;height:1100px;border:0;background:#f4f7fb;"
-            ></iframe>
-        </section>
+        <div class="s039-fuel-shell" data-fuel-surcharge-root>
+            <section class="drayvia-preview-panel">
+                <div class="s039-fuel-head">
+                    <div><h3>Palivové příplatky</h3><p>Samostatné sazby podle aktuálního vývoje cen paliv. Dlouhodobé ceníky zůstávají beze změny.</p></div>
+                    <button class="drayvia-preview-action primary" type="button" data-fuel-surcharge-add>+ Přidat nový palivový příplatek</button>
+                </div>
+                <h4 style="margin:20px 0 0;">Historie palivových příplatků</h4>
+                <p style="margin:4px 0 0;color:#64748b;">
+                    Přehled odběratelských sazeb, přiřazených příjemců a jejich platnosti.
+                </p>
+                <div class="s039-fuel-filters">
+                    <label>Odběratel<select data-fuel-filter-customer><option value="">Všichni odběratelé</option></select></label>
+                    <label>Stav<select data-fuel-filter-status><option value="">Všechny stavy</option><option value="active">Aktivní</option><option value="ended">Ukončené</option><option value="cancelled">Zrušené</option></select></label>
+                    <label>Řidič, dopravce nebo název<input type="search" data-fuel-filter-search placeholder="Začněte psát…"></label>
+                </div>
+                <div style="overflow:auto"><table class="s039-fuel-table"><thead><tr><th>Odběratel</th><th>Platnost od</th><th>Platnost do</th><th>Fakturujeme</th><th>Příjemci</th><th>Interní marže</th><th>Stav</th><th>Akce</th></tr></thead><tbody data-fuel-surcharge-rows><tr><td colspan="8" class="s039-empty">Načítám…</td></tr></tbody></table></div>
+                <div class="s039-fuel-head" style="margin-top:14px"><span class="s039-fuel-status" data-fuel-surcharge-status>Načítám…</span><button type="button" data-fuel-surcharge-refresh>Obnovit přehled</button></div>
+            </section>
+
+            <section class="drayvia-preview-panel">
+                <div class="s039-fuel-head"><div><h3>Tankování a importy PHM</h3><p>Importy MOL a ORLEN, kontrola a auditované opravy.</p></div><div class="drayvia-preview-actions"><button id="drayviaFuelWorkspaceReload" class="drayvia-preview-action primary" type="button">OBNOVIT PHM</button><a class="drayvia-preview-action" href="/settings/fuel-imports" target="_blank" rel="noopener">OTEVŘÍT V NOVÉ KARTĚ</a><span id="drayviaFuelWorkspaceStatus" class="drayvia-preview-action">NAČÍTÁM PHM…</span></div></div>
+                <div style="padding:0;overflow:hidden;margin-top:18px"><iframe id="drayviaFuelWorkspaceFrame" title="Importy a kontrola PHM" src="/settings/fuel-imports" style="display:block;width:100%;height:900px;border:0;background:#f4f7fb;"></iframe></div>
+            </section>
+        </div>
     `;
     const finance = () => `
                 ${header(
@@ -15161,6 +15198,10 @@ const bindFuelWorkspace = () => {
                         gap: 6px;
                     }
 
+                    .drayvia-conditional-rule-field[hidden] {
+                        display: none !important;
+                    }
+
                     .drayvia-conditional-rule-field > span,
                     .drayvia-conditional-rule-field > label {
                         font-size: 13px;
@@ -15183,6 +15224,10 @@ const bindFuelWorkspace = () => {
                         align-items: center;
                         gap: 8px;
                         font-size: 13px;
+                    }
+
+                    .drayvia-conditional-source-grid label[hidden] {
+                        display: none !important;
                     }
 
                     .drayvia-conditional-source-grid input,
@@ -15670,7 +15715,7 @@ const bindFuelWorkspace = () => {
                                                                 </td>
                                                             </tr>
                                                             <tr data-pricing-code="undelivered_parcels">
-                                                                <td>Odm&#237;tnuto z&#225;kazn&#237;kem</td>
+                                                                <td>Nedoru&#269;en&#225; z&#225;silka</td>
                                                                 <td>zásilka</td>
                                                                 <td>
                                                                     <input
@@ -15703,27 +15748,27 @@ const bindFuelWorkspace = () => {
                                                 >
                                                     <div class="drayvia-conditional-rule-header">
                                                         <div>
-                                                            <h5>Faktura&#269;n&#237; p&#345;&#237;platky</h5>
+                                                            <h5>P&#345;&#237;platky a sr&#225;&#382;ky</h5>
                                                             <p>
-                                                                Nastavte libovoln&#253; po&#269;et podm&#237;n&#283;n&#253;ch
-                                                                p&#345;&#237;platk&#367;, jejich vzorec, prahy, cenu
-                                                                a vyhodnocen&#237; za trasu nebo za m&#283;s&#237;c.
+                                                                Jeden &#345;&#225;dek znamen&#225; jedno srozumiteln&#233; pravidlo.
+                                                                Vyberte, co kontrolujeme, po&#382;adovan&#253; rozsah
+                                                                a za kter&#233; v&#253;kony se odm&#283;na vyplat&#237;.
                                                             </p>
                                                         </div>
                                                     </div>
 
                                                     <div class="drayvia-conditional-toolbar">
                                                         <label>
-                                                            <span>&#352;ablona nov&#233;ho p&#345;&#237;platku</span>
+                                                            <span>Co chcete p&#345;idat?</span>
                                                             <select data-conditional-rule-preset>
                                                                 <option value="quality">
-                                                                    Kvalita rozvozu
+                                                                    Kvalita doručení
                                                                 </option>
                                                                 <option value="redirected">
                                                                     Pod&#237;l p&#345;esm&#283;rovan&#253;ch z&#225;silek
                                                                 </option>
                                                                 <option value="custom">
-                                                                    Vlastn&#237; pravidlo
+                                                                    Jin&#253; p&#345;&#237;platek nebo sr&#225;&#382;ka
                                                                 </option>
                                                             </select>
                                                         </label>
@@ -15732,7 +15777,7 @@ const bindFuelWorkspace = () => {
                                                             type="button"
                                                             data-conditional-rule-add
                                                         >
-                                                            P&#345;idat p&#345;&#237;platek
+                                                            + P&#345;idat p&#345;&#237;platek nebo polo&#382;ku
                                                         </button>
                                                     </div>
 
@@ -16288,9 +16333,10 @@ const bindFuelWorkspace = () => {
         {method = 'GET', formData = null, json = null} = {}
     ) => {
         const depotImportToken = sessionStorage.getItem('tms_mvp_token') || '';
+        const depotImportOrganizationId = sessionStorage.getItem('tms_mvp_organization_id') || '';
         const headers = {
             Accept: 'application/json',
-            'X-Organization-ID': '1',
+            'X-Organization-ID': depotImportOrganizationId,
         };
 
         if (depotImportToken) {
@@ -19604,7 +19650,11 @@ const templates = {
                     ],
                     denominatorSources: ['loaded_parcels'],
                     scope: 'per_route',
-                    rewardMethod: 'fixed_amount',
+                    rewardMethod: 'amount_per_unit',
+                    rewardSources: [
+                        'delivered_parcels',
+                        'redirected_parcels',
+                    ],
                     minimumValue: '95',
                 },
                 redirected: {
@@ -19614,7 +19664,11 @@ const templates = {
                     numeratorSources: ['redirected_parcels'],
                     denominatorSources: ['loaded_parcels'],
                     scope: 'per_route',
-                    rewardMethod: 'fixed_amount',
+                    rewardMethod: 'amount_per_unit',
+                    rewardSources: [
+                        'delivered_parcels',
+                        'redirected_parcels',
+                    ],
                     minimumValue: '5',
                 },
                 custom: {
@@ -19625,6 +19679,7 @@ const templates = {
                     denominatorSources: ['loaded_parcels'],
                     scope: 'per_route',
                     rewardMethod: 'fixed_amount',
+                    rewardSources: [],
                     minimumValue: '',
                 },
             };
@@ -19711,7 +19766,7 @@ const templates = {
                 band.innerHTML = `
                     <div class="drayvia-conditional-band-grid">
                         <label class="drayvia-conditional-rule-field">
-                            <span>Od hodnoty</span>
+                            <span>Rozsah od</span>
                             <input
                                 type="number"
                                 min="0"
@@ -19720,7 +19775,7 @@ const templates = {
                             >
                         </label>
                         <label class="drayvia-conditional-rule-field">
-                            <span>Do hodnoty</span>
+                            <span>Rozsah do</span>
                             <input
                                 type="number"
                                 min="0"
@@ -19729,7 +19784,7 @@ const templates = {
                             >
                         </label>
                         <label class="drayvia-conditional-rule-field">
-                            <span>Hodnota p\u0159\u00edplatku</span>
+                            <span data-conditional-band-adjustment-label>V\u00fd\u0161e odm\u011bny</span>
                             <input
                                 type="number"
                                 min="0"
@@ -19738,7 +19793,7 @@ const templates = {
                                 required
                             >
                         </label>
-                        <div class="drayvia-conditional-rule-field">
+                        <div class="drayvia-conditional-rule-field" hidden>
                             <span>Hranice</span>
                             <label class="drayvia-conditional-band-check">
                                 <input
@@ -19776,11 +19831,36 @@ const templates = {
                     '[data-conditional-band-adjustment]'
                 ).value = values.adjustmentValue ?? '';
 
+                if (rule.dataset.standardDriverReward === '1') {
+                    const adjustmentLabel = band.querySelector(
+                        '[data-conditional-band-adjustment-label]'
+                    );
+
+                    if (adjustmentLabel) {
+                        adjustmentLabel.textContent =
+                            'Sazba p\u0159\u00edplatku za jednotku (K\u010d)';
+                    }
+                }
+
+                band.querySelectorAll('input').forEach((input) => {
+                    input.addEventListener(
+                        'input',
+                        () => updateFinanceConditionalRuleSummary(rule)
+                    );
+                    input.addEventListener(
+                        'change',
+                        () => updateFinanceConditionalRuleSummary(rule)
+                    );
+                });
+
                 band.querySelector(
                     '[data-conditional-band-remove]'
                 ).addEventListener(
                     'click',
-                    () => band.remove()
+                    () => {
+                        band.remove();
+                        updateFinanceConditionalRuleSummary(rule);
+                    }
                 );
 
                 list.appendChild(band);
@@ -19801,6 +19881,14 @@ const templates = {
                 const quantitySource = rule.querySelector(
                     '[data-conditional-rule-reward-quantity]'
                 );
+                const rewardQuantityField = rule.querySelector(
+                    '[data-conditional-rule-reward-quantities]'
+                );
+                const rewardQuantityInputs = Array.from(
+                    rule.querySelectorAll(
+                        '[data-conditional-reward-source]'
+                    )
+                );
                 const targetItem = rule.querySelector(
                     '[data-conditional-rule-reward-target]'
                 );
@@ -19814,22 +19902,121 @@ const templates = {
                 });
 
                 if (quantitySource) {
-                    quantitySource.disabled =
+                    quantitySource.disabled = true;
+
+                    const quantityField = quantitySource.closest(
+                        '.drayvia-conditional-rule-field'
+                    );
+
+                    if (quantityField) {
+                        quantityField.hidden = true;
+                    }
+
+                    quantitySource.value = '';
+                }
+
+                if (rewardQuantityField) {
+                    rewardQuantityField.hidden =
+                        rewardMethod !== 'amount_per_unit';
+                }
+
+                rewardQuantityInputs.forEach((input) => {
+                    input.disabled =
                         rewardMethod !== 'amount_per_unit';
 
-                    if (quantitySource.disabled) {
-                        quantitySource.value = '';
+                    if (input.disabled) {
+                        input.checked = false;
                     }
-                }
+                });
 
                 if (targetItem) {
                     targetItem.disabled =
                         rewardMethod !== 'percentage_of_item';
 
+                    const targetField = targetItem.closest(
+                        '.drayvia-conditional-rule-field'
+                    );
+
+                    if (targetField) {
+                        targetField.hidden = targetItem.disabled;
+                    }
+
                     if (targetItem.disabled) {
                         targetItem.value = '';
                     }
                 }
+
+                updateFinanceConditionalRuleSummary(rule);
+            };
+
+            const updateFinanceConditionalRuleSummary = (rule) => {
+                const output = rule.querySelector(
+                    '[data-conditional-rule-summary]'
+                );
+
+                if (!output) {
+                    return;
+                }
+
+                const label = (source) =>
+                    financeConditionalMetricSources.find(
+                        (item) => item.value === source
+                    )?.label || source;
+                const numerator = Array.from(
+                    rule.querySelectorAll(
+                        '[data-conditional-numerator-source]:checked'
+                    )
+                ).map((input) => label(input.value));
+                const denominator = Array.from(
+                    rule.querySelectorAll(
+                        '[data-conditional-denominator-source]:checked'
+                    )
+                ).map((input) => label(input.value));
+                const rewards = Array.from(
+                    rule.querySelectorAll(
+                        '[data-conditional-reward-source]:checked'
+                    )
+                ).map((input) => label(input.value));
+                const rewardMethod = rule.querySelector(
+                    '[data-conditional-rule-reward-method]'
+                )?.value;
+                const legacyReward = rule.querySelector(
+                    '[data-conditional-rule-reward-quantity]'
+                )?.value;
+                const targetItem = rule.querySelector(
+                    '[data-conditional-rule-reward-target]'
+                )?.value;
+                const minimum = rule.querySelector(
+                    '[data-conditional-band-minimum]'
+                )?.value;
+                const maximum = rule.querySelector(
+                    '[data-conditional-band-maximum]'
+                )?.value;
+                const amount = rule.querySelector(
+                    '[data-conditional-band-adjustment]'
+                )?.value;
+                const condition = denominator.length > 0
+                    ? `(${numerator.join(' + ') || '\u2014'}) \u00f7 (${denominator.join(' + ')}) \u00d7 100`
+                    : numerator.join(' + ') || '\u2014';
+                const range = [
+                    minimum ? `od ${minimum} %` : '',
+                    maximum ? `do ${maximum} %` : '',
+                ].filter(Boolean).join(' ');
+                const payout = rewardMethod === 'fixed_amount'
+                    ? `pevn\u00e1 \u010d\u00e1stka ${amount || '\u2014'} K\u010d`
+                    : rewardMethod === 'percentage_of_item'
+                        ? `${amount || '\u2014'} % z ${financeBillingItemLabel(targetItem)}`
+                        : (
+                            rewards.length > 0
+                                ? `(${rewards.join(' + ')}) \u00d7 ${amount || '\u2014'} K\u010d`
+                                : legacyReward
+                                    ? `${label(legacyReward)} \u00d7 ${amount || '\u2014'} K\u010d`
+                                    : 'vyberte polo\u017eky pro v\u00fdplatu'
+                        );
+
+                output.textContent =
+                    `Kontrola: ${condition}. `
+                    + `P\u0159i v\u00fdsledku ${range || '\u2014'} se vyplat\u00ed ${payout}.`;
             };
 
             const addFinanceConditionalRule = (
@@ -19865,13 +20052,14 @@ const templates = {
 
                     <div class="drayvia-conditional-rule-grid">
                         <label class="drayvia-conditional-rule-field">
-                            <span>Technick\u00fd k\u00f3d</span>
+                            <span hidden>Technick\u00fd k\u00f3d</span>
                             <input
                                 type="text"
                                 pattern="[a-z][a-z0-9_]{0,63}"
                                 maxlength="64"
                                 data-conditional-rule-code
                                 required
+                                hidden
                             >
                         </label>
                         <label class="drayvia-conditional-rule-field">
@@ -19883,8 +20071,8 @@ const templates = {
                                 required
                             >
                         </label>
-                        <label class="drayvia-conditional-rule-field">
-                            <span>Typ metriky</span>
+                        <label class="drayvia-conditional-rule-field" hidden>
+                            <span>Jak podm\u00ednku po\u010d\u00edt\u00e1me</span>
                             <select data-conditional-rule-metric-type>
                                 <option value="ratio_percentage">
                                     Procento
@@ -19895,21 +20083,21 @@ const templates = {
                             </select>
                         </label>
                         <label class="drayvia-conditional-rule-field">
-                            <span>Vyhodnocen\u00ed</span>
+                            <span>Kdy podm\u00ednku vyhodnotit</span>
                             <select data-conditional-rule-scope>
                                 <option value="per_route">
-                                    Za danou trasu
+                                    Za ka\u017edou trasu samostatn\u011b
                                 </option>
-                                <option value="monthly_price_list">
-                                    M\u011bs\u00ed\u010dn\u011b za faktura\u010dn\u00ed cen\u00edk
+                                <option value="monthly_price_list" data-monthly-price-list-scope>
+                                    Souhrnn\u011b za cel\u00fd kalend\u00e1\u0159n\u00ed m\u011bs\u00edc
                                 </option>
-                                <option value="monthly_driver">
-                                    M\u011bs\u00ed\u010dn\u011b za \u0159idi\u010de (historick\u00e9)
+                                <option value="monthly_driver" data-monthly-driver-scope>
+                                    Souhrnn\u011b za cel\u00fd kalend\u00e1\u0159n\u00ed m\u011bs\u00edc
                                 </option>
                             </select>
                         </label>
                         <label class="drayvia-conditional-rule-field">
-                            <span>Zp\u016fsob p\u0159\u00edplatku</span>
+                            <span>Jak odm\u011bnu vypo\u010d\u00edtat</span>
                             <select data-conditional-rule-reward-method>
                                 <option value="fixed_amount">
                                     Pevn\u00e1 \u010d\u00e1stka za rozsah
@@ -19923,7 +20111,7 @@ const templates = {
                             </select>
                         </label>
                         <label class="drayvia-conditional-rule-field">
-                            <span>N\u00e1sobit mno\u017estv\u00edm</span>
+                            <span>Za kterou polo\u017eku odm\u011bnu vyplatit</span>
                             <select data-conditional-rule-reward-quantity>
                                 ${financeConditionalOptions(
                                     financeConditionalMetricSources,
@@ -19931,8 +20119,23 @@ const templates = {
                                 )}
                             </select>
                         </label>
+                        <fieldset
+                            class="drayvia-conditional-rule-field drayvia-conditional-rule-field-wide"
+                            data-conditional-rule-reward-quantities
+                            hidden
+                        >
+                            <legend>Za kter\u00e9 v\u00fdkony p\u0159\u00edplatek vyplatit</legend>
+                            <p class="drayvia-finance-note">
+                                M\u016f\u017eete vybrat jednu nebo v\u00edce polo\u017eek. Jejich mno\u017estv\u00ed se se\u010dte a vyn\u00e1sob\u00ed sazbou p\u0159\u00edplatku.
+                            </p>
+                            <div class="drayvia-conditional-source-grid">
+                                ${financeConditionalSourceCheckboxes(
+                                    'reward'
+                                )}
+                            </div>
+                        </fieldset>
                         <label class="drayvia-conditional-rule-field">
-                            <span>Procento z polo\u017eky</span>
+                            <span>Z kter\u00e9 z\u00e1kladn\u00ed polo\u017eky</span>
                             <select data-conditional-rule-reward-target>
                                 ${financeConditionalOptions(
                                     financeConditionalBaseItems,
@@ -19940,7 +20143,7 @@ const templates = {
                                 )}
                             </select>
                         </label>
-                        <label class="drayvia-conditional-rule-field drayvia-conditional-rule-field-wide">
+                        <label class="drayvia-conditional-rule-field drayvia-conditional-rule-field-wide" hidden>
                             <span>Popis</span>
                             <textarea
                                 rows="2"
@@ -19952,7 +20155,7 @@ const templates = {
 
                     <div class="drayvia-conditional-rule-grid">
                         <fieldset class="drayvia-conditional-rule-field">
-                            <legend>Co vstupuje do \u010ditatele</legend>
+                            <legend>Co pova\u017eujeme za spln\u011bn\u00fd v\u00fdkon</legend>
                             <div class="drayvia-conditional-source-grid">
                                 ${financeConditionalSourceCheckboxes(
                                     'numerator'
@@ -19960,7 +20163,7 @@ const templates = {
                             </div>
                         </fieldset>
                         <fieldset class="drayvia-conditional-rule-field">
-                            <legend>Co vstupuje do jmenovatele</legend>
+                            <legend>Z \u010deho procento po\u010d\u00edt\u00e1me</legend>
                             <div class="drayvia-conditional-source-grid">
                                 ${financeConditionalSourceCheckboxes(
                                     'denominator'
@@ -19972,9 +20175,9 @@ const templates = {
                     <section class="drayvia-conditional-bands">
                         <div class="drayvia-conditional-band-header">
                             <div>
-                                <strong>Prahy a ceny p\u0159\u00edplatku</strong>
+                                <strong>Rozsah podm\u00ednky</strong>
                                 <div>
-                                    Pro procentn\u00ed metriku zad\u00e1vejte hranice v %.
+                                    Nastavte hodnotu od a do. U procent zad\u00e1vejte hranice v %.
                                 </div>
                             </div>
                             <button
@@ -19986,6 +20189,11 @@ const templates = {
                         </div>
                         <div data-conditional-band-list></div>
                     </section>
+                    <div
+                        class="drayvia-finance-note"
+                        data-conditional-rule-summary
+                        aria-live="polite"
+                    ></div>
                 `;
 
                 const code = financeConditionalUniqueCode(
@@ -20019,6 +20227,45 @@ const templates = {
                 scope.value = preset.scope;
                 rewardMethod.value = preset.rewardMethod;
 
+                const driverMode = Boolean(
+                    panel.matches(
+                        '[data-driver-price-list-create-card], '
+                        + '[data-driver-price-list-editor]'
+                    )
+                    || panel.closest(
+                        '[data-driver-price-list-create-card], '
+                        + '[data-driver-price-list-editor]'
+                    )
+                );
+
+                const monthlyPriceListScope = scope.querySelector(
+                    '[data-monthly-price-list-scope]'
+                );
+                const monthlyDriverScope = scope.querySelector(
+                    '[data-monthly-driver-scope]'
+                );
+
+                if (monthlyPriceListScope) {
+                    monthlyPriceListScope.hidden = driverMode;
+                }
+
+                if (monthlyDriverScope) {
+                    monthlyDriverScope.hidden = !driverMode;
+                }
+
+                if (presetName !== 'custom') {
+                    rewardMethod.value = 'amount_per_unit';
+                    rule.dataset.standardDriverReward = '1';
+
+                    const rewardMethodField = rewardMethod.closest(
+                        '.drayvia-conditional-rule-field'
+                    );
+
+                    if (rewardMethodField) {
+                        rewardMethodField.hidden = true;
+                    }
+                }
+
                 rule.querySelectorAll(
                     '[data-conditional-numerator-source]'
                 ).forEach((input) => {
@@ -20034,6 +20281,33 @@ const templates = {
                     );
                 });
 
+                rule.querySelectorAll(
+                    '[data-conditional-reward-source]'
+                ).forEach((input) => {
+                    input.checked = (preset.rewardSources || []).includes(
+                        input.value
+                    );
+                });
+
+                if (driverMode && presetName !== 'custom') {
+                    rule.querySelectorAll(
+                        '[data-conditional-numerator-source], '
+                        + '[data-conditional-denominator-source]'
+                    ).forEach((input) => {
+                        if ([
+                            'actual_km',
+                            'planned_km',
+                            'processed_parcels',
+                        ].includes(input.value)) {
+                            const option = input.closest('label');
+
+                            if (option) {
+                                option.hidden = true;
+                            }
+                        }
+                    });
+                }
+
                 nameInput.addEventListener('input', () => {
                     title.textContent = nameInput.value.trim()
                         || 'Vlastn\u00ed podm\u00edn\u011bn\u00fd p\u0159\u00edplatek';
@@ -20046,6 +20320,16 @@ const templates = {
                     'change',
                     () => syncFinanceConditionalRuleFields(rule)
                 );
+                rule.querySelectorAll(
+                    '[data-conditional-numerator-source], '
+                    + '[data-conditional-denominator-source], '
+                    + '[data-conditional-reward-source]'
+                ).forEach((input) => {
+                    input.addEventListener(
+                        'change',
+                        () => updateFinanceConditionalRuleSummary(rule)
+                    );
+                });
                 rule.querySelector(
                     '[data-conditional-rule-remove]'
                 ).addEventListener('click', () => {
@@ -20077,8 +20361,7 @@ const templates = {
                 }
 
                 list.replaceChildren();
-                addFinanceConditionalRule(panel, 'quality');
-                addFinanceConditionalRule(panel, 'redirected');
+                updateFinanceConditionalEmptyState(panel);
             };
 
             const collectFinanceConditionalRules = (panel) => {
@@ -20109,6 +20392,11 @@ const templates = {
                     const rewardQuantitySource = rule.querySelector(
                         '[data-conditional-rule-reward-quantity]'
                     ).value || null;
+                    const rewardQuantitySources = Array.from(
+                        rule.querySelectorAll(
+                            '[data-conditional-reward-source]:checked'
+                        )
+                    ).map((input) => input.value);
                     const rewardTargetItemCode = rule.querySelector(
                         '[data-conditional-rule-reward-target]'
                     ).value || null;
@@ -20160,10 +20448,10 @@ const templates = {
 
                     if (
                         rewardMethod === 'amount_per_unit'
-                        && rewardQuantitySource === null
+                        && rewardQuantitySources.length === 0
                     ) {
                         throw new Error(
-                            `P\u0159\u00edplatek ${number}: vyberte n\u00e1soben\u00e9 mno\u017estv\u00ed.`
+                            `P\u0159\u00edplatek ${number}: vyberte alespo\u0148 jednu polo\u017eku, za kterou se p\u0159\u00edplatek vyplat\u00ed.`
                         );
                     }
 
@@ -20258,9 +20546,13 @@ const templates = {
                         metric_denominator_sources: denominatorSources,
                         evaluation_scope: evaluationScope,
                         reward_method: rewardMethod,
+                        reward_quantity_sources:
+                            rewardMethod === 'amount_per_unit'
+                                ? rewardQuantitySources
+                                : [],
                         reward_quantity_source:
                             rewardMethod === 'amount_per_unit'
-                                ? rewardQuantitySource
+                                ? rewardQuantitySources[0]
                                 : null,
                         reward_target_item_code:
                             rewardMethod === 'percentage_of_item'
@@ -20765,6 +21057,24 @@ const templates = {
                     value?.reward_quantity_source
                 );
 
+                const rewardQuantitySources = Array.isArray(
+                    value?.reward_quantity_sources
+                )
+                    ? value.reward_quantity_sources
+                    : (
+                        value?.reward_quantity_source
+                            ? [value.reward_quantity_source]
+                            : []
+                    );
+
+                rule.querySelectorAll(
+                    '[data-conditional-reward-source]'
+                ).forEach((input) => {
+                    input.checked = rewardQuantitySources.includes(
+                        input.value
+                    );
+                });
+
                 setValue(
                     '[data-conditional-rule-reward-target]',
                     value?.reward_target_item_code
@@ -20802,6 +21112,37 @@ const templates = {
                     title.textContent =
                         value?.name
                         || 'Vlastn\u00ed podm\u00edn\u011bn\u00fd p\u0159\u00edplatek';
+                }
+
+                const driverMode = Boolean(
+                    panel.matches(
+                        '[data-driver-price-list-create-card], '
+                        + '[data-driver-price-list-editor]'
+                    )
+                    || panel.closest(
+                        '[data-driver-price-list-create-card], '
+                        + '[data-driver-price-list-editor]'
+                    )
+                );
+
+                if (
+                    driverMode
+                    && [
+                        'delivery_quality',
+                        'redirected_share',
+                    ].includes(value?.code)
+                ) {
+                    rule.dataset.standardDriverReward = '1';
+                    const method = rule.querySelector(
+                        '[data-conditional-rule-reward-method]'
+                    );
+                    const methodField = method?.closest(
+                        '.drayvia-conditional-rule-field'
+                    );
+
+                    if (methodField) {
+                        methodField.hidden = true;
+                    }
                 }
 
                 const bandList = rule.querySelector(
@@ -23473,6 +23814,7 @@ const templates = {
 
                 createCard.dataset.driverDraftCreateBound = '1';
                 resetFinanceConditionalRules(createCard);
+                save.textContent = 'Ulo\u017eit koncept cen\u00edku';
 
                 assignment.addEventListener('focus', () => {
                     populateFinanceDriverPriceListSelect();
@@ -24917,6 +25259,10 @@ const templates = {
                         const option = document.createElement('option');
 
                         option.value = String(relationshipId);
+                        option.dataset.vatPayer =
+                            relationship?.external_carrier?.vat_number
+                                ? '1'
+                                : '0';
                         option.textContent =
                             relationship?.external_carrier?.name
                             || `Extern\u00ed dopravce ${relationshipId}`;
@@ -25349,6 +25695,10 @@ const loadFinanceCustomers = async () => {
 
                         option.value =
                             String(relationshipId);
+
+                        option.dataset.vatPayer = customer.vat_number
+                            ? '1'
+                            : '0';
 
                         option.textContent =
                             customer.registration_number
@@ -26029,5 +26379,1171 @@ if (page === 'finance') {
     );
 })();
 </script>
+    <!-- S039-02A-R6-PRICE-LIST-STEPS -->
+    <style data-s039-r6-price-list-steps>
+        .s039-r6-step {
+            border-top: 1px solid #d8dee8;
+            margin-top: 1rem;
+            padding-top: 1rem;
+        }
+
+        .s039-r6-step:first-of-type {
+            border-top: 0;
+            margin-top: .5rem;
+            padding-top: 0;
+        }
+
+        .s039-r6-step-heading {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 0 0 .75rem;
+        }
+
+        .s039-r6-step-help {
+            color: #52627a;
+            margin: -.35rem 0 .75rem;
+        }
+
+        .s039-r6-rate-list {
+            display: grid;
+            gap: .75rem;
+        }
+
+        .s039-r6-rate-row {
+            border: 1px solid #d8dee8;
+            border-radius: .65rem;
+            padding: .75rem;
+        }
+
+        .s039-r6-rate-row > label {
+            display: block;
+            margin: 0;
+        }
+
+        .s039-r6-rate-row input {
+            width: 100%;
+        }
+
+        .s039-r6-rule-error {
+            color: #b42318;
+            font-weight: 600;
+            margin-top: .5rem;
+        }
+    </style>
+    <script data-s039-r6-price-list-steps>
+        (() => {
+            const text = (element) =>
+                (element?.textContent || '').replace(/\s+/g, ' ').trim();
+
+            const directChild = (rule, element) => {
+                let current = element;
+
+                while (current && current.parentElement !== rule) {
+                    current = current.parentElement;
+                }
+
+                return current?.parentElement === rule ? current : null;
+            };
+
+            const findByText = (root, selector, phrase) =>
+                Array.from(root.querySelectorAll(selector)).find(
+                    (element) => text(element).includes(phrase)
+                );
+
+            const createStep = (number, title, help) => {
+                const section = document.createElement('section');
+                section.className = 's039-r6-step';
+                section.dataset.s039R6Step = String(number);
+
+                const heading = document.createElement('h4');
+                heading.className = 's039-r6-step-heading';
+                heading.textContent = `${number}. ${title}`;
+                section.appendChild(heading);
+
+                if (help) {
+                    const description = document.createElement('p');
+                    description.className = 's039-r6-step-help';
+                    description.textContent = help;
+                    section.appendChild(description);
+                }
+
+                return section;
+            };
+
+            const updateRateLabels = (rule) => {
+                const rows = Array.from(
+                    rule.querySelectorAll('.s039-r6-rate-row')
+                );
+
+                rows.forEach((row, index) => {
+                    const label = row.querySelector('label > span');
+
+                    if (label) {
+                        const nextLabel = rows.length > 1
+                            ? `Pásmo ${index + 1} – sazba příplatku za jednotku (Kč)`
+                            : 'Sazba příplatku za jednotku (Kč)';
+
+                        if (text(label) !== nextLabel) {
+                            label.textContent = nextLabel;
+                        }
+                    }
+                });
+            };
+
+            const moveBandRate = (rule, band, rateList) => {
+                if (band.dataset.s039R6RateMoved === '1') {
+                    return;
+                }
+
+                const input = band.querySelector(
+                    '[data-conditional-band-adjustment]'
+                );
+                const field = input?.closest('label');
+
+                if (!input || !field) {
+                    return;
+                }
+
+                const row = document.createElement('div');
+                row.className = 's039-r6-rate-row';
+                row.dataset.s039R6RateFor = String(
+                    Date.now() + Math.random()
+                );
+                row.appendChild(field);
+                rateList.appendChild(row);
+                band.dataset.s039R6RateMoved = '1';
+
+                const remove = band.querySelector(
+                    '[data-conditional-band-remove]'
+                );
+
+                remove?.addEventListener('click', () => {
+                    row.remove();
+                    queueMicrotask(() => updateRateLabels(rule));
+                }, { capture: true, once: true });
+            };
+
+            const decorateRule = (rule) => {
+                if (rule.dataset.s039R6Decorated === '1') {
+                    const rateList = rule.querySelector(
+                        '[data-s039-r6-rate-list]'
+                    );
+
+                    if (rateList) {
+                        rule.querySelectorAll('[data-conditional-band]').forEach(
+                            (band) => moveBandRate(rule, band, rateList)
+                        );
+                        updateRateLabels(rule);
+                    }
+
+                    return;
+                }
+
+                const numeratorLegend = findByText(
+                    rule,
+                    'legend',
+                    'Co považujeme za splněný výkon'
+                ) || findByText(rule, 'legend', 'čitatele');
+                const payoutLegend = findByText(
+                    rule,
+                    'legend',
+                    'Za které výkony příplatek vyplatit'
+                );
+                const bands = rule.querySelector(
+                    '[data-conditional-band-list]'
+                )?.closest('section');
+
+                const conditionBlock = directChild(rule, numeratorLegend);
+                const payoutBlock = payoutLegend?.closest('fieldset');
+                const bandsBlock = directChild(rule, bands);
+
+                if (!conditionBlock || !payoutBlock || !bandsBlock) {
+                    return;
+                }
+
+                const summary = Array.from(rule.children).find(
+                    (element) => text(element).startsWith('Kontrola:')
+                );
+
+                const step1 = createStep(
+                    1,
+                    'Co kontrolujeme',
+                    'Potvrďte, co považujeme za splněný výkon a z čeho procento počítáme.'
+                );
+                const step2 = createStep(
+                    2,
+                    'Požadovaný rozsah kvality',
+                    'Nastavte dolní a případně horní hranici v procentech.'
+                );
+                const step3 = createStep(
+                    3,
+                    'Za které výkony příplatek vyplatíme',
+                    'Vyberte jednu nebo více položek. Pokud příplatek nechcete, odeberte celé pravidlo.'
+                );
+                const step4 = createStep(
+                    4,
+                    'Kolik vyplatíme',
+                    'Zadejte sazbu příplatku za jednu jednotku vybraného výkonu.'
+                );
+                const rateList = document.createElement('div');
+                rateList.className = 's039-r6-rate-list';
+                rateList.dataset.s039R6RateList = '1';
+
+                step1.appendChild(conditionBlock);
+                step2.appendChild(bandsBlock);
+                step3.appendChild(payoutBlock);
+                step4.appendChild(rateList);
+
+                rule.appendChild(step1);
+                rule.appendChild(step2);
+                rule.appendChild(step3);
+                rule.appendChild(step4);
+
+                if (summary) {
+                    rule.appendChild(summary);
+                }
+
+                rule.querySelectorAll('[data-conditional-band]').forEach(
+                    (band) => moveBandRate(rule, band, rateList)
+                );
+
+                payoutLegend.textContent = 'Položky pro výplatu';
+                rule.dataset.s039R6Decorated = '1';
+                updateRateLabels(rule);
+            };
+
+            const decorate = () => {
+                document.querySelectorAll(
+                    '[data-conditional-rule-root]'
+                ).forEach((root) => {
+                    const heading = root.querySelector('h5');
+
+                    if (heading && text(heading) !== 'Příplatky a srážky' && (
+                        text(heading).includes('Podmíněné příplatky')
+                        || text(heading).includes('Příplatky a srážky')
+                    )) {
+                        heading.textContent = 'Příplatky a srážky';
+                    }
+                });
+
+                document.querySelectorAll(
+                    '[data-conditional-rule]'
+                ).forEach(decorateRule);
+            };
+
+            let scheduled = false;
+            const schedule = () => {
+                if (scheduled) {
+                    return;
+                }
+
+                scheduled = true;
+                queueMicrotask(() => {
+                    scheduled = false;
+                    decorate();
+                });
+            };
+
+            new MutationObserver(schedule).observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+            });
+
+            document.addEventListener('DOMContentLoaded', schedule);
+            schedule();
+        })();
+    </script>
+    <!-- S039-04A-R8-SURCHARGE-WIZARD -->
+    <!-- S039-04B-R8-R2-USABILITY-FINALIZATION -->
+    <style data-s039-r8-surcharge-wizard>
+        .s039-r8-hidden-raw-rule {
+            display: none !important;
+        }
+
+        .s039-r8-summary-wrap {
+            margin-top: 1rem;
+            overflow-x: auto;
+        }
+
+        .s039-r8-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+
+        .s039-r8-summary-table th,
+        .s039-r8-summary-table td {
+            border-bottom: 1px solid #d8dee8;
+            padding: .75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .s039-r8-summary-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        .s039-r8-modal[hidden] {
+            display: none !important;
+        }
+
+        .s039-r8-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, .62);
+        }
+
+        .s039-r8-dialog {
+            width: min(860px, 100%);
+            max-height: calc(100vh - 2rem);
+            overflow: auto;
+            border-radius: 1rem;
+            background: #fff;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
+        }
+
+        .s039-r8-dialog-header,
+        .s039-r8-dialog-body,
+        .s039-r8-dialog-footer {
+            padding: 1.25rem 1.5rem;
+        }
+
+        .s039-r8-dialog-header {
+            border-bottom: 1px solid #d8dee8;
+        }
+
+        .s039-r8-dialog-header h3 {
+            margin: .25rem 0 0;
+        }
+
+        .s039-r8-progress {
+            color: #52627a;
+            font-size: .875rem;
+            font-weight: 700;
+        }
+
+        .s039-r8-dialog-body {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .s039-r8-dialog-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: .75rem;
+            border-top: 1px solid #d8dee8;
+        }
+
+        .s039-r8-choice-grid,
+        .s039-r8-check-grid,
+        .s039-r8-band-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: .75rem;
+        }
+
+        .s039-r8-choice,
+        .s039-r8-check,
+        .s039-r8-band {
+            border: 1px solid #cbd5e1;
+            border-radius: .75rem;
+            padding: .9rem;
+            background: #fff;
+        }
+
+        .s039-r8-choice:has(input:checked),
+        .s039-r8-check:has(input:checked) {
+            border-color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        .s039-r8-choice label,
+        .s039-r8-check label {
+            display: flex;
+            gap: .65rem;
+            cursor: pointer;
+        }
+
+        .s039-r8-field {
+            display: grid;
+            gap: .4rem;
+        }
+
+        .s039-r8-field > span {
+            font-weight: 700;
+        }
+
+        .s039-r8-field input,
+        .s039-r8-field select {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #cbd5e1;
+            border-radius: .55rem;
+            padding: .7rem;
+            background: #fff;
+        }
+
+        .s039-r8-note,
+        .s039-r8-final-summary {
+            border-left: 4px solid #2563eb;
+            padding: .8rem 1rem;
+            background: #eff6ff;
+        }
+
+        .s039-r8-error {
+            color: #b42318;
+            font-weight: 700;
+        }
+
+        @media (max-width: 720px) {
+            .s039-r8-summary-table thead {
+                display: none;
+            }
+
+            .s039-r8-summary-table tr,
+            .s039-r8-summary-table td {
+                display: block;
+            }
+        }
+    </style>
+    <script data-s039-r8-surcharge-wizard>
+        (() => {
+            const sources = [
+                ['loaded_parcels', 'Naloženo'],
+                ['delivered_parcels', 'Doručeno'],
+                ['redirected_parcels', 'Přesměrováno'],
+                ['customer_rejected_parcels', 'Odmítnuto zákazníkem'],
+                ['not_delivered_parcels', 'Nerozvezeno'],
+                ['processed_parcels', 'Zpracováno celkem'],
+                ['actual_km', 'Skutečné km'],
+                ['planned_km', 'Plánované km'],
+            ];
+            const sourceLabels = Object.fromEntries(sources);
+            const presets = {
+                quality: {
+                    name: 'Příplatek za kvalitu doručení',
+                    numerator: [
+                        'delivered_parcels',
+                        'redirected_parcels',
+                        'customer_rejected_parcels',
+                    ],
+                    denominator: ['loaded_parcels'],
+                    minimum: '95',
+                },
+                redirected: {
+                    name: 'Příplatek za podíl přesměrovaných zásilek',
+                    numerator: ['redirected_parcels'],
+                    denominator: ['loaded_parcels'],
+                    minimum: '5',
+                },
+                custom: {
+                    name: 'Vlastní příplatek',
+                    numerator: ['delivered_parcels'],
+                    denominator: ['loaded_parcels'],
+                    minimum: '',
+                },
+            };
+            const stepTitles = [
+                'Jaký příplatek chcete založit?',
+                'Jak se má výsledek vypočítat?',
+                'Za jaké období podmínku vyhodnotit?',
+                'Jaký výsledek musí být splněn?',
+                'Za které výkony příplatek vyplatit?',
+                'Jaká bude sazba příplatku?',
+                'Kontrola a potvrzení',
+            ];
+
+            let wizard = null;
+
+            const modal = document.createElement('div');
+            modal.className = 's039-r8-modal';
+            modal.dataset.s039R8Wizard = '1';
+            modal.hidden = true;
+            modal.innerHTML = `
+                <section class="s039-r8-dialog" role="dialog" aria-modal="true" aria-labelledby="s039-r8-title">
+                    <header class="s039-r8-dialog-header">
+                        <div class="s039-r8-progress" data-s039-r8-progress></div>
+                        <h3 id="s039-r8-title" data-s039-r8-title></h3>
+                    </header>
+                    <div class="s039-r8-dialog-body" data-s039-r8-body></div>
+                    <footer class="s039-r8-dialog-footer">
+                        <div>
+                            <button type="button" data-s039-r8-cancel>Zrušit</button>
+                        </div>
+                        <div class="s039-r8-summary-actions">
+                            <button type="button" data-s039-r8-back>Zpět</button>
+                            <button type="button" data-s039-r8-next>Pokračovat</button>
+                        </div>
+                    </footer>
+                </section>
+            `;
+            document.body.appendChild(modal);
+
+            const body = modal.querySelector('[data-s039-r8-body]');
+            const title = modal.querySelector('[data-s039-r8-title]');
+            const progress = modal.querySelector('[data-s039-r8-progress]');
+            const back = modal.querySelector('[data-s039-r8-back]');
+            const next = modal.querySelector('[data-s039-r8-next]');
+
+            const isDriverRoot = (root) => Boolean(root.closest(
+                '[data-driver-price-list-create-card], [data-driver-price-list-editor]'
+            ));
+
+            const isBillingRoot = (root) => Boolean(root.closest(
+                '[data-billing-price-list-create-card], [data-billing-price-list-editor]'
+            ));
+
+            const isVatPayer = (root) => {
+                if (isDriverRoot(root)) {
+                    return false;
+                }
+
+                // Fakturační ceník vždy přijímá čistou sazbu. Tím zůstává
+                // výpočet konzistentní i před výběrem konkrétního odběratele.
+                if (isBillingRoot(root)) {
+                    return true;
+                }
+
+                const select = root.closest(
+                    '[data-billing-price-list-create-card], [data-billing-price-list-editor], '
+                    + '[data-external-carrier-price-list-create-card], [data-external-carrier-price-list-editor]'
+                )?.querySelector(
+                    '[data-billing-price-list-customer], '
+                    + '[data-external-carrier-price-list-relationship]'
+                );
+
+                return select?.selectedOptions?.[0]?.dataset.vatPayer === '1';
+            };
+
+            const defaultState = (presetName = 'quality') => {
+                const preset = presets[presetName] || presets.quality;
+
+                return {
+                    preset: presetName,
+                    name: preset.name,
+                    numerator: [...preset.numerator],
+                    denominator: [...preset.denominator],
+                    scope: presetName === 'quality' ? 'monthly' : 'per_route',
+                    bands: [{
+                        minimum: preset.minimum,
+                        maximum: '',
+                        rate: '',
+                    }],
+                    rewards: [
+                        'delivered_parcels',
+                        'redirected_parcels',
+                    ],
+                };
+            };
+
+            const checkedValues = (selector) => Array.from(
+                body.querySelectorAll(`${selector}:checked`)
+            ).map((input) => input.value);
+
+            const checkGrid = (role, selected) => `
+                <div class="s039-r8-check-grid">
+                    ${sources.map(([value, label]) => `
+                        <div class="s039-r8-check">
+                            <label>
+                                <input type="checkbox" value="${value}" data-s039-r8-${role} ${selected.includes(value) ? 'checked' : ''}>
+                                <span>${label}</span>
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            const formulaText = (state) => {
+                const numerator = state.numerator.map(
+                    (value) => sourceLabels[value] || value
+                ).join(' + ');
+                const denominator = state.denominator.map(
+                    (value) => sourceLabels[value] || value
+                ).join(' + ');
+
+                return `(${numerator || '—'}) ÷ (${denominator || '—'}) × 100`;
+            };
+
+            const periodText = (state) => state.scope === 'per_route'
+                ? 'Každá trasa samostatně'
+                : 'Souhrnně za celý kalendářní měsíc';
+
+            const rangeTitle = (state) => state.preset === 'quality'
+                ? 'Požadovaný rozsah kvality'
+                : state.preset === 'redirected'
+                    ? 'Požadovaný podíl přesměrovaných zásilek'
+                    : 'Požadovaný rozsah výsledku';
+
+            const readStep = () => {
+                const state = wizard.state;
+
+                if (wizard.step === 0) {
+                    const selected = body.querySelector(
+                        '[data-s039-r8-preset]:checked'
+                    )?.value || state.preset;
+
+                    if (selected !== state.preset) {
+                        wizard.state = defaultState(selected);
+                    }
+
+                    const name = body.querySelector('[data-s039-r8-name]');
+
+                    if (name) {
+                        wizard.state.name = name.value.trim();
+                    }
+                }
+
+                if (wizard.step === 1) {
+                    state.numerator = checkedValues('[data-s039-r8-numerator]');
+                    state.denominator = checkedValues('[data-s039-r8-denominator]');
+                }
+
+                if (wizard.step === 2) {
+                    state.scope = body.querySelector(
+                        '[data-s039-r8-scope]:checked'
+                    )?.value || state.scope;
+                }
+
+                if (wizard.step === 3) {
+                    state.bands = Array.from(
+                        body.querySelectorAll('[data-s039-r8-band]')
+                    ).map((row, index) => ({
+                        minimum: row.querySelector('[data-s039-r8-minimum]').value.trim(),
+                        maximum: row.querySelector('[data-s039-r8-maximum]').value.trim(),
+                        rate: state.bands[index]?.rate || '',
+                    }));
+                }
+
+                if (wizard.step === 4) {
+                    state.rewards = checkedValues('[data-s039-r8-reward]');
+                }
+
+                if (wizard.step === 5) {
+                    state.bands.forEach((band, index) => {
+                        band.rate = body.querySelector(
+                            `[data-s039-r8-rate="${index}"]`
+                        )?.value.trim() || '';
+                    });
+                }
+            };
+
+            const validateStep = () => {
+                readStep();
+                const state = wizard.state;
+
+                if (wizard.step === 0 && state.name === '') {
+                    return 'Doplňte název příplatku.';
+                }
+
+                if (wizard.step === 1 && state.numerator.length === 0) {
+                    return 'Vyberte alespoň jednu položku, kterou budeme kontrolovat.';
+                }
+
+                if (wizard.step === 1 && state.denominator.length === 0) {
+                    return 'Vyberte alespoň jednu položku, ze které procento vypočítáme.';
+                }
+
+                if (wizard.step === 3 && state.bands.some(
+                    (band) => band.minimum === '' || Number.isNaN(Number(band.minimum))
+                )) {
+                    return 'Každé pásmo musí mít platnou dolní hranici.';
+                }
+
+                if (wizard.step === 3 && state.bands.some(
+                    (band) => band.maximum !== '' && Number.isNaN(Number(band.maximum))
+                )) {
+                    return 'Horní hranice musí být číslo nebo může zůstat prázdná.';
+                }
+
+                if (wizard.step === 4 && state.rewards.length === 0) {
+                    return 'Vyberte alespoň jednu položku, za kterou příplatek vyplatíme.';
+                }
+
+                if (wizard.step === 5 && state.bands.some(
+                    (band) => band.rate === '' || Number.isNaN(Number(band.rate))
+                )) {
+                    return 'Zadejte sazbu pro každé pásmo. Hodnota 0 Kč je platná.';
+                }
+
+                return '';
+            };
+
+            const renderStep = () => {
+                const state = wizard.state;
+                progress.textContent = `Krok ${wizard.step + 1} ze ${stepTitles.length}`;
+                title.textContent = stepTitles[wizard.step];
+                back.hidden = wizard.step === 0;
+                next.textContent = wizard.step === stepTitles.length - 1
+                    ? 'Uložit příplatek'
+                    : 'Pokračovat';
+
+                if (wizard.step === 0) {
+                    body.innerHTML = `
+                        <p>Příplatek je volitelný. Pokud jej nepotřebujete, průvodce zrušte a základní ceník uložte bez něj.</p>
+                        <div class="s039-r8-choice-grid">
+                            ${[
+                                ['quality', 'Kvalita doručení', 'Kontrola celkové úspěšnosti doručení.'],
+                                ['redirected', 'Podíl přesměrovaných zásilek', 'Kontrola podílu přesměrovaných zásilek.'],
+                                ['custom', 'Jiný příplatek', 'Vlastní budoucí pravidlo a výpočet.'],
+                            ].map(([value, label, help]) => `
+                                <div class="s039-r8-choice">
+                                    <label>
+                                        <input type="radio" name="s039-r8-preset" value="${value}" data-s039-r8-preset ${state.preset === value ? 'checked' : ''}>
+                                        <span><strong>${label}</strong><br><small>${help}</small></span>
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <label class="s039-r8-field">
+                            <span>Název příplatku</span>
+                            <input type="text" value="${state.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-s039-r8-name>
+                        </label>
+                    `;
+
+                    body.querySelectorAll('[data-s039-r8-preset]').forEach(
+                        (input) => input.addEventListener('change', () => {
+                            wizard.state = defaultState(input.value);
+                            renderStep();
+                        })
+                    );
+                }
+
+                if (wizard.step === 1) {
+                    body.innerHTML = `
+                        <p>Potvrďte položky výpočtu. Přednastavení můžete změnit.</p>
+                        <h4>Co považujeme za splněný výkon</h4>
+                        ${checkGrid('numerator', state.numerator)}
+                        <h4>Z čeho procento vypočítáme</h4>
+                        ${checkGrid('denominator', state.denominator)}
+                        <div class="s039-r8-note"><strong>Výpočet:</strong> ${formulaText(state)}</div>
+                    `;
+                }
+
+                if (wizard.step === 2) {
+                    const monthHelp = isDriverRoot(wizard.root)
+                        ? 'Sečteme všechny trasy daného řidiče za měsíc. Výsledek je do uzavření měsíce předběžný.'
+                        : 'Sečteme všechny trasy tohoto ceníku za měsíc. Výsledek je do uzavření měsíce předběžný.';
+                    body.innerHTML = `
+                        <div class="s039-r8-choice-grid">
+                            <div class="s039-r8-choice">
+                                <label>
+                                    <input type="radio" name="s039-r8-scope" value="per_route" data-s039-r8-scope ${state.scope === 'per_route' ? 'checked' : ''}>
+                                    <span><strong>Každou trasu samostatně</strong><br><small>Podmínku i příplatek vyhodnotíme ihned z hodnot jedné trasy.</small></span>
+                                </label>
+                            </div>
+                            <div class="s039-r8-choice">
+                                <label>
+                                    <input type="radio" name="s039-r8-scope" value="monthly" data-s039-r8-scope ${state.scope !== 'per_route' ? 'checked' : ''}>
+                                    <span><strong>Souhrnně za celý kalendářní měsíc</strong><br><small>${monthHelp}</small></span>
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (wizard.step === 3) {
+                    body.innerHTML = `
+                        <p><strong>${rangeTitle(state)}</strong></p>
+                        <p>Nastavte dolní a případně horní hranici v procentech.</p>
+                        <div data-s039-r8-band-list>
+                            ${state.bands.map((band, index) => `
+                                <div class="s039-r8-band s039-r8-band-grid" data-s039-r8-band>
+                                    <label class="s039-r8-field"><span>Rozsah od (%)</span><input type="number" step="0.0001" value="${band.minimum}" data-s039-r8-minimum></label>
+                                    <label class="s039-r8-field"><span>Rozsah do (%)</span><input type="number" step="0.0001" value="${band.maximum}" data-s039-r8-maximum></label>
+                                    ${state.bands.length > 1 ? `<button type="button" data-s039-r8-remove-band="${index}">Odebrat pásmo</button>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" data-s039-r8-add-band>+ Přidat další pásmo</button>
+                    `;
+                    body.querySelector('[data-s039-r8-add-band]').addEventListener('click', () => {
+                        readStep();
+                        state.bands.push({ minimum: '', maximum: '', rate: '' });
+                        renderStep();
+                    });
+                    body.querySelectorAll('[data-s039-r8-remove-band]').forEach(
+                        (button) => button.addEventListener('click', () => {
+                            readStep();
+                            state.bands.splice(Number(button.dataset.s039R8RemoveBand), 1);
+                            renderStep();
+                        })
+                    );
+                }
+
+                if (wizard.step === 4) {
+                    body.innerHTML = `
+                        <p>Vyberte jednu nebo více položek. Přednastavené jsou doručené a přesměrované zásilky.</p>
+                        ${checkGrid('reward', state.rewards)}
+                        <div class="s039-r8-note">Množství vybraných položek se sečte a vynásobí sazbou příplatku.</div>
+                    `;
+                }
+
+                if (wizard.step === 5) {
+                    const withoutVat = isVatPayer(wizard.root);
+                    body.innerHTML = `
+                        <p>Hodnota 0 Kč je platná a příplatek ponechá bez finančního dopadu.</p>
+                        ${withoutVat ? '<div class="s039-r8-note"><strong>Všechny sazby zadávejte bez DPH.</strong> DPH se přidá až při vystavení faktury.</div>' : ''}
+                        <div class="s039-r8-band-grid">
+                            ${state.bands.map((band, index) => `
+                                <label class="s039-r8-field">
+                                    <span>${state.bands.length > 1 ? `Pásmo ${index + 1} – ` : ''}Sazba příplatku za jednotku${withoutVat ? ' bez DPH' : ''} (Kč)</span>
+                                    <input type="number" step="0.0001" value="${band.rate}" data-s039-r8-rate="${index}">
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                if (wizard.step === 6) {
+                    const withoutVat = isVatPayer(wizard.root);
+                    const rewards = state.rewards.map(
+                        (value) => sourceLabels[value] || value
+                    ).join(' + ');
+                    const bands = state.bands.map((band) => {
+                        const range = `${band.minimum} %${band.maximum !== '' ? ` až ${band.maximum} %` : ' a více'}`;
+                        return `${range}: ${band.rate} Kč za jednotku${withoutVat ? ' bez DPH' : ''}`;
+                    }).join('<br>');
+                    body.innerHTML = `
+                        <div class="s039-r8-final-summary">
+                            <p><strong>${state.name}</strong></p>
+                            <p><strong>Výpočet:</strong> ${formulaText(state)}</p>
+                            <p><strong>Vyhodnocení:</strong> ${periodText(state)}${state.scope === 'per_route' ? '.' : '. Do uzavření měsíce je výsledek předběžný.'}</p>
+                            <p><strong>Výplatní položky:</strong> ${rewards}</p>
+                            <p><strong>Pásma a sazby:</strong><br>${bands}</p>
+                        </div>
+                        <p>Po potvrzení se příplatek zobrazí v souhrnné tabulce ceníku. Základní ceník se uloží až jeho vlastním tlačítkem.</p>
+                    `;
+                }
+
+                const oldError = body.querySelector('[data-s039-r8-error]');
+                oldError?.remove();
+            };
+
+            const restoreBandRates = (rule) => {
+                const bands = Array.from(rule.querySelectorAll('[data-conditional-band]'));
+                const rows = Array.from(rule.querySelectorAll('.s039-r6-rate-row'));
+
+                bands.forEach((band, index) => {
+                    if (band.querySelector('[data-conditional-band-adjustment]')) {
+                        return;
+                    }
+
+                    const field = rows[index]?.querySelector(
+                        '[data-conditional-band-adjustment]'
+                    )?.closest('label');
+
+                    if (field) {
+                        field.hidden = true;
+                        band.appendChild(field);
+                    }
+                });
+            };
+
+            const stateFromRule = (root, rule) => {
+                restoreBandRates(rule);
+                const code = rule.querySelector('[data-conditional-rule-code]')?.value || '';
+                const preset = code.startsWith('delivery_quality')
+                    ? 'quality'
+                    : code.startsWith('redirected_share')
+                        ? 'redirected'
+                        : 'custom';
+                const scope = rule.querySelector('[data-conditional-rule-scope]')?.value || 'per_route';
+
+                return {
+                    preset,
+                    name: rule.querySelector('[data-conditional-rule-name]')?.value || presets[preset].name,
+                    numerator: Array.from(rule.querySelectorAll('[data-conditional-numerator-source]:checked')).map((input) => input.value),
+                    denominator: Array.from(rule.querySelectorAll('[data-conditional-denominator-source]:checked')).map((input) => input.value),
+                    scope: scope === 'per_route' ? 'per_route' : 'monthly',
+                    rewards: Array.from(rule.querySelectorAll('[data-conditional-reward-source]:checked')).map((input) => input.value),
+                    bands: Array.from(rule.querySelectorAll('[data-conditional-band]')).map((band) => ({
+                        minimum: band.querySelector('[data-conditional-band-minimum]')?.value || '',
+                        maximum: band.querySelector('[data-conditional-band-maximum]')?.value || '',
+                        rate: band.querySelector('[data-conditional-band-adjustment]')?.value || '',
+                    })),
+                };
+            };
+
+            const ensureSummaryTable = (root) => {
+                let wrap = root.querySelector('[data-s039-r8-summary-wrap]');
+
+                if (wrap) {
+                    return wrap.querySelector('tbody');
+                }
+
+                wrap = document.createElement('div');
+                wrap.className = 's039-r8-summary-wrap';
+                wrap.dataset.s039R8SummaryWrap = '1';
+                wrap.innerHTML = `
+                    <table class="s039-r8-summary-table">
+                        <thead><tr><th>Příplatek</th><th>Podmínka</th><th>Období</th><th>Výplatní položky</th><th>Sazba</th><th>Akce</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                `;
+                root.querySelector('[data-conditional-rule-list]')?.before(wrap);
+
+                return wrap.querySelector('tbody');
+            };
+
+            const updateSummaryRow = (root, rule) => {
+                const state = stateFromRule(root, rule);
+                const tbody = ensureSummaryTable(root);
+                let row = tbody.querySelector(`[data-s039-r8-row="${rule.dataset.s039R8Id}"]`);
+
+                if (!rule.dataset.s039R8Id) {
+                    rule.dataset.s039R8Id = `${Date.now()}-${Math.random()}`;
+                }
+
+                if (!row) {
+                    row = document.createElement('tr');
+                    row.dataset.s039R8Row = rule.dataset.s039R8Id;
+                    tbody.appendChild(row);
+                }
+
+                const ranges = state.bands.map((band) => {
+                    if (band.minimum !== '' && band.maximum === '') {
+                        return `${band.minimum} % a více`;
+                    }
+
+                    if (band.minimum === '' && band.maximum !== '') {
+                        return `do ${band.maximum} %`;
+                    }
+
+                    if (band.minimum !== '' && band.maximum !== '') {
+                        return `${band.minimum}–${band.maximum} %`;
+                    }
+
+                    return '—';
+                }).join(', ');
+                const rewards = state.rewards.map(
+                    (value) => sourceLabels[value] || value
+                ).join(' + ');
+                const vat = isVatPayer(root) ? ' bez DPH' : '';
+                const rates = state.bands.map(
+                    (band) => `${band.rate || '—'} Kč/ks${vat}`
+                ).join(', ');
+
+                row.innerHTML = `
+                    <td><strong>${state.name}</strong></td>
+                    <td>${ranges}</td>
+                    <td>${periodText(state)}</td>
+                    <td>${rewards || '—'}</td>
+                    <td>${rates}</td>
+                    <td><div class="s039-r8-summary-actions"><button type="button" data-s039-r8-edit>Upravit</button><button type="button" class="drayvia-conditional-danger" data-s039-r8-remove>Odebrat</button></div></td>
+                `;
+                row.querySelector('[data-s039-r8-edit]').addEventListener(
+                    'click', () => openWizard(root, rule)
+                );
+                row.querySelector('[data-s039-r8-remove]').addEventListener('click', () => {
+                    rule.querySelector('[data-conditional-rule-remove]')?.click();
+                    row.remove();
+                    if (tbody.children.length === 0) {
+                        root.querySelector('[data-s039-r8-summary-wrap]')?.remove();
+                    }
+                });
+                rule.classList.add('s039-r8-hidden-raw-rule');
+            };
+
+            const applyState = () => {
+                const { root, state } = wizard;
+                let rule = wizard.rule;
+
+                if (!rule) {
+                    const preset = root.querySelector('[data-conditional-rule-preset]');
+                    const add = root.querySelector('[data-conditional-rule-add]');
+                    preset.value = state.preset;
+                    root.dataset.s039R8Bypass = '1';
+                    add.click();
+                    delete root.dataset.s039R8Bypass;
+                    rule = Array.from(root.querySelectorAll('[data-conditional-rule]')).at(-1);
+                }
+
+                if (!rule) {
+                    throw new Error('Příplatek se nepodařilo vytvořit.');
+                }
+
+                rule.querySelector('[data-conditional-rule-name]').value = state.name;
+                const driver = isDriverRoot(root);
+                rule.querySelector('[data-conditional-rule-scope]').value = state.scope === 'per_route'
+                    ? 'per_route'
+                    : driver ? 'monthly_driver' : 'monthly_price_list';
+                rule.querySelectorAll('[data-conditional-numerator-source]').forEach(
+                    (input) => { input.checked = state.numerator.includes(input.value); }
+                );
+                rule.querySelectorAll('[data-conditional-denominator-source]').forEach(
+                    (input) => { input.checked = state.denominator.includes(input.value); }
+                );
+                rule.querySelectorAll('[data-conditional-reward-source]').forEach(
+                    (input) => { input.checked = state.rewards.includes(input.value); }
+                );
+
+                restoreBandRates(rule);
+                let bands = Array.from(rule.querySelectorAll('[data-conditional-band]'));
+
+                while (bands.length < state.bands.length) {
+                    rule.querySelector('[data-conditional-band-add]').click();
+                    bands = Array.from(rule.querySelectorAll('[data-conditional-band]'));
+                }
+
+                while (bands.length > state.bands.length) {
+                    bands.at(-1).querySelector('[data-conditional-band-remove]').click();
+                    bands = Array.from(rule.querySelectorAll('[data-conditional-band]'));
+                }
+
+                restoreBandRates(rule);
+                bands.forEach((band, index) => {
+                    band.querySelector('[data-conditional-band-minimum]').value = state.bands[index].minimum;
+                    band.querySelector('[data-conditional-band-maximum]').value = state.bands[index].maximum;
+                    band.querySelector('[data-conditional-band-adjustment]').value = state.bands[index].rate;
+                });
+
+                rule.querySelectorAll('input, select').forEach((input) => {
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                });
+                updateSummaryRow(root, rule);
+            };
+
+            function openWizard(root, rule = null) {
+                wizard = {
+                    root,
+                    rule,
+                    step: 0,
+                    state: rule
+                        ? stateFromRule(root, rule)
+                        : defaultState('quality'),
+                };
+                modal.hidden = false;
+                document.body.style.overflow = 'hidden';
+                renderStep();
+            }
+
+            const closeWizard = () => {
+                modal.hidden = true;
+                document.body.style.overflow = '';
+                wizard = null;
+            };
+
+            modal.querySelector('[data-s039-r8-cancel]').addEventListener(
+                'click', closeWizard
+            );
+            back.addEventListener('click', () => {
+                readStep();
+                wizard.step -= 1;
+                renderStep();
+            });
+            next.addEventListener('click', () => {
+                const error = validateStep();
+
+                if (error) {
+                    const message = document.createElement('p');
+                    message.className = 's039-r8-error';
+                    message.dataset.s039R8Error = '1';
+                    message.textContent = error;
+                    body.appendChild(message);
+                    return;
+                }
+
+                if (wizard.step < stepTitles.length - 1) {
+                    wizard.step += 1;
+                    renderStep();
+                    return;
+                }
+
+                try {
+                    applyState();
+                    closeWizard();
+                }
+                catch (error) {
+                    const message = document.createElement('p');
+                    message.className = 's039-r8-error';
+                    message.textContent = error.message;
+                    body.appendChild(message);
+                }
+            });
+
+            document.addEventListener('click', (event) => {
+                const add = event.target.closest('[data-conditional-rule-add]');
+
+                if (!add) {
+                    return;
+                }
+
+                const root = add.closest('[data-conditional-rule-root]');
+
+                if (!root || root.dataset.s039R8Bypass === '1') {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                openWizard(root);
+            }, true);
+
+            const decorateRoot = (root) => {
+                const toolbar = root.querySelector('.drayvia-conditional-toolbar');
+                const presetLabel = root.querySelector(
+                    '[data-conditional-rule-preset]'
+                )?.closest('label');
+                const add = root.querySelector('[data-conditional-rule-add]');
+
+                if (presetLabel) {
+                    presetLabel.hidden = true;
+                }
+
+                if (toolbar) {
+                    toolbar.style.justifyContent = 'flex-start';
+                }
+
+                if (
+                    add
+                    && add.textContent.replace(/\s+/g, ' ').trim()
+                        !== '+ Přidat příplatek'
+                ) {
+                    add.textContent = '+ Přidat příplatek';
+                }
+
+                root.querySelectorAll('[data-conditional-rule]').forEach(
+                    (rule) => {
+                        if (rule.dataset.s039R8Decorated === '1') {
+                            return;
+                        }
+
+                        rule.dataset.s039R8Decorated = '1';
+                        updateSummaryRow(root, rule);
+                    }
+                );
+            };
+
+            let scheduled = false;
+            const schedule = () => {
+                if (scheduled) {
+                    return;
+                }
+
+                scheduled = true;
+                queueMicrotask(() => {
+                    scheduled = false;
+                    document.querySelectorAll(
+                        '[data-conditional-rule-root]'
+                    ).forEach(decorateRoot);
+                });
+            };
+
+            new MutationObserver(schedule).observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+            });
+            document.addEventListener('DOMContentLoaded', schedule);
+            schedule();
+        })();
+    </script>
+    <script src="/assets/s039-fuel-surcharge.js" data-s039-05a-3-fuel-surcharge></script>
 </body>
 </html>

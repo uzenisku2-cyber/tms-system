@@ -27,6 +27,7 @@ final class DriverPriceListVersionResource extends JsonResource
 
         $version->loadMissing([
             'conditionalRules.metricComponents',
+            'conditionalRules.rewardComponents',
             'conditionalRules.bands',
         ]);
 

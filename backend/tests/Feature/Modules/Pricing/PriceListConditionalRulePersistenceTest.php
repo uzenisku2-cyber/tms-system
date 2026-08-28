@@ -11,6 +11,7 @@ use App\Modules\Organizations\Models\OrganizationRelationship;
 use App\Modules\Pricing\Models\PriceList;
 use App\Modules\Pricing\Models\PriceListConditionalRule;
 use App\Modules\Pricing\Models\PriceListConditionalRuleMetricComponent;
+use App\Modules\Pricing\Models\PriceListConditionalRuleRewardComponent;
 use App\Modules\Pricing\Models\PriceListItem;
 use App\Modules\Pricing\Models\PriceListVersion;
 use App\Modules\Pricing\Services\PriceListWriteService;
@@ -62,6 +63,7 @@ final class PriceListConditionalRulePersistenceTest extends TestCase
             $version->getAttribute('status'),
         );
         self::assertSame(2, $version->conditionalRules()->count());
+        self::assertSame(2, $this->rewardComponentCount($version));
         self::assertSame(
             6,
             $this->componentCount($version),
@@ -90,6 +92,15 @@ final class PriceListConditionalRulePersistenceTest extends TestCase
                 ->pluck('metric_source')
                 ->all(),
         );
+        self::assertSame(
+            [
+                PriceListConditionalRule::SOURCE_DELIVERED_PARCELS,
+                PriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+            ],
+            $quality->rewardComponents()
+                ->pluck('metric_source')
+                ->all(),
+        );
 
         $updated = $this->writeService()->updateDraftVersion(
             $actor,
@@ -109,6 +120,7 @@ final class PriceListConditionalRulePersistenceTest extends TestCase
 
         self::assertSame(2, $updated->getAttribute('lock_version'));
         self::assertSame(1, $updated->conditionalRules()->count());
+        self::assertSame(0, $this->rewardComponentCount($updated));
         self::assertSame(2, $this->componentCount($updated));
         self::assertSame(1, $this->bandCount($updated));
         self::assertFalse(
@@ -150,6 +162,7 @@ final class PriceListConditionalRulePersistenceTest extends TestCase
             $copy->items()->count(),
         );
         self::assertSame(1, $copy->conditionalRules()->count());
+        self::assertSame(0, $this->rewardComponentCount($copy));
         self::assertSame(2, $this->componentCount($copy));
         self::assertSame(1, $this->bandCount($copy));
 
@@ -343,6 +356,10 @@ final class PriceListConditionalRulePersistenceTest extends TestCase
             ],
             'evaluation_scope' => PriceListConditionalRule::EVALUATION_SCOPE_PER_ROUTE,
             'reward_method' => PriceListConditionalRule::REWARD_METHOD_AMOUNT_PER_UNIT,
+            'reward_quantity_sources' => [
+                PriceListConditionalRule::SOURCE_DELIVERED_PARCELS,
+                PriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+            ],
             'reward_quantity_source' => PriceListConditionalRule::SOURCE_DELIVERED_PARCELS,
             'reward_target_item_code' => null,
             'rounding_scale' => 2,
@@ -406,6 +423,16 @@ final class PriceListConditionalRulePersistenceTest extends TestCase
             ->withCount('bands')
             ->get()
             ->sum('bands_count');
+    }
+
+    private function rewardComponentCount(PriceListVersion $version): int
+    {
+        return PriceListConditionalRuleRewardComponent::query()
+            ->whereIn(
+                'price_list_conditional_rule_id',
+                $version->conditionalRules()->select('id'),
+            )
+            ->count();
     }
 
     private function organizationContext(): OrganizationContext

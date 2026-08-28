@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Modules\Pricing;
 
+use App\Modules\Pricing\Exceptions\InvalidConditionalRewardConfiguration;
 use App\Modules\Pricing\Services\ConditionalPriceListRulePayload;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -61,19 +62,78 @@ final class ConditionalPriceListRulePayloadTest extends TestCase
     {
         $rule = $this->qualityRule();
         $rule['reward_method'] = 'fixed_amount';
-        $rule['reward_quantity_source'] = 'delivered_parcels';
 
-        try {
+        $this->expectException(
+            InvalidConditionalRewardConfiguration::class,
+        );
+
+        (new ConditionalPriceListRulePayload)->fromInput([
+            'conditional_rules' => [$rule],
+        ]);
+    }
+
+    public function test_multiple_reward_quantity_sources_are_preserved(): void
+    {
+        $rules = (new ConditionalPriceListRulePayload)->fromInput([
+            'conditional_rules' => [$this->qualityRule()],
+        ]);
+
+        self::assertSame(
+            [
+                'delivered_parcels',
+                'redirected_parcels',
+                'customer_rejected_parcels',
+            ],
+            $rules[0]['reward_quantity_sources'],
+        );
+
+        self::assertSame(
+            'delivered_parcels',
+            $rules[0]['reward_quantity_source'],
+        );
+    }
+
+    public function test_legacy_reward_quantity_source_is_normalized(): void
+    {
+        $rule = $this->qualityRule();
+        unset($rule['reward_quantity_sources']);
+        $rule['reward_quantity_source'] = 'redirected_parcels';
+
+        $rules = (new ConditionalPriceListRulePayload)->fromInput([
+            'conditional_rules' => [$rule],
+        ]);
+
+        self::assertSame(
+            ['redirected_parcels'],
+            $rules[0]['reward_quantity_sources'],
+        );
+        self::assertSame(
+            'redirected_parcels',
+            $rules[0]['reward_quantity_source'],
+        );
+    }
+
+    public function test_price_list_without_surcharge_is_valid(): void
+    {
+        self::assertSame(
+            [],
             (new ConditionalPriceListRulePayload)->fromInput([
-                'conditional_rules' => [$rule],
-            ]);
-            self::fail('An incompatible reward shape was accepted.');
-        } catch (ValidationException $exception) {
-            self::assertArrayHasKey(
-                'conditional_rules.0.reward_method',
-                $exception->errors(),
-            );
-        }
+                'conditional_rules' => [],
+            ]),
+        );
+    }
+
+    public function test_zero_rate_is_a_valid_explicit_surcharge_value(): void
+    {
+        $rule = $this->qualityRule();
+        $rule['bands'][0]['adjustment_value'] = '0';
+        $rule['bands'] = [$rule['bands'][0]];
+
+        $rules = (new ConditionalPriceListRulePayload)->fromInput([
+            'conditional_rules' => [$rule],
+        ]);
+
+        self::assertSame('0', $rules[0]['bands'][0]['adjustment_value']);
     }
 
     /** @return array<string, mixed> */
@@ -94,6 +154,11 @@ final class ConditionalPriceListRulePayloadTest extends TestCase
             ],
             'evaluation_scope' => 'per_route',
             'reward_method' => 'amount_per_unit',
+            'reward_quantity_sources' => [
+                'delivered_parcels',
+                'redirected_parcels',
+                'customer_rejected_parcels',
+            ],
             'reward_quantity_source' => 'delivered_parcels',
             'reward_target_item_code' => null,
             'rounding_scale' => 2,
@@ -132,6 +197,7 @@ final class ConditionalPriceListRulePayloadTest extends TestCase
             ],
             'evaluation_scope' => 'monthly_price_list',
             'reward_method' => 'fixed_amount',
+            'reward_quantity_sources' => [],
             'reward_quantity_source' => null,
             'reward_target_item_code' => null,
             'rounding_scale' => 2,

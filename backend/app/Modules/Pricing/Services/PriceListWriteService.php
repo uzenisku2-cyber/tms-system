@@ -1932,11 +1932,15 @@ final class PriceListWriteService
             $denominatorSources = $payload[
                 'metric_denominator_sources'
             ];
+            $rewardQuantitySources = $payload[
+                'reward_quantity_sources'
+            ] ?? null;
 
             if (
                 ! is_array($numeratorSources)
                 || $numeratorSources === []
                 || ! is_array($denominatorSources)
+                || ! is_array($rewardQuantitySources)
             ) {
                 throw new LogicException(
                     'Normalized conditional metric components are invalid.',
@@ -1952,7 +1956,7 @@ final class PriceListWriteService
                 'metric_denominator_source' => $denominatorSources[0] ?? null,
                 'evaluation_scope' => $payload['evaluation_scope'],
                 'reward_method' => $payload['reward_method'],
-                'reward_quantity_source' => $payload['reward_quantity_source'],
+                'reward_quantity_source' => $rewardQuantitySources[0] ?? null,
                 'reward_target_item_code' => $payload['reward_target_item_code'],
                 'rounding_scale' => $payload['rounding_scale'],
                 'rounding_method' => PriceListConditionalRule::ROUNDING_METHOD_HALF_UP,
@@ -1970,6 +1974,13 @@ final class PriceListWriteService
             foreach ($denominatorSources as $index => $source) {
                 $rule->metricComponents()->create([
                     'component_role' => PriceListConditionalRuleMetricComponent::ROLE_DENOMINATOR,
+                    'metric_source' => $source,
+                    'position' => $index + 1,
+                ]);
+            }
+
+            foreach ($rewardQuantitySources as $index => $source) {
+                $rule->rewardComponents()->create([
                     'metric_source' => $source,
                     'position' => $index + 1,
                 ]);
@@ -2016,6 +2027,7 @@ final class PriceListWriteService
         foreach ($existingRules as $rule) {
             $rule->bands()->delete();
             $rule->metricComponents()->delete();
+            $rule->rewardComponents()->delete();
             $rule->delete();
         }
 
@@ -2178,6 +2190,23 @@ final class PriceListWriteService
                 }
             }
 
+            $rewardQuantitySources = $rule->rewardComponents()
+                ->orderBy('position')
+                ->pluck('metric_source')
+                ->filter(static fn (mixed $source): bool => is_string($source))
+                ->values()
+                ->all();
+
+            if ($rewardQuantitySources === []) {
+                $legacyRewardQuantitySource = $rule->getAttribute(
+                    'reward_quantity_source',
+                );
+
+                if (is_string($legacyRewardQuantitySource)) {
+                    $rewardQuantitySources[] = $legacyRewardQuantitySource;
+                }
+            }
+
             $bands = [];
 
             foreach ($rule->bands()->orderBy('position')->get() as $band) {
@@ -2203,6 +2232,7 @@ final class PriceListWriteService
                 'metric_denominator_sources' => $denominatorSources,
                 'evaluation_scope' => $rule->getAttribute('evaluation_scope'),
                 'reward_method' => $rule->getAttribute('reward_method'),
+                'reward_quantity_sources' => $rewardQuantitySources,
                 'reward_quantity_source' => $rule->getAttribute('reward_quantity_source'),
                 'reward_target_item_code' => $rule->getAttribute('reward_target_item_code'),
                 'rounding_scale' => $rule->getAttribute('rounding_scale'),
@@ -2219,6 +2249,7 @@ final class PriceListWriteService
         return [
             'items',
             'conditionalRules.metricComponents',
+            'conditionalRules.rewardComponents',
             'conditionalRules.bands',
         ];
     }

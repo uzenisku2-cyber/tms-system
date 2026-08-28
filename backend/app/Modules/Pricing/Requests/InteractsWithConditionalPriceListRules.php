@@ -63,6 +63,7 @@ trait InteractsWithConditionalPriceListRules
             foreach ([
                 'metric_numerator_sources',
                 'metric_denominator_sources',
+                'reward_quantity_sources',
             ] as $field) {
                 $sources = $rule[$field] ?? null;
 
@@ -76,6 +77,22 @@ trait InteractsWithConditionalPriceListRules
                             : $source,
                     $sources,
                 );
+            }
+
+            if (
+                ! array_key_exists(
+                    'reward_quantity_sources',
+                    $normalizedRule,
+                )
+            ) {
+                $legacyRewardQuantitySource =
+                    $normalizedRule['reward_quantity_source'] ?? null;
+
+                $normalizedRule['reward_quantity_sources'] =
+                    is_string($legacyRewardQuantitySource)
+                    && $legacyRewardQuantitySource !== ''
+                        ? [$legacyRewardQuantitySource]
+                        : [];
             }
 
             $roundingScale = $rule['rounding_scale'] ?? null;
@@ -163,6 +180,62 @@ trait InteractsWithConditionalPriceListRules
         };
     }
 
+    private function compatibleConditionalRewardConfiguration(): Closure
+    {
+        return function (
+            string $attribute,
+            mixed $value,
+            Closure $fail,
+        ): void {
+            if (! is_string($value)) {
+                return;
+            }
+
+            if (
+                preg_match(
+                    '/^conditional_rules\.(\d+)\.reward_method$/',
+                    $attribute,
+                    $matches,
+                ) !== 1
+            ) {
+                return;
+            }
+
+            $rule = $this->input(
+                'conditional_rules.'.(int) $matches[1],
+            );
+
+            if (! is_array($rule)) {
+                return;
+            }
+
+            $sources = $rule['reward_quantity_sources'] ?? null;
+            $target = $rule['reward_target_item_code'] ?? null;
+
+            if (! is_array($sources)) {
+                return;
+            }
+
+            $valid = match ($value) {
+                PriceListConditionalRule::REWARD_METHOD_AMOUNT_PER_UNIT =>
+                    $sources !== [] && $target === null,
+                PriceListConditionalRule::REWARD_METHOD_FIXED_AMOUNT =>
+                    $sources === [] && $target === null,
+                PriceListConditionalRule::REWARD_METHOD_PERCENTAGE_OF_ITEM =>
+                    $sources === []
+                    && is_string($target)
+                    && $target !== '',
+                default => false,
+            };
+
+            if (! $valid) {
+                $fail(
+                    'The selected reward method has incompatible quantity or target fields.',
+                );
+            }
+        };
+    }
+
     /** @return array<string, list<mixed>> */
     protected function conditionalPriceListRuleRules(): array
     {
@@ -173,7 +246,7 @@ trait InteractsWithConditionalPriceListRules
             ],
             'conditional_rules.*' => [
                 'required',
-                'array:code,name,description,metric_type,metric_numerator_sources,metric_denominator_sources,evaluation_scope,reward_method,reward_quantity_source,reward_target_item_code,rounding_scale,bands',
+                'array:code,name,description,metric_type,metric_numerator_sources,metric_denominator_sources,evaluation_scope,reward_method,reward_quantity_source,reward_quantity_sources,reward_target_item_code,rounding_scale,bands',
             ],
             'conditional_rules.*.code' => [
                 'required',
@@ -227,9 +300,20 @@ trait InteractsWithConditionalPriceListRules
                 'required',
                 'string',
                 Rule::in(PriceListConditionalRule::REWARD_METHODS),
+                $this->compatibleConditionalRewardConfiguration(),
             ],
             'conditional_rules.*.reward_quantity_source' => [
                 'nullable',
+                'string',
+                Rule::in(PriceListConditionalRule::METRIC_SOURCES),
+            ],
+            'conditional_rules.*.reward_quantity_sources' => [
+                'present',
+                'array',
+                $this->distinctConditionalMetricSources(),
+            ],
+            'conditional_rules.*.reward_quantity_sources.*' => [
+                'required',
                 'string',
                 Rule::in(PriceListConditionalRule::METRIC_SOURCES),
             ],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Pricing\Services;
 
+use App\Modules\Pricing\Exceptions\InvalidConditionalRewardConfiguration;
 use App\Modules\Pricing\Models\PriceListConditionalRule;
 use App\Modules\Pricing\Models\PriceListItem;
 use Illuminate\Validation\ValidationException;
@@ -99,10 +100,21 @@ final class ConditionalPriceListRulePayload
                 PriceListConditionalRule::REWARD_METHODS,
             );
 
-            $rewardQuantitySource = $this->nullableAllowedString(
+            if (! array_key_exists('reward_quantity_sources', $rule)) {
+                $legacyRewardQuantitySource =
+                    $rule['reward_quantity_source'] ?? null;
+
+                $rule['reward_quantity_sources'] =
+                    is_string($legacyRewardQuantitySource)
+                        ? [$legacyRewardQuantitySource]
+                        : [];
+            }
+
+            $rewardQuantitySources = $this->sourceList(
                 $rule,
-                'reward_quantity_source',
-                PriceListConditionalRule::METRIC_SOURCES,
+                'reward_quantity_sources',
+                $path,
+                false,
             );
 
             $rewardTargetItemCode = $this->nullableAllowedString(
@@ -112,11 +124,13 @@ final class ConditionalPriceListRulePayload
             );
 
             $this->assertRewardShape(
-                $path,
                 $rewardMethod,
-                $rewardQuantitySource,
+                $rewardQuantitySources,
                 $rewardTargetItemCode,
             );
+
+            $legacyRewardQuantitySource =
+                $rewardQuantitySources[0] ?? null;
 
             $roundingScale = $this->integerValue(
                 $rule['rounding_scale'] ?? 2,
@@ -145,7 +159,8 @@ final class ConditionalPriceListRulePayload
                     PriceListConditionalRule::EVALUATION_SCOPES,
                 ),
                 'reward_method' => $rewardMethod,
-                'reward_quantity_source' => $rewardQuantitySource,
+                'reward_quantity_sources' => $rewardQuantitySources,
+                'reward_quantity_source' => $legacyRewardQuantitySource,
                 'reward_target_item_code' => $rewardTargetItemCode,
                 'rounding_scale' => $roundingScale,
                 'bands' => $this->bands($rule, $path),
@@ -372,26 +387,27 @@ final class ConditionalPriceListRulePayload
         return true;
     }
 
+    /** @param list<string> $rewardQuantitySources */
     private function assertRewardShape(
-        string $path,
         string $rewardMethod,
-        ?string $rewardQuantitySource,
+        array $rewardQuantitySources,
         ?string $rewardTargetItemCode,
     ): void {
         $valid = match ($rewardMethod) {
-            PriceListConditionalRule::REWARD_METHOD_AMOUNT_PER_UNIT => $rewardQuantitySource !== null
+            PriceListConditionalRule::REWARD_METHOD_AMOUNT_PER_UNIT => $rewardQuantitySources !== []
                 && $rewardTargetItemCode === null,
-            PriceListConditionalRule::REWARD_METHOD_FIXED_AMOUNT => $rewardQuantitySource === null
+            PriceListConditionalRule::REWARD_METHOD_FIXED_AMOUNT => $rewardQuantitySources === []
                 && $rewardTargetItemCode === null,
-            PriceListConditionalRule::REWARD_METHOD_PERCENTAGE_OF_ITEM => $rewardQuantitySource === null
+            PriceListConditionalRule::REWARD_METHOD_PERCENTAGE_OF_ITEM => $rewardQuantitySources === []
                 && $rewardTargetItemCode !== null,
             default => false,
         };
 
         if (! $valid) {
-            $this->validationFailure(
-                $path.'.reward_method',
-                'The selected reward method has incompatible quantity or target fields.',
+            throw InvalidConditionalRewardConfiguration::incompatible(
+                $rewardMethod,
+                $rewardQuantitySources,
+                $rewardTargetItemCode,
             );
         }
     }

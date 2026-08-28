@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Tests\Unit\Modules\Pricing;
 
 use App\Modules\Pricing\Models\PriceListConditionalRule;
+use App\Modules\Pricing\Models\PriceListConditionalRuleMetricComponent;
+use App\Modules\Pricing\Models\PriceListConditionalRuleRewardComponent;
 use App\Modules\Pricing\Services\ConditionalPricingScopeAggregator;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -160,6 +163,77 @@ final class ConditionalPricingScopeAggregatorTest extends TestCase
                 ),
             ],
         );
+    }
+
+    public function test_multiple_formula_and_reward_sources_are_summed(): void
+    {
+        $rule = $this->rule('monthly_driver');
+        $rule->setRelation('metricComponents', new Collection([
+            $this->metricComponent('numerator', 'delivered_parcels', 1),
+            $this->metricComponent('numerator', 'redirected_parcels', 2),
+            $this->metricComponent('denominator', 'loaded_parcels', 1),
+        ]));
+        $rule->setRelation('rewardComponents', new Collection([
+            $this->rewardComponent('delivered_parcels', 1),
+            $this->rewardComponent('redirected_parcels', 2),
+        ]));
+
+        $result = (new ConditionalPricingScopeAggregator)->aggregate(
+            $rule,
+            [
+                [
+                    ...$this->snapshot(4, '2026-08-01', 100, 10),
+                    'delivered_parcels' => 85,
+                ],
+                [
+                    ...$this->snapshot(4, '2026-08-02', 50, 5),
+                    'delivered_parcels' => 40,
+                ],
+            ],
+        );
+
+        self::assertSame('140.000000', $result['metric_numerator_value']);
+        self::assertSame('150.000000', $result['metric_denominator_value']);
+        self::assertSame('140.000000', $result['reward_quantity_value']);
+        self::assertSame(
+            ['delivered_parcels', 'redirected_parcels'],
+            $result['reward_quantity_sources'],
+        );
+        self::assertSame(
+            [
+                'delivered_parcels' => '125.000000',
+                'redirected_parcels' => '15.000000',
+            ],
+            $result['reward_quantity_values'],
+        );
+    }
+
+    private function metricComponent(
+        string $role,
+        string $source,
+        int $position,
+    ): PriceListConditionalRuleMetricComponent {
+        $component = new PriceListConditionalRuleMetricComponent;
+        $component->forceFill([
+            'component_role' => $role,
+            'metric_source' => $source,
+            'position' => $position,
+        ]);
+
+        return $component;
+    }
+
+    private function rewardComponent(
+        string $source,
+        int $position,
+    ): PriceListConditionalRuleRewardComponent {
+        $component = new PriceListConditionalRuleRewardComponent;
+        $component->forceFill([
+            'metric_source' => $source,
+            'position' => $position,
+        ]);
+
+        return $component;
     }
 
     private function rule(
