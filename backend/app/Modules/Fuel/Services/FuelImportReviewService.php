@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Fuel\Models\FuelImportBatch;
 use App\Modules\Fuel\Models\FuelImportRow;
 use App\Modules\Fuel\Models\FuelImportRowCorrection;
+use App\Modules\Fuel\Models\FuelImportRowFinalization;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -24,6 +25,10 @@ final class FuelImportReviewService
             ->orderBy('revision')
             ->get();
         $latest = $corrections->last();
+        $finalization = FuelImportRowFinalization::query()
+            ->where('fuel_import_row_id', $row->id)
+            ->with(['finalizedBy:id,name', 'transaction:id,public_id'])
+            ->first();
 
         return [
             'source_row' => $row->source_row,
@@ -41,6 +46,16 @@ final class FuelImportReviewService
                 'corrected_by' => $item->correctedBy?->only(['id', 'name']),
                 'created_at' => $item->created_at?->toISOString(),
             ])->values(),
+            'finalization' => $finalization instanceof FuelImportRowFinalization ? [
+                'public_id' => $finalization->public_id,
+                'correction_revision' => $finalization->correction_revision,
+                'from_status' => $finalization->from_status,
+                'to_status' => $finalization->to_status,
+                'reason' => $finalization->reason,
+                'transaction_public_id' => $finalization->transaction?->public_id,
+                'finalized_by' => $finalization->finalizedBy?->only(['id', 'name']),
+                'finalized_at' => $finalization->finalized_at?->toISOString(),
+            ] : null,
         ];
     }
 
