@@ -3932,7 +3932,7 @@
     <button class="nav-item active" type="button" data-drayvia-page="routes">Trasy</button>
     <button class="nav-item drayvia-nav-subitem" type="button" data-drayvia-page="record-review">Kontrola zápisů</button>
     <button class="nav-item" type="button" data-drayvia-page="drivers">Řidiči</button>
-    <button class="nav-item" id="carriersNavButton" type="button">Dopravci</button>
+    <button class="nav-item" id="carriersNavButton" type="button" data-drayvia-page="carriers">Dopravci</button>
     <button class="nav-item" type="button" data-drayvia-page="statistics">Statistiky</button>
 <button class="nav-item" type="button" data-drayvia-page="fuel">PHM</button>
     <button class="nav-item" type="button" data-drayvia-page="finance">Finance</button>
@@ -7702,9 +7702,7 @@ summaryParts.push(
 
             refreshButton.addEventListener('click', loadReports);
 
-            carriersNavButton.addEventListener('click', () => {
-                window.location.href = '/carriers';
-            });
+                        // Carrier navigation is handled by the unified DRAYVIA page router.
 
             dailyReportAddButton.addEventListener('click', () => {
                 if (!currentDriver) {
@@ -13655,38 +13653,57 @@ const calendarJuly2026 = {
             const drivers =
                 realDriverItems(body);
 
+            // S038-01A RESILIENT DRIVER ASSIGNMENT ENRICHMENT
             const enrichedDrivers =
                 await Promise.all(
                     drivers.map(
                         async (driver) => {
-                            const assignmentBody =
-                                await realDriverApi(
-                                    `/api/v1/own-drivers/${driver.id}/assignments`
-                                );
+                            try {
+                                const assignmentBody =
+                                    await realDriverApi(
+                                        `/api/v1/own-drivers/${driver.id}/assignments`
+                                    );
 
-                            const assignmentData =
-                                assignmentBody?.data
-                                ?? {};
+                                const assignmentData =
+                                    assignmentBody?.data
+                                    ?? {};
 
-                            const assignmentItems =
-                                Array.isArray(
-                                    assignmentData.items
-                                )
-                                    ? assignmentData.items
-                                    : [];
+                                const assignmentItems =
+                                    Array.isArray(
+                                        assignmentData.items
+                                    )
+                                        ? assignmentData.items
+                                        : [];
 
-                            return {
-                                ...driver,
-                                organization_assignment_current:
-                                    assignmentData.current
-                                    ?? null,
-                                organization_assignment_latest:
-                                    assignmentData.current
-                                    ?? assignmentItems[0]
-                                    ?? null,
-                                organization_assignment_items:
-                                    assignmentItems,
-                            };
+                                return {
+                                    ...driver,
+                                    organization_assignment_current:
+                                        assignmentData.current
+                                        ?? null,
+                                    organization_assignment_latest:
+                                        assignmentData.current
+                                        ?? assignmentItems[0]
+                                        ?? null,
+                                    organization_assignment_items:
+                                        assignmentItems,
+                                    organization_assignment_load_error:
+                                        null,
+                                };
+                            }
+                            catch (error) {
+                                return {
+                                    ...driver,
+                                    organization_assignment_current:
+                                        null,
+                                    organization_assignment_latest:
+                                        null,
+                                    organization_assignment_items:
+                                        [],
+                                    organization_assignment_load_error:
+                                        error?.message
+                                        || 'Historii organizačního přiřazení nelze načíst.',
+                                };
+                            }
                         }
                     )
                 );
@@ -13709,7 +13726,20 @@ const calendarJuly2026 = {
             realDriverState.items =
                 enrichedDrivers;
 
+            const assignmentLoadFailureCount =
+                enrichedDrivers.filter(
+                    (driver) =>
+                        driver.organization_assignment_load_error
+                ).length;
+
             renderRealDriverRows();
+
+            if (assignmentLoadFailureCount > 0) {
+                setRealDriverMessage(
+                    `Řidiči byli načteni. Historii přiřazení se nepodařilo načíst u ${assignmentLoadFailureCount} záznamů.`,
+                    'error'
+                );
+            }
         }
         catch (error) {
             target.innerHTML = `
@@ -13859,6 +13889,170 @@ const calendarJuly2026 = {
         }
     };
 
+    let carrierShellItems = [];
+
+    const carrierShellCollection = (body) => {
+        const value = body?.data?.items ?? body?.items ?? body?.data ?? body ?? [];
+        return Array.isArray(value) ? value : [];
+    };
+
+    const carrierShellText = (value, fallback = '—') => {
+        if (value === null || value === undefined || value === '') {
+            return fallback;
+        }
+        return String(value);
+    };
+
+    const renderCarrierShellRows = () => {
+        const list = document.getElementById('drayviaCarrierShellList');
+        const total = document.getElementById('drayviaCarrierShellTotal');
+        const active = document.getElementById('drayviaCarrierShellActive');
+
+        if (!list || !total || !active) {
+            return;
+        }
+
+        total.textContent = String(carrierShellItems.length);
+        active.textContent = String(
+            carrierShellItems.filter((item) => item.status === 'active').length
+        );
+        list.replaceChildren();
+
+        if (carrierShellItems.length === 0) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 5;
+            cell.textContent = 'Nejsou evidováni žádní externí dopravci.';
+            row.appendChild(cell);
+            list.appendChild(row);
+            return;
+        }
+
+        carrierShellItems.forEach((item) => {
+            const row = document.createElement('tr');
+            [
+                carrierShellText(item.name),
+                carrierShellText(item.registration_number ?? item.ico),
+                carrierShellText(item.relationship_type ?? item.type),
+                carrierShellText(item.status),
+                carrierShellText(item.contact_email)
+            ].forEach((value) => {
+                const cell = document.createElement('td');
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+            list.appendChild(row);
+        });
+    };
+
+    const loadCarrierShellData = async () => {
+        const message = document.getElementById('drayviaCarrierShellMessage');
+        const company = document.getElementById('drayviaCarrierShellCompany');
+        const reload = document.getElementById('drayviaCarrierShellReload');
+
+        if (reload) {
+            reload.disabled = true;
+        }
+        if (message) {
+            message.hidden = true;
+            message.textContent = '';
+        }
+
+        try {
+            const [profileBody, carrierBody] = await Promise.all([
+                api('/api/v1/organization-profile'),
+                api('/api/v1/carriers')
+            ]);
+            const profile = profileBody?.data ?? profileBody ?? {};
+            carrierShellItems = carrierShellCollection(carrierBody);
+
+            if (company) {
+                company.textContent = carrierShellText(
+                    profile.name ?? profile.organization?.name,
+                    'Hlavní organizace'
+                );
+            }
+            renderCarrierShellRows();
+        }
+        catch (error) {
+            carrierShellItems = [];
+            renderCarrierShellRows();
+            if (message) {
+                message.hidden = false;
+                message.textContent = `Dopravce se nepodařilo načíst: ${error.message}`;
+            }
+        }
+        finally {
+            if (reload) {
+                reload.disabled = false;
+            }
+        }
+    };
+
+    const bindCarrierShell = () => {
+        document
+            .getElementById('drayviaCarrierShellReload')
+            ?.addEventListener('click', loadCarrierShellData);
+        loadCarrierShellData();
+    };
+
+    const carriers = () => `
+        ${header(
+            'Dopravci',
+            'Správa hlavní organizace a externích dopravců uvnitř jednotného prostředí DRAYVIA.'
+        )}
+
+        <div class="drayvia-preview-actions">
+            <button id="drayviaCarrierShellReload" class="drayvia-preview-action primary" type="button">
+                OBNOVIT
+            </button>
+            <a class="drayvia-preview-action" href="/carriers" target="_blank" rel="noopener">
+                ROZŠÍŘENÁ SPRÁVA V NOVÉ KARTĚ
+            </a>
+        </div>
+
+        <div id="drayviaCarrierShellMessage" class="drayvia-real-driver-message" hidden></div>
+
+        <div class="drayvia-preview-kpis">
+            <article class="drayvia-preview-card">
+                <div class="drayvia-preview-card-label">HLAVNÍ ORGANIZACE</div>
+                <strong id="drayviaCarrierShellCompany">—</strong>
+            </article>
+            <article class="drayvia-preview-card">
+                <div class="drayvia-preview-card-label">DOPRAVCI CELKEM</div>
+                <strong id="drayviaCarrierShellTotal">—</strong>
+            </article>
+            <article class="drayvia-preview-card">
+                <div class="drayvia-preview-card-label">AKTIVNÍ DOPRAVCI</div>
+                <strong id="drayviaCarrierShellActive">—</strong>
+            </article>
+        </div>
+
+        <section class="drayvia-preview-panel">
+            <div class="drayvia-preview-panel-head">
+                <div>
+                    <h2>EXTERNÍ DOPRAVCI</h2>
+                    <p>Aktuální organizace dostupné přes provozní API.</p>
+                </div>
+            </div>
+            <div class="drayvia-preview-table-wrap">
+                <table class="drayvia-preview-table">
+                    <thead>
+                        <tr>
+                            <th>DOPRAVCE</th>
+                            <th>IČO</th>
+                            <th>VZTAH</th>
+                            <th>STAV</th>
+                            <th>KONTAKT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drayviaCarrierShellList">
+                        <tr><td colspan="5">Načítám dopravce…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
     const drivers = () => `
         ${header(
             'Řidiči',
@@ -14430,63 +14624,42 @@ const calendarJuly2026 = {
             hidden
         ></div>
     `;
-const fuel = () => `
+const bindFuelWorkspace = () => {
+        const frame = document.getElementById('drayviaFuelWorkspaceFrame');
+        const reload = document.getElementById('drayviaFuelWorkspaceReload');
+        const status = document.getElementById('drayviaFuelWorkspaceStatus');
+
+        reload?.addEventListener('click', () => {
+            if (!frame) return;
+            if (status) status.textContent = 'NAČÍTÁM PHM…';
+            frame.src = '/settings/fuel-imports';
+        });
+        frame?.addEventListener('load', () => {
+            if (status) status.textContent = 'PHM PŘIPRAVENO';
+        });
+    };
+
+    const fuel = () => `
         ${header(
             'PHM',
-            'Import a kontrola tankování MOL a ORLEN, spotřeby a skutečných nákladů na palivo.'
+            'Import a kontrola tankování MOL a ORLEN, auditované opravy a finální potvrzení.'
         )}
 
         <div class="drayvia-preview-actions">
-            <button class="drayvia-preview-action primary" type="button">
-                Import MOL
-            </button>
-            <button class="drayvia-preview-action primary" type="button">
-                Import ORLEN
-            </button>
-            <button class="drayvia-preview-action" type="button">
-                Palivové karty
-            </button>
-            <button class="drayvia-preview-action" type="button">
-                Přiřazení karet řidičům
-            </button>
+            <button id="drayviaFuelWorkspaceReload" class="drayvia-preview-action primary" type="button">OBNOVIT PHM</button>
+            <a class="drayvia-preview-action" href="/settings/fuel-imports" target="_blank" rel="noopener">OTEVŘÍT V NOVÉ KARTĚ</a>
+            <span id="drayviaFuelWorkspaceStatus" class="drayvia-preview-action">NAČÍTÁM PHM…</span>
         </div>
 
-        <div class="drayvia-preview-grid" style="margin-top:18px;">
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Tankování</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Litry</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Náklady PHM</div>
-                <div class="drayvia-preview-card-value">— Kč</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Ke kontrole</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-        </div>
-
-        <div class="drayvia-preview-panel">
-            <div class="drayvia-preview-panel-head">
-                <h2 class="drayvia-preview-panel-title">Tankování</h2>
-                <div class="drayvia-preview-panel-subtitle">
-                    Datum · řidič · karta · stanice · litry · cena · přiřazení.
-                </div>
-            </div>
-
-            <div class="drayvia-preview-panel-body">
-                Přehled importovaných transakcí bude zde.
-            </div>
-        </div>
+        <section class="drayvia-preview-panel" style="padding:0;overflow:hidden;margin-top:18px;">
+            <iframe
+                id="drayviaFuelWorkspaceFrame"
+                title="Importy a kontrola PHM"
+                src="/settings/fuel-imports"
+                style="display:block;width:100%;height:1100px;border:0;background:#f4f7fb;"
+            ></iframe>
+        </section>
     `;
-
     const finance = () => `
                 ${header(
                     'Finance',
@@ -18451,6 +18624,37 @@ const fuel = () => `
         </section>
     `;
 
+    const loadSettingsSystemInfo = async () => {
+        const panel = document.getElementById('drayviaSettingsSystemPanel');
+        const status = document.getElementById('drayviaSettingsSystemStatus');
+        const identity = document.getElementById('drayviaSettingsSystemIdentity');
+
+        if (!panel || !status || !identity) {
+            return;
+        }
+
+        panel.hidden = false;
+        status.textContent = 'OVĚŘUJI API…';
+        identity.textContent = '—';
+
+        try {
+            const body = await api('/api/v1/auth/me');
+            const user = body?.data ?? body?.user ?? body ?? {};
+            status.textContent = 'API PŘIPOJENO';
+            identity.textContent = user.name ?? user.email ?? 'Přihlášený uživatel';
+        }
+        catch (error) {
+            status.textContent = 'API NENÍ DOSTUPNÉ';
+            identity.textContent = error.message;
+        }
+    };
+
+    const bindSettingsShell = () => {
+        document
+            .getElementById('drayviaSettingsSystemAction')
+            ?.addEventListener('click', loadSettingsSystemInfo);
+    };
+
     const settings = () => `
         ${header(
             'Nastavení',
@@ -18458,53 +18662,151 @@ const fuel = () => `
         )}
 
         <div class="drayvia-settings-grid">
-            <div class="drayvia-settings-tile">
+            <button class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-page="carriers" data-drayvia-settings-target="carriers">
                 <strong>Firma a provoz</strong>
-                <span>
-                    Identifikační údaje firmy a základní parametry provozu.
-                </span>
-            </div>
+                <span>Identifikační údaje hlavní firmy a přehled externích dopravců.</span>
+            </button>
 
-            <div class="drayvia-settings-tile">
+            <button class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-page="daily-report-settings" data-drayvia-settings-target="daily-report-settings">
                 <strong>Provozní pravidla</strong>
-                <span>
-                    Globální pravidla, která platí napříč celým systémem.
-                </span>
-            </div>
+                <span>Konfigurace denního výkazu a pravidel platných pro provoz.</span>
+            </button>
 
-            <div class="drayvia-settings-tile">
+            <button class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-page="statistics" data-drayvia-settings-target="statistics">
                 <strong>Kontroly a tolerance</strong>
-                <span>
-                    Zásadní limity pro automatické kontroly a upozornění.
-                </span>
-            </div>
+                <span>Statistiky, dílčí kvalita a provozní kontrolní limity.</span>
+            </button>
 
-            <div class="drayvia-settings-tile">
+            <button class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-page="overview" data-drayvia-settings-target="overview">
                 <strong>Uzavírání období</strong>
-                <span>
-                    Podmínky potřebné pro bezpečné uzavření měsíce.
-                </span>
-            </div>
+                <span>Stav měsíce a kroky potřebné před jeho bezpečným uzavřením.</span>
+            </button>
 
-            <div class="drayvia-settings-tile">
+            <button class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-page="route-catalog" data-drayvia-settings-target="route-catalog">
                 <strong>Výchozí hodnoty</strong>
-                <span>
-                    Společné výchozí chování používané napříč DRAYVIA.
-                </span>
-            </div>
+                <span>Katalog tras a společné provozní hodnoty používané v systému.</span>
+            </button>
 
-            <div class="drayvia-settings-tile">
+            <button id="drayviaSettingsSystemAction" class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-settings-target="system">
                 <strong>Systém</strong>
-                <span>
-                    Základní technické a provozní informace aplikace.
-                </span>
-            </div>
+                <span>Ověření připojení API a aktuální přihlášené identity.</span>
+            </button>
+
+            <button class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-page="fuel" data-drayvia-settings-target="fuel">
+                <strong>PHM</strong>
+                <span>Importy MOL a ORLEN, palivové karty a kontrola transakcí.</span>
+            </button>
+
+            <button class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-page="imports" data-drayvia-settings-target="imports">
+                <strong>Importy</strong>
+                <span>Načtení a kontrola měsíčních zápisů z depa.</span>
+            </button>
         </div>
+
+        <section id="drayviaSettingsSystemPanel" class="drayvia-preview-panel" hidden>
+            <div class="drayvia-preview-panel-head">
+                <div>
+                    <h2>STAV SYSTÉMU</h2>
+                    <p>Živé ověření přístupu k aplikačnímu API.</p>
+                </div>
+            </div>
+            <div class="drayvia-preview-kpis">
+                <article class="drayvia-preview-card">
+                    <div class="drayvia-preview-card-label">STAV API</div>
+                    <strong id="drayviaSettingsSystemStatus">—</strong>
+                </article>
+                <article class="drayvia-preview-card">
+                    <div class="drayvia-preview-card-label">UŽIVATEL</div>
+                    <strong id="drayviaSettingsSystemIdentity">—</strong>
+                </article>
+                <article class="drayvia-preview-card">
+                    <div class="drayvia-preview-card-label">PROSTŘEDÍ</div>
+                    <strong>DRAYVIA</strong>
+                </article>
+            </div>
+        </section>
     `;
+const embeddedSettingsWorkspace = (title, description, frameId, frameTitle, path) => `
+        ${header(title, description)}
+
+        <div class="drayvia-preview-actions">
+            <button class="drayvia-preview-action primary" type="button" onclick="document.getElementById('${frameId}').contentWindow.location.reload()">OBNOVIT</button>
+            <button id="drayviaEmbeddedSettingsBack" class="drayvia-preview-action" type="button">ZPĚT NA NASTAVENÍ</button>
+        </div>
+
+        <section class="drayvia-preview-panel" style="padding:0;overflow:hidden;margin-top:18px;">
+            <iframe
+                id="${frameId}"
+                title="${frameTitle}"
+                src="${path}"
+                style="display:block;width:100%;height:1200px;border:0;background:#f4f7fb;"
+            ></iframe>
+        </section>
+    `;
+
+    const normalizeEmbeddedSettingsFrame = (frame) => {
+        const apply = () => {
+            const document = frame.contentDocument;
+
+            if (!document) {
+                return;
+            }
+
+            const sidebar = document.querySelector('.sidebar');
+            const shell = document.querySelector('.shell');
+            const main = document.querySelector('.main');
+
+            if (sidebar) {
+                sidebar.hidden = true;
+            }
+
+            if (shell) {
+                shell.style.gridTemplateColumns = 'minmax(0, 1fr)';
+            }
+
+            if (main) {
+                main.style.maxWidth = 'none';
+                main.style.padding = '24px';
+            }
+        };
+
+        frame.addEventListener('load', apply);
+        apply();
+    };
+
+    const bindEmbeddedSettingsWorkspace = () => {
+        document
+            .querySelectorAll('#drayviaDailyReportSettingsFrame, #drayviaRouteCatalogFrame')
+            .forEach(normalizeEmbeddedSettingsFrame);
+
+        document
+            .getElementById('drayviaEmbeddedSettingsBack')
+            ?.addEventListener('click', () => renderPage('settings'));
+    };
+
+    const dailyReportSettingsWorkspace = () => embeddedSettingsWorkspace(
+        'Provozní pravidla',
+        'Konfigurace denního výkazu a pravidel platných pro provoz.',
+        'drayviaDailyReportSettingsFrame',
+        'Nastavení denního výkazu',
+        '/daily-report-settings'
+    );
+
+    const routeCatalogWorkspace = () => embeddedSettingsWorkspace(
+        'Výchozí hodnoty',
+        'Katalog tras a společné provozní hodnoty používané v systému.',
+        'drayviaRouteCatalogFrame',
+        'Katalog tras',
+        '/settings/catalogs/routes'
+    );
+
 const templates = {
+        'daily-report-settings': dailyReportSettingsWorkspace,
+        'route-catalog': routeCatalogWorkspace,
         overview,
         calendar,
         drivers,
+        carriers,
         statistics,
         fuel,
         finance,
@@ -25212,6 +25514,22 @@ const loadFinanceCustomers = async () => {
 
         if (page === 'drivers') {
             loadRealDriverData();
+        }
+
+        if (page === 'carriers') {
+            bindCarrierShell();
+        }
+
+        if (page === 'settings') {
+            bindSettingsShell();
+        }
+
+        if (page === 'daily-report-settings' || page === 'route-catalog') {
+            bindEmbeddedSettingsWorkspace();
+        }
+
+        if (page === 'fuel') {
+            bindFuelWorkspace();
         }
 
         if (page === 'statistics') {

@@ -43,6 +43,55 @@ final class DriverOrganizationAssignmentAuthorizationTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_index_returns_empty_history_for_own_driver_with_active_membership(): void
+    {
+        $master = $this->createOrganization(
+            'Master carrier',
+            Organization::TYPE_MASTER,
+        );
+
+        $actor = $this->createAuthorizedActor(
+            $master,
+        );
+
+        $driver = $this->createDriver();
+
+        OrganizationMembership::query()->create([
+            'organization_id' => $master->getKey(),
+            'user_id' => $driver->getAttribute('user_id'),
+            'relationship_type' => OrganizationMembership::RELATIONSHIP_EMPLOYEE,
+            'status' => OrganizationMembership::STATUS_ACTIVE,
+            'valid_from' => '2026-08-01',
+            'valid_until' => null,
+        ]);
+
+        $this->actingAsApiUser(
+            $actor,
+        );
+
+        $response = $this
+            ->withHeader(
+                'X-Organization-ID',
+                (string) $master->getKey(),
+            )
+            ->getJson(
+                $this->assignmentUrl(
+                    $driver,
+                ),
+            );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'data.current',
+                null,
+            )
+            ->assertJsonCount(
+                0,
+                'data.items',
+            );
+    }
+
     public function test_index_rejects_driver_assignment_without_explicit_supervisory_scope(): void
     {
         $master = $this->createOrganization(
