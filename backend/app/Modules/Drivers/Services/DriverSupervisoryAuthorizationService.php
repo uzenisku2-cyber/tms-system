@@ -51,6 +51,52 @@ final class DriverSupervisoryAuthorizationService
             return $driver;
         }
 
+        /*
+         * S038-01D
+         *
+         * Own-driver administration lists drivers through their active user
+         * membership. The same driver must remain visible while no historical
+         * organization assignment exists yet, otherwise the empty assignment
+         * history endpoint incorrectly returns 404.
+         */
+        $date = $moment->toDateString();
+
+        $hasActiveOwnMembership =
+            OrganizationMembership::query()
+                ->where(
+                    'organization_id',
+                    $organizationId,
+                )
+                ->where(
+                    'user_id',
+                    (int) $driver->getAttribute('user_id'),
+                )
+                ->where(
+                    'status',
+                    OrganizationMembership::STATUS_ACTIVE,
+                )
+                ->whereDate(
+                    'valid_from',
+                    '<=',
+                    $date,
+                )
+                ->where(
+                    static function (Builder $query) use ($date): void {
+                        $query
+                            ->whereNull('valid_until')
+                            ->orWhereDate(
+                                'valid_until',
+                                '>=',
+                                $date,
+                            );
+                    },
+                )
+                ->exists();
+
+        if ($hasActiveOwnMembership) {
+            return $driver;
+        }
+
         $organizationIds = $this->activeTargetOrganizationIds(
             $actor,
             $organizationId,
