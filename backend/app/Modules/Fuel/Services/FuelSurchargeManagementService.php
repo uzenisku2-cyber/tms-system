@@ -16,6 +16,9 @@ use Illuminate\Validation\ValidationException;
 
 final class FuelSurchargeManagementService
 {
+    /**
+     * @return Collection<int, FuelSurcharge>
+     */
     public function internalIndex(int $organizationId): Collection
     {
         return FuelSurcharge::query()
@@ -121,6 +124,9 @@ final class FuelSurchargeManagementService
 
     public function internalPayload(FuelSurcharge $surcharge): array
     {
+        /** @var Collection<int, FuelSurchargeRecipientRate> $recipientRates */
+        $recipientRates = $surcharge->recipientRates;
+
         return [
             'public_id' => $surcharge->public_id,
             'customer_relationship_id' => (int) $surcharge->customer_relationship_id,
@@ -130,7 +136,7 @@ final class FuelSurchargeManagementService
             'valid_until' => $surcharge->valid_until?->toDateString(),
             'status' => $surcharge->status,
             'lock_version' => (int) $surcharge->lock_version,
-            'recipients' => $surcharge->recipientRates->map(
+            'recipients' => $recipientRates->map(
                 fn (FuelSurchargeRecipientRate $rate): array => [
                     'public_id' => $rate->public_id,
                     'recipient_type' => $rate->recipient_type,

@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\DB;
 
 final class FuelSurchargeRecipientVisibilityService
 {
+    /**
+     * @return Collection<int, FuelSurchargeRecipientRate>
+     */
     public function ownRates(User $actor, int $organizationId): Collection
     {
         $externalOrganization = DB::table('organizations')
@@ -26,13 +29,17 @@ final class FuelSurchargeRecipientVisibilityService
             ): void {
                 $query->where(function ($driverQuery) use (
                     $actor,
+                    $organizationId,
                 ): void {
                     $driverQuery
                         ->where(
                             'recipient_type',
                             FuelSurchargeRecipientRate::TYPE_OWN_DRIVER,
                         )
-                        ->whereExists(function ($assignment) use ($actor): void {
+                        ->whereExists(function ($assignment) use (
+                            $actor,
+                            $organizationId,
+                        ): void {
                             $assignment->selectRaw('1')
                                 ->from('driver_organization_assignments')
                                 ->join(

@@ -43,6 +43,9 @@ final class FuelSurcharge extends Model
         return 'public_id';
     }
 
+    /**
+     * @return HasMany<FuelSurchargeRecipientRate, $this>
+     */
     public function recipientRates(): HasMany
     {
         return $this->hasMany(FuelSurchargeRecipientRate::class);

@@ -287,49 +287,6 @@ final class ConditionalPricingScopeAggregator
         }
     }
 
-    private function requiredSource(
-        PriceListConditionalRule $rule,
-        string $attribute,
-    ): string {
-        $source = $this->requiredRuleString(
-            $rule,
-            $attribute,
-        );
-
-        if (
-            ! in_array(
-                $source,
-                PriceListConditionalRule::METRIC_SOURCES,
-                true,
-            )
-        ) {
-            throw new LogicException(
-                sprintf(
-                    'Unsupported conditional metric source [%s].',
-                    $source,
-                ),
-            );
-        }
-
-        return $source;
-    }
-
-    private function nullableSource(
-        PriceListConditionalRule $rule,
-        string $attribute,
-    ): ?string {
-        $value = $rule->getAttribute($attribute);
-
-        if ($value === null) {
-            return null;
-        }
-
-        return $this->requiredSource(
-            $rule,
-            $attribute,
-        );
-    }
-
     private function requiredRuleString(
         PriceListConditionalRule $rule,
         string $attribute,
