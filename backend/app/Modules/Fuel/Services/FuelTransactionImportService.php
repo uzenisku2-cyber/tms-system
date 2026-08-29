@@ -63,7 +63,7 @@ final class FuelTransactionImportService
                     $status = 'rejected';
                 } else {
                     $match = $this->match($organizationId, $provider, $normalized['provider_card_identifier'], $normalized['occurred_at']);
-                    $status = $match['status'] === 'matched' ? 'accepted' : 'review';
+                    $status = $match['match_status'] === 'matched' ? 'accepted' : 'review';
                     $transaction = FuelTransaction::query()->create([...$normalized, ...$match, 'public_id' => (string) Str::uuid(), 'owner_organization_id' => $organizationId, 'provider' => $provider, 'transaction_fingerprint' => $row['fingerprint'], 'fuel_import_batch_id' => $batch->getKey(), 'source_row' => $row['source_row']]);
                 }
 
