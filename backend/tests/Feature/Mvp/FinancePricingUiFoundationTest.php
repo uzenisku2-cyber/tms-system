@@ -444,8 +444,7 @@ final class FinancePricingUiFoundationTest extends TestCase
             'const addFinanceConditionalRule = (',
             'const addFinanceConditionalBand = (',
             'const collectFinanceConditionalRules = (panel) => {',
-            "addFinanceConditionalRule(panel, 'quality');",
-            "addFinanceConditionalRule(panel, 'redirected');",
+            "addFinanceConditionalRule(panel, 'custom');",
             'value="monthly_price_list"',
             "'customer_rejected_parcels'",
             "'not_delivered_parcels'",
@@ -455,7 +454,7 @@ final class FinancePricingUiFoundationTest extends TestCase
             'reward_quantity_source:',
             'reward_target_item_code:',
             'conditional_rules:',
-            'Odm&#237;tnuto z&#225;kazn&#237;kem',
+            'Odmítnuto zákazníkem',
         ] as $marker) {
             self::assertStringContainsString(
                 $marker,

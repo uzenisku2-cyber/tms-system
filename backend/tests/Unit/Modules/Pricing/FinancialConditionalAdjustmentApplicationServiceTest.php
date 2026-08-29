@@ -865,6 +865,29 @@ final class FinancialConditionalAdjustmentApplicationServiceTest extends TestCas
         );
 
         Schema::create(
+            'price_list_conditional_rule_metric_components',
+            static function (Blueprint $table): void {
+                $table->id();
+                $table->unsignedBigInteger('price_list_conditional_rule_id');
+                $table->string('component_role', 32);
+                $table->string('metric_source', 64);
+                $table->unsignedSmallInteger('position');
+                $table->timestamp('created_at')->nullable();
+            },
+        );
+
+        Schema::create(
+            'price_list_conditional_rule_reward_components',
+            static function (Blueprint $table): void {
+                $table->id();
+                $table->unsignedBigInteger('price_list_conditional_rule_id');
+                $table->string('metric_source', 64);
+                $table->unsignedSmallInteger('position');
+                $table->timestamp('created_at')->nullable();
+            },
+        );
+
+        Schema::create(
             'price_list_conditional_bands',
             static function (Blueprint $table): void {
                 $table->id();

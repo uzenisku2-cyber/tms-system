@@ -117,6 +117,7 @@ final class ConditionalPriceListRuleRequestValidationTest extends TestCase
             'metric_denominator_sources' => $denominatorSources,
             'evaluation_scope' => PriceListConditionalRule::EVALUATION_SCOPE_PER_ROUTE,
             'reward_method' => PriceListConditionalRule::REWARD_METHOD_FIXED_AMOUNT,
+            'reward_quantity_sources' => [],
             'reward_quantity_source' => null,
             'reward_target_item_code' => null,
             'rounding_scale' => 2,
