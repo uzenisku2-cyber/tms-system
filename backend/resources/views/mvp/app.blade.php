@@ -14660,6 +14660,7 @@ const bindFuelWorkspace = () => {
         });
 
         window.DrayviaFuelSurcharge?.mount();
+        window.DrayviaFuelCardAdmin?.mount();
     };
 
     const fuel = () => `
@@ -14691,7 +14692,30 @@ const bindFuelWorkspace = () => {
                 <div class="s039-fuel-head" style="margin-top:14px"><span class="s039-fuel-status" data-fuel-surcharge-status>Načítám…</span><button type="button" data-fuel-surcharge-refresh>Obnovit přehled</button></div>
             </section>
 
-            <section class="drayvia-preview-panel">
+                        <section class="drayvia-preview-panel" data-fuel-card-root>
+                <div class="s043-card-head">
+                    <div>
+                        <h3>Správa palivových karet</h3>
+                        <p>Karty MOL a ORLEN, aktuální držitelé, odpovědné organizace a úplná historie přiřazení.</p>
+                    </div>
+                    <button class="drayvia-preview-action primary" type="button" data-fuel-card-refresh>OBNOVIT KARTY</button>
+                </div>
+                <div class="s043-card-summary" data-fuel-card-summary>Načítám palivové karty…</div>
+                <div class="s043-card-filters">
+                    <label>Poskytovatel<select data-fuel-card-provider><option value="">Všichni poskytovatelé</option><option value="MOL">MOL</option><option value="ORLEN">ORLEN</option><option value="OTHER">Ostatní</option></select></label>
+                    <label>Stav<select data-fuel-card-status><option value="">Všechny stavy</option><option value="active">Aktivní</option><option value="blocked">Blokované</option><option value="expired">Prošlé</option><option value="retired">Vyřazené</option></select></label>
+                    <label>Karta nebo držitel<input type="search" data-fuel-card-search placeholder="Číslo, štítek nebo držitel…"></label>
+                </div>
+                <div class="s043-card-table-wrap">
+                    <table class="s043-card-table">
+                        <thead><tr><th>Karta</th><th>Poskytovatel</th><th>Aktuální odpovědnost</th><th>Platnost karty</th><th>Vyúčtování</th><th>Stav</th><th>Historie</th></tr></thead>
+                        <tbody data-fuel-card-rows><tr><td colspan="7" class="s043-card-empty">Načítám…</td></tr></tbody>
+                    </table>
+                </div>
+                <p class="s043-card-note">Tento první náhled je pouze pro čtení. Historická přiřazení ani transakce zde nelze změnit.</p>
+                <div class="s043-card-status" data-fuel-card-message></div>
+            </section>
+<section class="drayvia-preview-panel">
                 <div class="s039-fuel-head"><div><h3>Tankování a importy PHM</h3><p>Importy MOL a ORLEN, kontrola a auditované opravy.</p></div><div class="drayvia-preview-actions"><button id="drayviaFuelWorkspaceReload" class="drayvia-preview-action primary" type="button">OBNOVIT PHM</button><a class="drayvia-preview-action" href="/settings/fuel-imports" target="_blank" rel="noopener">OTEVŘÍT V NOVÉ KARTĚ</a><span id="drayviaFuelWorkspaceStatus" class="drayvia-preview-action">NAČÍTÁM PHM…</span></div></div>
                 <div style="padding:0;overflow:hidden;margin-top:18px"><iframe id="drayviaFuelWorkspaceFrame" title="Importy a kontrola PHM" src="/settings/fuel-imports" style="display:block;width:100%;height:900px;border:0;background:#f4f7fb;"></iframe></div>
             </section>
@@ -27545,5 +27569,6 @@ if (page === 'finance') {
         })();
     </script>
     <script src="/assets/s039-fuel-surcharge.js" data-s039-05a-3-fuel-surcharge></script>
+    <script src="/assets/s043-fuel-card-administration.js" data-s043-fuel-card-administration></script>
 </body>
 </html>

@@ -19,6 +19,7 @@ Route::middleware(['auth:sanctum', 'organization'])
         });
         Route::middleware('perm:users.manage')->group(function (): void {
             Route::post('/', [FuelCardController::class, 'store'])->name('store');
+            Route::patch('/{fuelCard}', [FuelCardController::class, 'update'])->name('update');
             Route::patch('/{fuelCard}/status', [FuelCardController::class, 'changeStatus'])
                 ->whereUuid('fuelCard')
                 ->name('status');

@@ -9,9 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 final class FuelCard extends Model
 {
-    protected $fillable = ['public_id', 'owner_organization_id', 'provider', 'provider_card_identifier', 'masked_card_number', 'label', 'status', 'valid_from', 'expires_at', 'currency', 'purchase_restrictions', 'lock_version', 'created_by_user_id'];
+    protected $fillable = ['public_id', 'owner_organization_id', 'provider', 'provider_card_identifier', 'masked_card_number', 'label', 'status', 'provider_status', 'provider_status_verified_at', 'provider_status_note', 'valid_from', 'expires_at', 'currency', 'purchase_restrictions', 'lock_version', 'created_by_user_id'];
 
-    protected $casts = ['valid_from' => 'date', 'expires_at' => 'date', 'purchase_restrictions' => 'array', 'lock_version' => 'integer'];
+    protected $casts = ['provider_status_verified_at' => 'immutable_datetime', 'valid_from' => 'date', 'expires_at' => 'date', 'purchase_restrictions' => 'array', 'lock_version' => 'integer'];
 
     public function getRouteKeyName(): string
     {
