@@ -125,7 +125,16 @@ final class FuelTransactionImportService
                     continue;
                 }
                 $raw = array_combine($headers, array_map(fn ($value): string => $this->clean((string) $value), $values));
-                $normalized = ['provider_transaction_identifier' => $raw['Číslo účtenky'], 'occurred_at' => $this->date($raw['Datum a čas prodeje'], 'j.n.Y H:i:s'), 'posting_date' => null, 'provider_card_identifier' => $this->identifier($raw['Číslo karty']), 'station_identifier' => trim(explode(' - ', $raw['Čerpací stanice'], 2)[0]), 'station_name' => $raw['Čerpací stanice'], 'station_address' => $raw['Adresa čerpací stanice'] ?: null, 'product_code' => trim(explode(' ', $raw['Produkt'], 2)[0]), 'product_name' => $raw['Produkt'], 'quantity' => $this->decimal($raw['Množství'], true), 'unit_of_measure' => 'L', 'unit_price' => $this->decimal($raw['Jednotková cena po slevě']), 'net_amount' => $this->decimal($raw['Celková cena (bez DPH)']), 'tax_amount' => $this->decimal($raw['DPH']), 'gross_amount' => $this->decimal($raw['Celková cena po slevě'], true), 'discount_amount' => $this->decimal($raw['Sleva']), 'tax_rate' => $this->decimal($raw['Sazba DPH']), 'currency' => strtoupper($raw['Měna']), 'vehicle_registration' => $raw['RZ'] ?: null, 'odometer' => $this->optionalDecimal($raw['Stav tachometru']), 'invoice_reference' => $raw['Faktura číslo'] ?: null, 'source_description' => $raw['Typ transakce'] ?: null];
+                $grossAmount = $this->decimal(
+                    $raw['Celková cena po slevě'],
+                    true,
+                );
+                $taxRate = $this->decimal($raw['Sazba DPH']);
+                [$netAmount, $taxAmount] = $this->splitGrossAmount(
+                    $grossAmount,
+                    $taxRate,
+                );
+                $normalized = ['provider_transaction_identifier' => $raw['Číslo účtenky'], 'occurred_at' => $this->date($raw['Datum a čas prodeje'], 'j.n.Y H:i:s'), 'posting_date' => null, 'provider_card_identifier' => $this->identifier($raw['Číslo karty']), 'station_identifier' => trim(explode(' - ', $raw['Čerpací stanice'], 2)[0]), 'station_name' => $raw['Čerpací stanice'], 'station_address' => $raw['Adresa čerpací stanice'] ?: null, 'product_code' => trim(explode(' ', $raw['Produkt'], 2)[0]), 'product_name' => $raw['Produkt'], 'quantity' => $this->decimal($raw['Množství'], true), 'unit_of_measure' => 'L', 'unit_price' => $this->decimal($raw['Jednotková cena po slevě']), 'net_amount' => $netAmount, 'tax_amount' => $taxAmount, 'gross_amount' => $grossAmount, 'discount_amount' => $this->decimal($raw['Sleva']), 'tax_rate' => $taxRate, 'currency' => strtoupper($raw['Měna']), 'vehicle_registration' => $raw['RZ'] ?: null, 'odometer' => $this->optionalDecimal($raw['Stav tachometru']), 'invoice_reference' => $raw['Faktura číslo'] ?: null, 'source_description' => $raw['Typ transakce'] ?: null];
                 $rows[] = $this->row($line, $raw, $normalized);
             }
 
@@ -240,6 +249,31 @@ final class FuelTransactionImportService
     private function optionalDecimal(string $value): ?string
     {
         return $this->decimal($value);
+    }
+
+    /** @return array{0:?string,1:?string} */
+    private function splitGrossAmount(
+        ?string $grossAmount,
+        ?string $taxRate,
+    ): array {
+        if ($grossAmount === null || $taxRate === null) {
+            return [null, null];
+        }
+
+        $divisor = bcadd(
+            '1',
+            bcdiv($taxRate, '100', 12),
+            12,
+        );
+
+        if (bccomp($divisor, '0', 12) <= 0) {
+            return [null, null];
+        }
+
+        $netAmount = bcdiv($grossAmount, $divisor, 6);
+        $taxAmount = bcsub($grossAmount, $netAmount, 6);
+
+        return [$netAmount, $taxAmount];
     }
 
     private function date(string $value, string $format): ?string

@@ -67,7 +67,7 @@ final class DepotWorkbookReader
         }
 
         $zip = new ZipArchive;
-        $opened = $zip->open($path, ZipArchive::CHECKCONS);
+        $opened = $zip->open($path);
 
         if ($opened !== true) {
             throw new DepotWorkbookException(
@@ -77,6 +77,7 @@ final class DepotWorkbookReader
 
         try {
             $this->assertSafeArchive($zip);
+            $this->assertReadableArchiveEntries($zip);
 
             $sharedStrings = $this->sharedStrings($zip);
             $sheetDefinitions = $this->sheetDefinitions($zip);
@@ -103,6 +104,74 @@ final class DepotWorkbookReader
             ];
         } finally {
             $zip->close();
+        }
+    }
+
+    private function assertReadableArchiveEntries(ZipArchive $zip): void
+    {
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $stat = $zip->statIndex($index);
+
+            if (! is_array($stat)) {
+                throw new DepotWorkbookException(
+                    'Interní položku sešitu nelze ověřit.',
+                );
+            }
+
+            $name = (string) ($stat['name'] ?? '');
+            $expectedSize = (int) ($stat['size'] ?? 0);
+
+            if (str_ends_with($name, '/') && $expectedSize === 0) {
+                continue;
+            }
+
+            $stream = $zip->getStream($name);
+
+            if (! is_resource($stream)) {
+                throw new DepotWorkbookException(
+                    'Interní položku sešitu nelze bezpečně přečíst.',
+                );
+            }
+
+            $readSize = 0;
+
+            try {
+                while (! feof($stream)) {
+                    $chunk = fread($stream, 1_048_576);
+
+                    if ($chunk === false) {
+                        throw new DepotWorkbookException(
+                            'Interní položka sešitu je poškozená.',
+                        );
+                    }
+
+                    if ($chunk === '') {
+                        if (! feof($stream)) {
+                            throw new DepotWorkbookException(
+                                'Interní položku sešitu nelze dočíst.',
+                            );
+                        }
+
+                        break;
+                    }
+
+                    $readSize += strlen($chunk);
+
+                    if ($readSize > $expectedSize) {
+                        throw new DepotWorkbookException(
+                            'Velikost interní položky sešitu nesouhlasí.',
+                        );
+                    }
+                }
+            } finally {
+                fclose($stream);
+            }
+
+            if ($readSize !== $expectedSize) {
+                throw new DepotWorkbookException(
+                    'Interní položka sešitu není úplná.',
+                );
+            }
         }
     }
 
