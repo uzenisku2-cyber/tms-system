@@ -32,6 +32,17 @@ final class FuelProviderTransactionNormalizerTest extends TestCase
             self::assertSame('2026-07-31 07:54:51', $row['occurred_at']);
             self::assertSame('40.41', $row['quantity']);
             self::assertSame('1701.27', $row['gross_amount']);
+            self::assertSame('1406.008264', $row['net_amount']);
+            self::assertSame('295.261736', $row['tax_amount']);
+            self::assertSame('-32.33', $row['discount_amount']);
+            self::assertSame(
+                0,
+                bccomp(
+                    $row['gross_amount'],
+                    bcadd($row['net_amount'], $row['tax_amount'], 6),
+                    6,
+                ),
+            );
             self::assertSame('R-1', $row['provider_transaction_identifier']);
         } finally {
             @unlink($path);

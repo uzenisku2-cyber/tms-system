@@ -12,6 +12,27 @@ use Tests\TestCase;
 
 final class DepotWorkbookReaderTest extends TestCase
 {
+    public function test_reader_uses_entry_read_validation_without_checkcons_false_rejection(): void
+    {
+        $source = file_get_contents(
+            app_path('Modules/DailyReports/Services/DepotWorkbookReader.php'),
+        );
+
+        self::assertIsString($source);
+        self::assertStringNotContainsString(
+            'ZipArchive::CHECKCONS',
+            $source,
+        );
+        self::assertStringContainsString(
+            'assertReadableArchiveEntries($zip)',
+            $source,
+        );
+        self::assertStringContainsString(
+            '$readSize !== $expectedSize',
+            $source,
+        );
+    }
+
     public function test_values_only_reader_detects_shifted_two_row_header_without_exposing_formula_text(): void
     {
         $path = DepotWorkbookFactory::create(
