@@ -13,6 +13,7 @@ use App\Modules\Fuel\Requests\ChangeFuelCardStatusRequest;
 use App\Modules\Fuel\Requests\EndFuelCardAssignmentRequest;
 use App\Modules\Fuel\Requests\StoreFuelCardRequest;
 use App\Modules\Fuel\Requests\StoreFuelCardSettlementPolicyRequest;
+use App\Modules\Fuel\Requests\UpdateFuelCardRequest;
 use App\Modules\Fuel\Services\FuelCardManagementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,11 @@ final class FuelCardController
     public function store(StoreFuelCardRequest $request, OrganizationContext $context, FuelCardManagementService $service): JsonResponse
     {
         return response()->json(['data' => $service->create($context->requireId(), $this->actor($request), $request->validated())], 201);
+    }
+
+    public function update(UpdateFuelCardRequest $request, FuelCard $fuelCard, OrganizationContext $context, FuelCardManagementService $service): JsonResponse
+    {
+        return response()->json(['data' => $service->update($fuelCard, $context->requireId(), $this->actor($request), $request->validated())]);
     }
 
     public function changeStatus(ChangeFuelCardStatusRequest $request, FuelCard $fuelCard, OrganizationContext $context, FuelCardManagementService $service): JsonResponse

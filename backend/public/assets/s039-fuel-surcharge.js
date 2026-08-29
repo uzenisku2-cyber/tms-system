@@ -426,7 +426,7 @@
             root.querySelectorAll(':scope > section')
         );
 
-        if (sections.length !== 2) {
+        if (sections.length !== 3) {
             return;
         }
 
@@ -458,6 +458,16 @@
                 <strong>Tankování a importy</strong>
                 <small>MOL, ORLEN a kontrola dávek</small>
             </button>
+
+            <button
+                type="button"
+                role="tab"
+                aria-selected="false"
+                data-phm-tab="cards"
+            >
+                <strong>Správa palivových karet</strong>
+                <small>Držitelé, odpovědnost a historie</small>
+            </button>
         `;
 
         const surchargePane = document.createElement('div');
@@ -471,7 +481,13 @@
         importPane.className = 's039-phm-pane';
         importPane.dataset.phmPane = 'imports';
         importPane.hidden = true;
-        importPane.appendChild(sections[1]);
+        importPane.appendChild(sections[2]);
+
+        const cardsPane = document.createElement('div');
+        cardsPane.className = 's039-phm-pane';
+        cardsPane.dataset.phmPane = 'cards';
+        cardsPane.hidden = true;
+        cardsPane.appendChild(sections[1]);
 
         const style = document.createElement('style');
 
@@ -544,7 +560,8 @@
             style,
             navigation,
             surchargePane,
-            importPane
+            importPane,
+            cardsPane
         );
 
         navigation.addEventListener('click', (event) => {

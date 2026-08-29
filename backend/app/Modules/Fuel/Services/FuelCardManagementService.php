@@ -40,6 +40,38 @@ final class FuelCardManagementService
         });
     }
 
+    public function update(FuelCard $card, int $organizationId, User $actor, array $data): FuelCard
+    {
+        $this->assertOwned($card, $organizationId);
+
+        return DB::transaction(function () use ($card, $organizationId, $actor, $data): FuelCard {
+            $locked = FuelCard::query()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
+            $lockVersion = (int) $data['lock_version'];
+            if ((int) $locked->lock_version !== $lockVersion) {
+                throw ValidationException::withMessages(['lock_version' => ['The fuel card was changed by another operation.']]);
+            }
+            if (! empty($data['expires_at']) && $locked->valid_from->greaterThan($data['expires_at'])) {
+                throw ValidationException::withMessages(['expires_at' => ['The card expiry cannot precede its validity start.']]);
+            }
+
+            $reason = (string) $data['reason'];
+            $before = $locked->toArray();
+            $editable = collect($data)->only([
+                'label',
+                'masked_card_number',
+                'expires_at',
+                'purchase_restrictions',
+                'provider_status',
+                'provider_status_verified_at',
+                'provider_status_note',
+            ])->all();
+            $locked->forceFill([...$editable, 'lock_version' => $lockVersion + 1])->save();
+            $this->event($locked, 'updated', $organizationId, $actor, $reason, $before, $locked->fresh()->toArray());
+
+            return $locked->refresh();
+        });
+    }
+
     public function changeStatus(FuelCard $card, int $organizationId, User $actor, string $status, int $lockVersion, string $reason): FuelCard
     {
         $this->assertOwned($card, $organizationId);
