@@ -173,6 +173,17 @@ final class FuelTransactionImportService
                 $raw[$header] = $this->clean((string) ($source['cells'][$column]['value'] ?? ''));
             }
             $normalized = ['provider_transaction_identifier' => $raw['Číslo stvrzenky'] ?: null, 'occurred_at' => $this->excelDate($raw['Datum transakce']), 'posting_date' => null, 'provider_card_identifier' => $this->identifier($raw['Číslo karty']), 'station_identifier' => $raw['Čerpací stanice'] ?: null, 'station_name' => $raw['Název čerpací stanice'] ?: null, 'station_address' => null, 'product_code' => $raw['Kód produktu'] ?: null, 'product_name' => $raw['Produkt'], 'quantity' => $this->decimal($raw['Množství'], true), 'unit_of_measure' => strtoupper($raw['Jednotka množství']), 'unit_price' => $this->optionalDecimal($raw['Použitá jednotková cena']), 'net_amount' => null, 'tax_amount' => null, 'gross_amount' => $this->decimal($raw['Fakturovaná částka'], true), 'discount_amount' => $this->optionalDecimal($raw['Sleva/Jednotka']), 'tax_rate' => $this->optionalDecimal($raw['DPH %']), 'currency' => strtoupper($raw['Měna']), 'vehicle_registration' => $raw['Registrační značka'] ?: null, 'odometer' => $this->optionalDecimal($raw['Stav KM']), 'invoice_reference' => ltrim($raw['Č. faktury']) ?: null, 'source_description' => $raw['Cenotvorba'] ?: null];
+            if (($normalized['tax_rate'] ?? null) === null) {
+                throw ValidationException::withMessages([
+                    'file' => ['MOL VAT rate is required for financial normalization.'],
+                ]);
+            }
+            [$netAmount, $taxAmount] = $this->splitGrossAmount(
+                (string) $normalized['gross_amount'],
+                (string) $normalized['tax_rate'],
+            );
+            $normalized['net_amount'] = $netAmount;
+            $normalized['tax_amount'] = $taxAmount;
             $rows[] = $this->row((int) $source['row'], $raw, $normalized);
         }
 
