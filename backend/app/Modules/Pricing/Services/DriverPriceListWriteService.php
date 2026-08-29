@@ -1007,6 +1007,43 @@ final class DriverPriceListWriteService
                 );
             }
 
+            $rewardQuantitySources = $payload[
+                'reward_quantity_sources'
+            ] ?? null;
+
+            if (! is_array($rewardQuantitySources)) {
+                throw new LogicException(
+                    'Normalized conditional reward components are invalid.',
+                );
+            }
+
+            $uniqueRewardQuantitySources = [];
+
+            foreach ($rewardQuantitySources as $source) {
+                if (
+                    ! is_string($source)
+                    || ! in_array(
+                        $source,
+                        DriverPriceListConditionalRule::METRIC_SOURCES,
+                        true,
+                    )
+                    || in_array(
+                        $source,
+                        $uniqueRewardQuantitySources,
+                        true,
+                    )
+                ) {
+                    throw new LogicException(
+                        'Normalized conditional reward components are invalid.',
+                    );
+                }
+
+                $uniqueRewardQuantitySources[] = $source;
+            }
+
+            $legacyRewardQuantitySource =
+                $uniqueRewardQuantitySources[0] ?? null;
+
             $rule = $version->conditionalRules()->create([
                 'code' => $payload['code'],
                 'name' => $payload['name'],
@@ -1016,7 +1053,7 @@ final class DriverPriceListWriteService
                 'metric_denominator_source' => $denominatorSources[0] ?? null,
                 'evaluation_scope' => $payload['evaluation_scope'],
                 'reward_method' => $payload['reward_method'],
-                'reward_quantity_source' => $payload['reward_quantity_source'],
+                'reward_quantity_source' => $legacyRewardQuantitySource,
                 'reward_target_item_code' => $payload['reward_target_item_code'],
                 'rounding_scale' => $payload['rounding_scale'],
                 'rounding_method' => DriverPriceListConditionalRule::ROUNDING_METHOD_HALF_UP,
@@ -1034,6 +1071,15 @@ final class DriverPriceListWriteService
             foreach ($denominatorSources as $index => $source) {
                 $rule->metricComponents()->create([
                     'component_role' => DriverPriceListConditionalRuleMetricComponent::ROLE_DENOMINATOR,
+                    'metric_source' => $source,
+                    'position' => $index + 1,
+                ]);
+            }
+
+            foreach (
+                $uniqueRewardQuantitySources as $index => $source
+            ) {
+                $rule->rewardComponents()->create([
                     'metric_source' => $source,
                     'position' => $index + 1,
                 ]);
@@ -1080,6 +1126,7 @@ final class DriverPriceListWriteService
         foreach ($existingRules as $rule) {
             $rule->bands()->delete();
             $rule->metricComponents()->delete();
+            $rule->rewardComponents()->delete();
             $rule->delete();
         }
 
@@ -1170,6 +1217,30 @@ final class DriverPriceListWriteService
                 }
             }
 
+            $rewardQuantitySources = [];
+            $rewardComponents = $rule->rewardComponents()
+                ->orderBy('position')
+                ->get();
+
+            foreach ($rewardComponents as $component) {
+                $source = $component->getAttribute('metric_source');
+
+                if (is_string($source)) {
+                    $rewardQuantitySources[] = $source;
+                }
+            }
+
+            if ($rewardComponents->isEmpty()) {
+                $legacyRewardQuantitySource = $rule->getAttribute(
+                    'reward_quantity_source',
+                );
+
+                if (is_string($legacyRewardQuantitySource)) {
+                    $rewardQuantitySources[] =
+                        $legacyRewardQuantitySource;
+                }
+            }
+
             $bands = [];
 
             foreach ($rule->bands()->orderBy('position')->get() as $band) {
@@ -1195,7 +1266,7 @@ final class DriverPriceListWriteService
                 'metric_denominator_sources' => $denominatorSources,
                 'evaluation_scope' => $rule->getAttribute('evaluation_scope'),
                 'reward_method' => $rule->getAttribute('reward_method'),
-                'reward_quantity_source' => $rule->getAttribute('reward_quantity_source'),
+                'reward_quantity_sources' => $rewardQuantitySources,
                 'reward_target_item_code' => $rule->getAttribute('reward_target_item_code'),
                 'rounding_scale' => $rule->getAttribute('rounding_scale'),
                 'bands' => $bands,
@@ -1211,6 +1282,7 @@ final class DriverPriceListWriteService
         return [
             'items',
             'conditionalRules.metricComponents',
+            'conditionalRules.rewardComponents',
             'conditionalRules.bands',
         ];
     }

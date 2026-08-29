@@ -830,7 +830,7 @@ final class FinancialCalculationPersistenceServiceTest extends TestCase
 
                 'status' => OrganizationRelationship::STATUS_ACTIVE,
 
-                'valid_from' => now()->subMonth(),
+                'valid_from' => '2026-07-01 00:00:00',
                 'valid_until' => null,
             ]);
 

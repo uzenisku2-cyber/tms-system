@@ -6,6 +6,7 @@ namespace App\Modules\Pricing\Resources;
 
 use App\Modules\Pricing\Models\PriceListConditionalRule;
 use App\Modules\Pricing\Models\PriceListConditionalRuleMetricComponent;
+use App\Modules\Pricing\Models\PriceListConditionalRuleRewardComponent;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use LogicException;
@@ -25,6 +26,7 @@ final class PriceListConditionalRuleResource extends JsonResource
 
         $rule->loadMissing([
             'metricComponents',
+            'rewardComponents',
             'bands',
         ]);
 
@@ -76,6 +78,25 @@ final class PriceListConditionalRuleResource extends JsonResource
             }
         }
 
+        $rewardQuantitySources = $rule->rewardComponents
+            ->filter(
+                static fn (mixed $component): bool => $component instanceof PriceListConditionalRuleRewardComponent,
+            )
+            ->pluck('metric_source')
+            ->filter(static fn (mixed $source): bool => is_string($source))
+            ->values()
+            ->all();
+
+        if ($rewardQuantitySources === []) {
+            $legacyRewardQuantitySource = $rule->getAttribute(
+                'reward_quantity_source',
+            );
+
+            if (is_string($legacyRewardQuantitySource)) {
+                $rewardQuantitySources[] = $legacyRewardQuantitySource;
+            }
+        }
+
         return [
             'code' => (string) $rule->getAttribute('code'),
             'name' => (string) $rule->getAttribute('name'),
@@ -97,6 +118,7 @@ final class PriceListConditionalRuleResource extends JsonResource
             'reward_quantity_source' => $rule->getAttribute(
                 'reward_quantity_source',
             ),
+            'reward_quantity_sources' => $rewardQuantitySources,
             'reward_target_item_code' => $rule->getAttribute(
                 'reward_target_item_code',
             ),

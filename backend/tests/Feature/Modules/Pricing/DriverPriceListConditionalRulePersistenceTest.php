@@ -12,6 +12,7 @@ use App\Modules\Pricing\Models\DriverPriceList;
 use App\Modules\Pricing\Models\DriverPriceListConditionalBand;
 use App\Modules\Pricing\Models\DriverPriceListConditionalRule;
 use App\Modules\Pricing\Models\DriverPriceListConditionalRuleMetricComponent;
+use App\Modules\Pricing\Models\DriverPriceListConditionalRuleRewardComponent;
 use App\Modules\Pricing\Models\DriverPriceListVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -53,6 +54,18 @@ final class DriverPriceListConditionalRulePersistenceTest extends TestCase
                 [
                     'driver_price_list_conditional_rule_id',
                     'component_role',
+                    'metric_source',
+                    'position',
+                    'created_at',
+                ],
+            ),
+        );
+
+        self::assertTrue(
+            Schema::hasColumns(
+                'driver_price_list_conditional_rule_reward_components',
+                [
+                    'driver_price_list_conditional_rule_id',
                     'metric_source',
                     'position',
                     'created_at',
@@ -110,6 +123,17 @@ final class DriverPriceListConditionalRulePersistenceTest extends TestCase
             ],
         ]);
 
+        $rule->rewardComponents()->createMany([
+            [
+                'metric_source' => DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+                'position' => 1,
+            ],
+            [
+                'metric_source' => DriverPriceListConditionalRule::SOURCE_DELIVERED_PARCELS,
+                'position' => 2,
+            ],
+        ]);
+
         $rule->bands()->createMany([
             [
                 'minimum_value' => '30.0000',
@@ -133,6 +157,7 @@ final class DriverPriceListConditionalRulePersistenceTest extends TestCase
             ->conditionalRules()
             ->with([
                 'metricComponents',
+                'rewardComponents',
                 'bands',
             ])
             ->firstOrFail();
@@ -163,6 +188,19 @@ final class DriverPriceListConditionalRulePersistenceTest extends TestCase
         );
 
         self::assertSame(2, $loadedRule->bands->count());
+        self::assertContainsOnlyInstancesOf(
+            DriverPriceListConditionalRuleRewardComponent::class,
+            $loadedRule->rewardComponents,
+        );
+        self::assertSame(
+            [
+                DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+                DriverPriceListConditionalRule::SOURCE_DELIVERED_PARCELS,
+            ],
+            $loadedRule->rewardComponents
+                ->pluck('metric_source')
+                ->all(),
+        );
 
         $firstBand = $loadedRule->bands->first();
 
@@ -185,6 +223,10 @@ final class DriverPriceListConditionalRulePersistenceTest extends TestCase
             2,
         );
         $this->assertDatabaseCount(
+            'driver_price_list_conditional_rule_reward_components',
+            2,
+        );
+        $this->assertDatabaseCount(
             'driver_price_list_conditional_bands',
             2,
         );
@@ -200,8 +242,52 @@ final class DriverPriceListConditionalRulePersistenceTest extends TestCase
             0,
         );
         $this->assertDatabaseCount(
+            'driver_price_list_conditional_rule_reward_components',
+            0,
+        );
+        $this->assertDatabaseCount(
             'driver_price_list_conditional_bands',
             0,
+        );
+    }
+
+    public function test_migration_backfills_legacy_reward_quantity_source(): void
+    {
+        Schema::drop(
+            'driver_price_list_conditional_rule_reward_components',
+        );
+
+        $version = $this->createDriverPriceListVersion();
+
+        $rule = $version->conditionalRules()->create([
+            'code' => 'legacy_reward',
+            'name' => 'Legacy reward',
+            'description' => null,
+            'metric_type' => DriverPriceListConditionalRule::METRIC_TYPE_RATIO_PERCENTAGE,
+            'metric_numerator_source' => DriverPriceListConditionalRule::SOURCE_DELIVERED_PARCELS,
+            'metric_denominator_source' => DriverPriceListConditionalRule::SOURCE_LOADED_PARCELS,
+            'evaluation_scope' => DriverPriceListConditionalRule::EVALUATION_SCOPE_PER_ROUTE,
+            'reward_method' => DriverPriceListConditionalRule::REWARD_METHOD_AMOUNT_PER_UNIT,
+            'reward_quantity_source' => DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+            'reward_target_item_code' => null,
+            'rounding_scale' => 2,
+            'rounding_method' => DriverPriceListConditionalRule::ROUNDING_METHOD_HALF_UP,
+            'position' => 1,
+        ]);
+
+        $migration = require database_path(
+            'migrations/2026_08_28_190000_create_driver_price_list_conditional_rule_reward_components.php',
+        );
+
+        $migration->up();
+
+        $this->assertDatabaseHas(
+            'driver_price_list_conditional_rule_reward_components',
+            [
+                'driver_price_list_conditional_rule_id' => $rule->getKey(),
+                'metric_source' => DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+                'position' => 1,
+            ],
         );
     }
 

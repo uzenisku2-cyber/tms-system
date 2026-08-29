@@ -159,6 +159,17 @@ final class DriverPriceListConditionalRule extends Model
         );
     }
 
+    /**
+     * @return HasMany<DriverPriceListConditionalRuleRewardComponent, $this>
+     */
+    public function rewardComponents(): HasMany
+    {
+        return $this->hasMany(
+            DriverPriceListConditionalRuleRewardComponent::class,
+            'driver_price_list_conditional_rule_id',
+        )->orderBy('position');
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

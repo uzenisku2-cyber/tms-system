@@ -24,8 +24,10 @@ final class DriverConditionalPriceListPersistenceContractTest extends TestCase
             'assertApprovableConditionalRules',
             'conditionalRuleInputFromVersion',
             'metricComponents()->create',
+            'rewardComponents()->create',
             'bands()->create',
             'metricComponents()->delete',
+            'rewardComponents()->delete',
             'bands()->delete',
             '$this->versionRelations()',
         ] as $marker) {

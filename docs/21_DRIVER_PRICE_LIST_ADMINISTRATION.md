@@ -191,3 +191,74 @@ API.
 This is the minimum operational pricing workflow required before wiring driver
 compensation calculations to daily reports for the September 2026 Excel
 replacement milestone.
+
+## 12. Multi-item conditional reward contract
+
+Conditional driver surcharges may pay a rate for one or more operational
+quantities. The ordered sources are stored in
+`driver_price_list_conditional_rule_reward_components`.
+
+For an `amount_per_unit` rule, the eventual compensation calculation is:
+
+`sum(selected reward quantities) * matched band adjustment value`
+
+The legacy `reward_quantity_source` column remains populated with the first
+ordered source. It is a transitional compatibility field and is not the
+authoritative representation for newly written driver rules.
+
+Existing rules are backfilled as one reward component at position 1. Read and
+copy operations fall back to the legacy column only when no component rows are
+available. This makes deployment additive and preserves existing drafts and
+history.
+
+The request contract accepts both forms:
+
+- legacy `reward_quantity_source` string;
+- canonical `reward_quantity_sources` array with unique metric sources.
+
+Request normalization converts the legacy string to a single-item canonical
+array before the service layer runs. The payload guard rejects reward methods
+whose quantity sources and target item are incompatible.
+
+The browser presents standard quality and redirected-share surcharges as a
+business sequence: checked performance, percentage basis, qualifying range,
+selected payout quantities, and the rate. Technical reward-method selection is
+reserved for a custom surcharge or deduction.
+
+This contract prepares driver compensation calculation but does not silently
+route driver rules through the existing customer-billing conditional engine.
+That calculation and its immutable financial snapshots remain a separate
+integration increment.
+# R7 – společný kontrakt příplatků
+
+Příplatky jsou volitelné. Ceník odběratele, externího dopravce i vlastního
+řidiče lze uložit bez jediného podmíněného pravidla. Pokud pravidlo existuje,
+musí mít úplnou podmínku, rozsah, alespoň jednu položku pro výplatu u metody
+`amount_per_unit` a explicitní nezápornou sazbu; hodnota `0` je platná.
+
+Standardní pravidla `delivery_quality` a `redirected_share` oddělují metriku
+podmínky od položek výplaty. Po splnění pásma platí:
+
+`conditional_amount = sum(reward_quantity_sources) * adjustment_value`
+
+Metrika i odměna se nejprve sčítají ze zdrojových hodnot a teprve poté se
+vyhodnocuje procento. Rozsah `per_route` používá jednu trasu. Měsíční rozsahy
+agregují zapsané trasy v jednom kalendářním měsíci. Průběžný výsledek je
+informativní; fakturovatelný výsledek nadále vyžaduje schválené nebo uzavřené
+zdrojové výpočty.
+
+# R8 – průvodce založením příplatku
+
+Základní ceník je úplný a lze jej uložit i bez příplatku. Příplatek se ve všech
+třech typech ceníků zakládá sedmikrokovým průvodcem: druh příplatku, zdroje
+výpočtu, vyhodnocení za trasu nebo kalendářní měsíc, pásma, výplatní položky,
+sazby a závěrečné srozumitelné shrnutí.
+
+Výplatní položky `delivered_parcels` a `redirected_parcels` jsou přednastavené,
+ale lze je jednotlivě změnit. Sazba `0` je platná. Pokud je vybraná obchodní
+strana podle daňového profilu plátcem DPH, průvodce i souhrn označí sazbu jako
+částku bez DPH. U vlastního zaměstnance se informace o DPH nezobrazuje.
+
+Potvrzené příplatky se v ceníku zobrazují pouze v souhrnné tabulce. Úprava znovu
+otevře stejného průvodce; kompletní skrytý formulář nadále vytváří kanonický R7
+payload pro ukládací API.

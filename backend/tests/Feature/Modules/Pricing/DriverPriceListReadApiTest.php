@@ -535,7 +535,7 @@ final class DriverPriceListReadApiTest extends TestCase
         return DriverPriceList::query()->create([
             'driver_organization_assignment_id' => $assignment->getKey(),
             'managed_by_organization_id' => $managedBy->getKey(),
-            'code' => 'DRV-READ-'.Str::uuid(),
+            'code' => 'DRV-READ-'.Str::random(20),
             'name' => $name,
             'description' => null,
             'currency' => 'CZK',

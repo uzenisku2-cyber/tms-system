@@ -27,6 +27,7 @@ final class PriceListVersionResource extends JsonResource
 
         $version->loadMissing([
             'conditionalRules.metricComponents',
+            'conditionalRules.rewardComponents',
             'conditionalRules.bands',
         ]);
 

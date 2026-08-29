@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Pricing\Services;
 
 use App\Modules\Pricing\Models\PriceListConditionalRule;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use LogicException;
 
@@ -19,12 +20,16 @@ final class ConditionalPricingScopeAggregator
      *     driver_id: int,
      *     period: string,
      *     route_count: int,
+     *     metric_numerator_sources: list<string>,
      *     metric_numerator_source: string,
      *     metric_numerator_value: string,
+     *     metric_denominator_sources: list<string>,
      *     metric_denominator_source: string|null,
      *     metric_denominator_value: string|null,
+     *     reward_quantity_sources: list<string>,
      *     reward_quantity_source: string|null,
-     *     reward_quantity_value: string|null
+     *     reward_quantity_value: string|null,
+     *     reward_quantity_values: array<string, string>
      * }
      */
     public function aggregate(
@@ -67,20 +72,20 @@ final class ConditionalPricingScopeAggregator
             );
         }
 
-        $numeratorSource = $this->requiredSource(
+        $numeratorSources = $this->componentSources(
             $rule,
-            'metric_numerator_source',
+            'numerator',
+            true,
         );
-
-        $denominatorSource = $this->nullableSource(
+        $denominatorSources = $this->componentSources(
             $rule,
-            'metric_denominator_source',
+            'denominator',
+            false,
         );
-
-        $rewardQuantitySource = $this->nullableSource(
-            $rule,
-            'reward_quantity_source',
-        );
+        $rewardQuantitySources = $this->rewardSources($rule);
+        $numeratorSource = $numeratorSources[0];
+        $denominatorSource = $denominatorSources[0] ?? null;
+        $rewardQuantitySource = $rewardQuantitySources[0] ?? null;
 
         $first = $snapshots[0];
 
@@ -88,8 +93,14 @@ final class ConditionalPricingScopeAggregator
         $serviceDate = $this->serviceDate($first);
 
         $period =
-            $scope ===
-                PriceListConditionalRule::EVALUATION_SCOPE_MONTHLY_DRIVER
+            in_array(
+                $scope,
+                [
+                    PriceListConditionalRule::EVALUATION_SCOPE_MONTHLY_DRIVER,
+                    PriceListConditionalRule::EVALUATION_SCOPE_MONTHLY_PRICE_LIST,
+                ],
+                true,
+            )
                 ? substr($serviceDate, 0, 7)
                 : $serviceDate;
 
@@ -103,6 +114,10 @@ final class ConditionalPricingScopeAggregator
             $rewardQuantitySource !== null
                 ? '0.000000'
                 : null;
+        $rewardQuantityValues = array_fill_keys(
+            $rewardQuantitySources,
+            '0.000000',
+        );
 
         foreach ($snapshots as $snapshot) {
             $snapshotDriverId =
@@ -112,10 +127,19 @@ final class ConditionalPricingScopeAggregator
                 $this->serviceDate($snapshot);
 
             if (
-                $scope ===
-                    PriceListConditionalRule::EVALUATION_SCOPE_MONTHLY_DRIVER
+                in_array(
+                    $scope,
+                    [
+                        PriceListConditionalRule::EVALUATION_SCOPE_MONTHLY_DRIVER,
+                        PriceListConditionalRule::EVALUATION_SCOPE_MONTHLY_PRICE_LIST,
+                    ],
+                    true,
+                )
             ) {
-                if ($snapshotDriverId !== $driverId) {
+                if (
+                    $scope === PriceListConditionalRule::EVALUATION_SCOPE_MONTHLY_DRIVER
+                    && $snapshotDriverId !== $driverId
+                ) {
                     throw new InvalidArgumentException(
                         'Monthly-driver scope cannot mix drivers.',
                     );
@@ -126,38 +150,37 @@ final class ConditionalPricingScopeAggregator
                     !== $period
                 ) {
                     throw new InvalidArgumentException(
-                        'Monthly-driver scope cannot mix calendar months.',
+                        'Monthly scope cannot mix calendar months.',
                     );
                 }
             }
 
-            $numerator = bcadd(
-                $numerator,
-                $this->sourceValue(
-                    $snapshot,
-                    $numeratorSource,
-                ),
-                self::SCALE,
-            );
-
-            if ($denominatorSource !== null) {
-                $denominator = bcadd(
-                    (string) $denominator,
-                    $this->sourceValue(
-                        $snapshot,
-                        $denominatorSource,
-                    ),
+            foreach ($numeratorSources as $source) {
+                $numerator = bcadd(
+                    $numerator,
+                    $this->sourceValue($snapshot, $source),
                     self::SCALE,
                 );
             }
 
-            if ($rewardQuantitySource !== null) {
+            foreach ($denominatorSources as $source) {
+                $denominator = bcadd(
+                    (string) $denominator,
+                    $this->sourceValue($snapshot, $source),
+                    self::SCALE,
+                );
+            }
+
+            foreach ($rewardQuantitySources as $source) {
+                $sourceValue = $this->sourceValue($snapshot, $source);
                 $rewardQuantity = bcadd(
                     (string) $rewardQuantity,
-                    $this->sourceValue(
-                        $snapshot,
-                        $rewardQuantitySource,
-                    ),
+                    $sourceValue,
+                    self::SCALE,
+                );
+                $rewardQuantityValues[$source] = bcadd(
+                    $rewardQuantityValues[$source],
+                    $sourceValue,
                     self::SCALE,
                 );
             }
@@ -168,56 +191,100 @@ final class ConditionalPricingScopeAggregator
             'driver_id' => $driverId,
             'period' => $period,
             'route_count' => count($snapshots),
+            'metric_numerator_sources' => $numeratorSources,
             'metric_numerator_source' => $numeratorSource,
             'metric_numerator_value' => $numerator,
+            'metric_denominator_sources' => $denominatorSources,
             'metric_denominator_source' => $denominatorSource,
             'metric_denominator_value' => $denominator,
+            'reward_quantity_sources' => $rewardQuantitySources,
             'reward_quantity_source' => $rewardQuantitySource,
             'reward_quantity_value' => $rewardQuantity,
+            'reward_quantity_values' => $rewardQuantityValues,
         ];
     }
 
-    private function requiredSource(
+    /** @return list<string> */
+    private function componentSources(
         PriceListConditionalRule $rule,
-        string $attribute,
-    ): string {
-        $source = $this->requiredRuleString(
-            $rule,
-            $attribute,
-        );
-
-        if (
-            ! in_array(
-                $source,
-                PriceListConditionalRule::METRIC_SOURCES,
-                true,
+        string $role,
+        bool $required,
+    ): array {
+        $components = $rule->relationLoaded('metricComponents')
+            ? $rule->getRelation('metricComponents')->filter(
+                static fn (mixed $component): bool => $component->getAttribute('component_role') === $role,
             )
-        ) {
+            : (! $rule->exists
+                ? new Collection
+                : ($role === 'numerator'
+                    ? $rule->numeratorComponents()->get()
+                    : $rule->denominatorComponents()->get()));
+        $sources = $components
+            ->pluck('metric_source')
+            ->filter(static fn (mixed $source): bool => is_string($source))
+            ->values()
+            ->all();
+
+        if ($sources === []) {
+            $legacy = $rule->getAttribute(
+                $role === 'numerator'
+                    ? 'metric_numerator_source'
+                    : 'metric_denominator_source',
+            );
+
+            if (is_string($legacy)) {
+                $sources[] = $legacy;
+            }
+        }
+
+        if ($required && $sources === []) {
             throw new LogicException(
-                sprintf(
-                    'Unsupported conditional metric source [%s].',
-                    $source,
-                ),
+                'Conditional numerator requires at least one source.',
             );
         }
 
-        return $source;
-    }
-
-    private function nullableSource(
-        PriceListConditionalRule $rule,
-        string $attribute,
-    ): ?string {
-        $value = $rule->getAttribute($attribute);
-
-        if ($value === null) {
-            return null;
+        foreach ($sources as $source) {
+            $this->assertSource($source);
         }
 
-        return $this->requiredSource(
-            $rule,
-            $attribute,
-        );
+        return $sources;
+    }
+
+    /** @return list<string> */
+    private function rewardSources(PriceListConditionalRule $rule): array
+    {
+        $components = $rule->relationLoaded('rewardComponents')
+            ? $rule->getRelation('rewardComponents')
+            : ($rule->exists
+                ? $rule->rewardComponents()->orderBy('position')->get()
+                : new Collection);
+        $sources = $components->pluck('metric_source')
+            ->filter(static fn (mixed $source): bool => is_string($source))
+            ->values()
+            ->all();
+
+        if ($sources === []) {
+            $legacy = $rule->getAttribute('reward_quantity_source');
+
+            if (is_string($legacy)) {
+                $sources[] = $legacy;
+            }
+        }
+
+        foreach ($sources as $source) {
+            $this->assertSource($source);
+        }
+
+        return $sources;
+    }
+
+    private function assertSource(string $source): void
+    {
+        if (! in_array($source, PriceListConditionalRule::METRIC_SOURCES, true)) {
+            throw new LogicException(
+                sprintf('Unsupported conditional metric source [%s].', $source),
+            );
+        }
     }
 
     private function requiredRuleString(

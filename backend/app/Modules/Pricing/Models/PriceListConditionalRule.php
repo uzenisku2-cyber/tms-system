@@ -175,6 +175,17 @@ final class PriceListConditionalRule extends Model
         );
     }
 
+    /**
+     * @return HasMany<PriceListConditionalRuleRewardComponent, $this>
+     */
+    public function rewardComponents(): HasMany
+    {
+        return $this->hasMany(
+            PriceListConditionalRuleRewardComponent::class,
+            'price_list_conditional_rule_id',
+        )->orderBy('position');
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

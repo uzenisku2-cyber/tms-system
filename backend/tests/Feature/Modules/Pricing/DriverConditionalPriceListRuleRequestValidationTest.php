@@ -9,7 +9,8 @@ use App\Modules\Pricing\Models\DriverPriceListItem;
 use App\Modules\Pricing\Requests\StoreDriverPriceListRequest;
 use App\Modules\Pricing\Requests\StoreDriverPriceListVersionRequest;
 use App\Modules\Pricing\Requests\UpdateDriverPriceListVersionRequest;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 final class DriverConditionalPriceListRuleRequestValidationTest extends TestCase
@@ -19,17 +20,16 @@ final class DriverConditionalPriceListRuleRequestValidationTest extends TestCase
         foreach ($this->requestCases($this->redirectedRule()) as $case) {
             [$request, $payload] = $case;
 
-            $validator = Validator::make(
-                $payload,
-                $request->rules(),
-            );
+            $validated = $this->validatedRequest($request, $payload);
 
-            self::assertFalse(
-                $validator->fails(),
-                json_encode(
-                    $validator->errors()->toArray(),
-                    JSON_THROW_ON_ERROR,
-                ),
+            self::assertSame(
+                [
+                    DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+                    DriverPriceListConditionalRule::SOURCE_DELIVERED_PARCELS,
+                ],
+                $validated['conditional_rules'][0][
+                    'reward_quantity_sources'
+                ],
             );
         }
     }
@@ -46,17 +46,56 @@ final class DriverConditionalPriceListRuleRequestValidationTest extends TestCase
         foreach ($this->requestCases($rule) as $case) {
             [$request, $payload] = $case;
 
-            $validator = Validator::make(
-                $payload,
-                $request->rules(),
-            );
+            try {
+                $this->validatedRequest($request, $payload);
+                self::fail('A duplicate formula source was accepted.');
+            } catch (ValidationException $exception) {
+                self::assertArrayHasKey(
+                    'conditional_rules.0.metric_numerator_sources',
+                    $exception->errors(),
+                );
+            }
+        }
+    }
 
-            self::assertTrue($validator->fails());
+    public function test_legacy_reward_quantity_source_is_normalized(): void
+    {
+        $rule = $this->redirectedRule();
+        unset($rule['reward_quantity_sources']);
 
-            self::assertArrayHasKey(
-                'conditional_rules.0.metric_numerator_sources',
-                $validator->errors()->toArray(),
+        foreach ($this->requestCases($rule) as $case) {
+            [$request, $payload] = $case;
+            $validated = $this->validatedRequest($request, $payload);
+
+            self::assertSame(
+                [DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS],
+                $validated['conditional_rules'][0][
+                    'reward_quantity_sources'
+                ],
             );
+        }
+    }
+
+    public function test_duplicate_reward_quantity_source_is_rejected(): void
+    {
+        $rule = $this->redirectedRule();
+        $rule['reward_quantity_sources'] = [
+            DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+            DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+        ];
+
+        foreach ($this->requestCases($rule) as $case) {
+            [$request, $payload] = $case;
+
+            try {
+                $this->validatedRequest($request, $payload);
+                self::fail('Duplicate reward quantity sources were accepted.');
+            } catch (ValidationException $exception) {
+                self::assertArrayHasKey(
+                    'conditional_rules.0.reward_quantity_sources',
+                    $exception->errors(),
+                );
+            }
         }
     }
 
@@ -144,6 +183,10 @@ final class DriverConditionalPriceListRuleRequestValidationTest extends TestCase
             ],
             'evaluation_scope' => DriverPriceListConditionalRule::EVALUATION_SCOPE_MONTHLY_DRIVER,
             'reward_method' => DriverPriceListConditionalRule::REWARD_METHOD_AMOUNT_PER_UNIT,
+            'reward_quantity_sources' => [
+                DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
+                DriverPriceListConditionalRule::SOURCE_DELIVERED_PARCELS,
+            ],
             'reward_quantity_source' => DriverPriceListConditionalRule::SOURCE_REDIRECTED_PARCELS,
             'reward_target_item_code' => null,
             'rounding_scale' => 2,
@@ -164,5 +207,22 @@ final class DriverConditionalPriceListRuleRequestValidationTest extends TestCase
                 ],
             ],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function validatedRequest(
+        FormRequest $request,
+        array $payload,
+    ): array {
+        $request->initialize(request: $payload);
+        $request->setMethod('POST');
+        $request->setContainer($this->app);
+        $request->setRedirector($this->app->make('redirect'));
+        $request->validateResolved();
+
+        return $request->validated();
     }
 }

@@ -103,11 +103,11 @@ final class FinancialConditionalAdjustmentPersistenceServiceTest extends TestCas
         );
         self::assertSame(
             '2026-08-01',
-            $adjustment->period_start->format('Y-m-d'),
+            CarbonImmutable::parse((string) $adjustment->getAttribute('period_start'))->format('Y-m-d'),
         );
         self::assertSame(
             '2026-08-31',
-            $adjustment->period_end->format('Y-m-d'),
+            CarbonImmutable::parse((string) $adjustment->getAttribute('period_end'))->format('Y-m-d'),
         );
         self::assertSame(
             '45.000000',
@@ -214,11 +214,11 @@ final class FinancialConditionalAdjustmentPersistenceServiceTest extends TestCas
 
         self::assertSame(
             '2026-02-11',
-            $adjustment->period_start->format('Y-m-d'),
+            CarbonImmutable::parse((string) $adjustment->getAttribute('period_start'))->format('Y-m-d'),
         );
         self::assertSame(
             '2026-02-28',
-            $adjustment->period_end->format('Y-m-d'),
+            CarbonImmutable::parse((string) $adjustment->getAttribute('period_end'))->format('Y-m-d'),
         );
 
         $snapshot = $adjustment->getAttribute(
@@ -275,11 +275,11 @@ final class FinancialConditionalAdjustmentPersistenceServiceTest extends TestCas
 
         self::assertSame(
             '2026-02-01',
-            $adjustment->period_start->format('Y-m-d'),
+            CarbonImmutable::parse((string) $adjustment->getAttribute('period_start'))->format('Y-m-d'),
         );
         self::assertSame(
             '2026-02-10',
-            $adjustment->period_end->format('Y-m-d'),
+            CarbonImmutable::parse((string) $adjustment->getAttribute('period_end'))->format('Y-m-d'),
         );
     }
 
@@ -377,7 +377,7 @@ final class FinancialConditionalAdjustmentPersistenceServiceTest extends TestCas
         );
         self::assertSame(
             '2026-08-03',
-            $adjustment->period_start->format('Y-m-d'),
+            CarbonImmutable::parse((string) $adjustment->getAttribute('period_start'))->format('Y-m-d'),
         );
         self::assertSame(
             '1000.00',
@@ -1102,6 +1102,23 @@ final class FinancialConditionalAdjustmentPersistenceServiceTest extends TestCas
             $table->string('reward_target_item_code')->nullable();
             $table->unsignedSmallInteger('rounding_scale')->default(2);
             $table->string('rounding_method')->default('half_up');
+            $table->unsignedSmallInteger('position');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('price_list_conditional_rule_metric_components', static function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('price_list_conditional_rule_id');
+            $table->string('component_role', 32);
+            $table->string('metric_source', 64);
+            $table->unsignedSmallInteger('position');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('price_list_conditional_rule_reward_components', static function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('price_list_conditional_rule_id');
+            $table->string('metric_source', 64);
             $table->unsignedSmallInteger('position');
             $table->timestamp('created_at')->nullable();
         });
