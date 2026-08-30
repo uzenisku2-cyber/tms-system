@@ -23,6 +23,7 @@ final class FuelTransactionDriverAttributionService
     {
         $this->assertVisible($transaction, $organizationId);
         $transaction->load(['importedDriver:id,first_name,last_name', 'actualDriver:id,first_name,last_name', 'driverAttributions.previousDriver:id,first_name,last_name', 'driverAttributions.newDriver:id,first_name,last_name', 'driverAttributions.correctedBy:id,name']);
+
         return $this->payload($transaction);
     }
 
@@ -31,6 +32,7 @@ final class FuelTransactionDriverAttributionService
         $this->assertVisible($transaction, $organizationId);
         $ids = $this->authorization->visibleDriverOrganizationAssignmentIds($actor, $organizationId, DriverSupervisoryAuthorizationService::CURRENT_MANAGE_PERMISSION);
         $date = $transaction->occurred_at->toDateString();
+
         return DriverOrganizationAssignment::query()->with('driver:id,first_name,last_name,status,active')->whereIn('id', $ids)
             ->whereDate('valid_from', '<=', $date)
             ->where(fn (Builder $query) => $query->whereNull('valid_until')->orWhereDate('valid_until', '>=', $date))
@@ -80,6 +82,7 @@ final class FuelTransactionDriverAttributionService
                 'corrected_by_user_id' => $actor->getKey(), 'corrected_at' => now(),
             ]);
             $locked->forceFill(['actual_driver_id' => $driverId, 'actual_driver_organization_assignment_id' => $assignment->getKey(), 'driver_attribution_revision' => $nextRevision])->save();
+
             return $this->show($locked->refresh(), $organizationId);
         });
     }

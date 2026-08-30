@@ -16,10 +16,14 @@ use LogicException;
 final class FuelTransactionDriverAttributionController
 {
     public function show(FuelTransaction $fuelTransaction, OrganizationContext $context, FuelTransactionDriverAttributionService $service): JsonResponse
-    { return response()->json(['data' => $service->show($fuelTransaction, $context->requireId())]); }
+    {
+        return response()->json(['data' => $service->show($fuelTransaction, $context->requireId())]);
+    }
 
     public function eligibleDrivers(Request $request, FuelTransaction $fuelTransaction, OrganizationContext $context, FuelTransactionDriverAttributionService $service): JsonResponse
-    { return response()->json(['data' => ['items' => $service->eligibleDrivers($fuelTransaction, $context->requireId(), $this->actor($request))]]); }
+    {
+        return response()->json(['data' => ['items' => $service->eligibleDrivers($fuelTransaction, $context->requireId(), $this->actor($request))]]);
+    }
 
     public function store(StoreFuelTransactionDriverAttributionRequest $request, FuelTransaction $fuelTransaction, OrganizationContext $context, FuelTransactionDriverAttributionService $service): JsonResponse
     {
@@ -29,7 +33,10 @@ final class FuelTransactionDriverAttributionController
     private function actor(Request $request): User
     {
         $actor = $request->user();
-        if (! $actor instanceof User || ! $actor->exists) { throw new LogicException('The fuel attribution actor must be persisted.'); }
+        if (! $actor instanceof User || ! $actor->exists) {
+            throw new LogicException('The fuel attribution actor must be persisted.');
+        }
+
         return $actor;
     }
 }

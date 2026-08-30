@@ -16,11 +16,38 @@ final class FuelTransactionDriverAttribution extends Model
 
     protected $casts = ['revision' => 'integer', 'corrected_at' => 'datetime'];
 
-    public function getRouteKeyName(): string { return 'public_id'; }
-    public function transaction(): BelongsTo { return $this->belongsTo(FuelTransaction::class, 'fuel_transaction_id'); }
-    public function previousDriver(): BelongsTo { return $this->belongsTo(Driver::class, 'previous_driver_id'); }
-    public function newDriver(): BelongsTo { return $this->belongsTo(Driver::class, 'new_driver_id'); }
-    public function previousAssignment(): BelongsTo { return $this->belongsTo(DriverOrganizationAssignment::class, 'previous_driver_organization_assignment_id'); }
-    public function newAssignment(): BelongsTo { return $this->belongsTo(DriverOrganizationAssignment::class, 'new_driver_organization_assignment_id'); }
-    public function correctedBy(): BelongsTo { return $this->belongsTo(User::class, 'corrected_by_user_id'); }
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
+
+    public function transaction(): BelongsTo
+    {
+        return $this->belongsTo(FuelTransaction::class, 'fuel_transaction_id');
+    }
+
+    public function previousDriver(): BelongsTo
+    {
+        return $this->belongsTo(Driver::class, 'previous_driver_id');
+    }
+
+    public function newDriver(): BelongsTo
+    {
+        return $this->belongsTo(Driver::class, 'new_driver_id');
+    }
+
+    public function previousAssignment(): BelongsTo
+    {
+        return $this->belongsTo(DriverOrganizationAssignment::class, 'previous_driver_organization_assignment_id');
+    }
+
+    public function newAssignment(): BelongsTo
+    {
+        return $this->belongsTo(DriverOrganizationAssignment::class, 'new_driver_organization_assignment_id');
+    }
+
+    public function correctedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'corrected_by_user_id');
+    }
 }

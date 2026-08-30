@@ -112,12 +112,14 @@ final class FuelTransactionDriverAttributionLifecycleTest extends TestCase
             'organization_relationship_id' => null, 'valid_from' => '2025-01-01',
             'created_by_user_id' => $actor->id,
         ]);
+
         return $actor;
     }
 
     private function driver(string $firstName, string $lastName): Driver
     {
         $user = User::factory()->create();
+
         return Driver::query()->create([
             'user_id' => $user->id, 'first_name' => $firstName, 'last_name' => $lastName,
             'license_number' => 'S044-'.Str::uuid(), 'license_category' => 'B', 'active' => true,
@@ -140,6 +142,7 @@ final class FuelTransactionDriverAttributionLifecycleTest extends TestCase
             'file_sha256' => str_repeat('A', 64), 'schema_fingerprint' => str_repeat('B', 64),
             'source_row_count' => 1, 'accepted_row_count' => 1, 'imported_by_user_id' => $actor->id, 'completed_at' => now(),
         ]);
+
         return FuelTransaction::query()->create([
             'public_id' => (string) Str::uuid(), 'owner_organization_id' => $organization->id,
             'provider' => 'ORLEN', 'provider_transaction_identifier' => 'BORROWED-001',
@@ -157,7 +160,10 @@ final class FuelTransactionDriverAttributionLifecycleTest extends TestCase
     {
         $fields = ['provider', 'provider_transaction_identifier', 'transaction_fingerprint', 'occurred_at', 'provider_card_identifier', 'driver_id', 'quantity', 'unit_price', 'net_amount', 'tax_amount', 'gross_amount', 'currency', 'fuel_import_batch_id', 'source_row'];
         $snapshot = [];
-        foreach ($fields as $field) { $snapshot[$field] = $transaction->getRawOriginal($field); }
+        foreach ($fields as $field) {
+            $snapshot[$field] = $transaction->getRawOriginal($field);
+        }
+
         return $snapshot;
     }
 }

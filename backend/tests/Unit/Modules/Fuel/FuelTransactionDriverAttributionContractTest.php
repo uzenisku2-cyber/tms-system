@@ -14,7 +14,10 @@ final class FuelTransactionDriverAttributionContractTest extends TestCase
         $service = file_get_contents(app_path('Modules/Fuel/Services/FuelTransactionDriverAttributionService.php'));
         $routes = file_get_contents(app_path('Modules/Fuel/Routes/api.php'));
         $request = file_get_contents(app_path('Modules/Fuel/Requests/StoreFuelTransactionDriverAttributionRequest.php'));
-        self::assertIsString($migration); self::assertIsString($service); self::assertIsString($routes); self::assertIsString($request);
+        self::assertIsString($migration);
+        self::assertIsString($service);
+        self::assertIsString($routes);
+        self::assertIsString($request);
         foreach (['actual_driver_id', 'actual_driver_organization_assignment_id', 'driver_attribution_revision', 'previous_driver_id', 'new_driver_id', 'corrected_by_user_id', 'corrected_at'] as $marker) {
             self::assertStringContainsString($marker, $migration);
         }
