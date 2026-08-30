@@ -25,6 +25,15 @@ final class FuelImportReviewUiTest extends TestCase
             ->assertSee('id="finalize"', false)
             ->assertSee('id="finalReason"', false)
             ->assertSee('transaction_public_id', false)
+            ->assertSee('Kdo tankoval')
+            ->assertSee('id="actualDriver"', false)
+            ->assertSee('id="driverReason"', false)
+            ->assertSee('id="driverAttributionHistory"', false)
+            ->assertSee('/api/v1/fuel-transactions/', false)
+            ->assertSee('/driver-attribution', false)
+            ->assertSee('/eligible-drivers', false)
+            ->assertSee('/driver-attributions', false)
+            ->assertSee('expected_revision', false)
             ->assertSee('tms_mvp_token', false)
             ->assertSee('X-Organization-ID', false);
     }

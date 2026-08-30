@@ -9,6 +9,7 @@ use App\Modules\Fuel\Models\FuelImportBatch;
 use App\Modules\Fuel\Models\FuelImportRow;
 use App\Modules\Fuel\Models\FuelImportRowCorrection;
 use App\Modules\Fuel\Models\FuelImportRowFinalization;
+use App\Modules\Fuel\Models\FuelTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -30,9 +31,14 @@ final class FuelImportReviewService
             ->with(['finalizedBy:id,name', 'transaction:id,public_id'])
             ->first();
 
+        $transactionPublicId = $row->fuel_transaction_id === null
+            ? null
+            : FuelTransaction::query()->whereKey($row->fuel_transaction_id)->value('public_id');
+
         return [
             'source_row' => $row->source_row,
             'status' => $row->status,
+            'transaction_public_id' => $transactionPublicId,
             'raw_payload' => $row->raw_payload,
             'normalized_payload' => $row->normalized_payload,
             'validation_messages' => $row->validation_messages,
