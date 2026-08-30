@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Fuel\Controllers\FuelCardController;
 use App\Modules\Fuel\Controllers\FuelSurchargeController;
 use App\Modules\Fuel\Controllers\FuelTransactionImportController;
+use App\Modules\Fuel\Controllers\FuelTransactionDriverAttributionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'organization'])
@@ -54,6 +55,14 @@ Route::middleware(['auth:sanctum', 'organization'])
         });
     });
 
+Route::middleware(['auth:sanctum', 'organization', 'perm:users.manage'])
+    ->prefix('fuel-transactions')
+    ->name('fuel-transactions.')
+    ->group(function (): void {
+        Route::get('/{fuelTransaction}/driver-attribution', [FuelTransactionDriverAttributionController::class, 'show'])->whereUuid('fuelTransaction')->name('driver-attribution.show');
+        Route::get('/{fuelTransaction}/eligible-drivers', [FuelTransactionDriverAttributionController::class, 'eligibleDrivers'])->whereUuid('fuelTransaction')->name('eligible-drivers.index');
+        Route::post('/{fuelTransaction}/driver-attributions', [FuelTransactionDriverAttributionController::class, 'store'])->whereUuid('fuelTransaction')->name('driver-attributions.store');
+    });
 Route::middleware(['auth:sanctum', 'organization'])
     ->prefix('fuel-imports')
     ->name('fuel-imports.')
