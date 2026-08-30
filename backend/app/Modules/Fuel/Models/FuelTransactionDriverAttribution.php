@@ -10,6 +10,11 @@ use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property-read Driver|null $previousDriver
+ * @property-read Driver $newDriver
+ * @property-read User|null $correctedBy
+ */
 final class FuelTransactionDriverAttribution extends Model
 {
     protected $fillable = ['public_id', 'fuel_transaction_id', 'revision', 'previous_driver_id', 'new_driver_id', 'previous_driver_organization_assignment_id', 'new_driver_organization_assignment_id', 'reason', 'corrected_by_user_id', 'corrected_at'];

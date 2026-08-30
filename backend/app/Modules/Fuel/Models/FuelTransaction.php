@@ -6,10 +6,16 @@ namespace App\Modules\Fuel\Models;
 
 use App\Modules\Drivers\Models\Driver;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read Driver|null $importedDriver
+ * @property-read Driver|null $actualDriver
+ * @property-read Collection<int, FuelTransactionDriverAttribution> $driverAttributions
+ */
 final class FuelTransaction extends Model
 {
     protected $fillable = ['public_id', 'owner_organization_id', 'provider', 'provider_transaction_identifier', 'transaction_fingerprint', 'occurred_at', 'posting_date', 'provider_card_identifier', 'fuel_card_id', 'fuel_card_assignment_id', 'responsible_organization_id', 'driver_id', 'actual_driver_id', 'actual_driver_organization_assignment_id', 'driver_attribution_revision', 'vehicle_id', 'match_status', 'match_method', 'station_identifier', 'station_name', 'station_address', 'product_code', 'product_name', 'quantity', 'unit_of_measure', 'unit_price', 'net_amount', 'tax_amount', 'gross_amount', 'discount_amount', 'tax_rate', 'currency', 'vehicle_registration', 'odometer', 'invoice_reference', 'source_description', 'fuel_import_batch_id', 'source_row'];
