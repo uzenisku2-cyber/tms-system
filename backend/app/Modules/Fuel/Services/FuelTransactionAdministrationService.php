@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 final class FuelTransactionAdministrationService
 {
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
     public function index(int $organizationId, array $filters): array

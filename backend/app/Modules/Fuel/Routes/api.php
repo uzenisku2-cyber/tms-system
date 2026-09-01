@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use App\Modules\Fuel\Controllers\FuelCardController;
 use App\Modules\Fuel\Controllers\FuelSurchargeController;
-use App\Modules\Fuel\Controllers\FuelTransactionDriverAttributionController;
 use App\Modules\Fuel\Controllers\FuelTransactionController;
+use App\Modules\Fuel\Controllers\FuelTransactionDriverAttributionController;
 use App\Modules\Fuel\Controllers\FuelTransactionImportController;
 use Illuminate\Support\Facades\Route;
 
