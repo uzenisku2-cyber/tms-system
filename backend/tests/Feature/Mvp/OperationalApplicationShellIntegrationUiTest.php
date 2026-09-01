@@ -99,13 +99,13 @@ final class OperationalApplicationShellIntegrationUiTest extends TestCase
         self::assertStringContainsString("if (page === 'settings')", $source);
     }
 
-    public function test_fuel_page_embeds_completed_import_review_workspace(): void
+    public function test_fuel_page_embeds_transaction_administration_workspace(): void
     {
         $source = file_get_contents(resource_path('views/mvp/app.blade.php'));
 
         self::assertIsString($source);
         self::assertStringContainsString('id="drayviaFuelWorkspaceFrame"', $source);
-        self::assertStringContainsString('src="/settings/fuel-imports"', $source);
+        self::assertStringContainsString('src="/settings/fuel-transactions"', $source);
         self::assertStringContainsString('bindFuelWorkspace', $source);
         self::assertStringContainsString("if (page === 'fuel')", $source);
         self::assertStringContainsString('OBNOVIT PHM', $source);

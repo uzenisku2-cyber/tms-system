@@ -14653,7 +14653,7 @@ const bindFuelWorkspace = () => {
         reload?.addEventListener('click', () => {
             if (!frame) return;
             if (status) status.textContent = 'NAČÍTÁM PHM…';
-            frame.src = '/settings/fuel-imports';
+            frame.src = '/settings/fuel-transactions';
         });
         frame?.addEventListener('load', () => {
             if (status) status.textContent = 'PHM PŘIPRAVENO';
@@ -14716,8 +14716,8 @@ const bindFuelWorkspace = () => {
                 <div class="s043-card-status" data-fuel-card-message></div>
             </section>
 <section class="drayvia-preview-panel">
-                <div class="s039-fuel-head"><div><h3>Tankování a importy PHM</h3><p>Importy MOL a ORLEN, kontrola a auditované opravy.</p></div><div class="drayvia-preview-actions"><button id="drayviaFuelWorkspaceReload" class="drayvia-preview-action primary" type="button">OBNOVIT PHM</button><a class="drayvia-preview-action" href="/settings/fuel-imports" target="_blank" rel="noopener">OTEVŘÍT V NOVÉ KARTĚ</a><span id="drayviaFuelWorkspaceStatus" class="drayvia-preview-action">NAČÍTÁM PHM…</span></div></div>
-                <div style="padding:0;overflow:hidden;margin-top:18px"><iframe id="drayviaFuelWorkspaceFrame" title="Importy a kontrola PHM" src="/settings/fuel-imports" style="display:block;width:100%;height:900px;border:0;background:#f4f7fb;"></iframe></div>
+                <div class="s039-fuel-head"><div><h3>Tankování a importy PHM</h3><p>Importy MOL a ORLEN, kontrola a auditované opravy.</p></div><div class="drayvia-preview-actions"><button id="drayviaFuelWorkspaceReload" class="drayvia-preview-action primary" type="button">OBNOVIT PHM</button><a class="drayvia-preview-action" href="/settings/fuel-transactions" target="_blank" rel="noopener">OTEVŘÍT V NOVÉ KARTĚ</a><span id="drayviaFuelWorkspaceStatus" class="drayvia-preview-action">NAČÍTÁM PHM…</span></div></div>
+                <div style="padding:0;overflow:hidden;margin-top:18px"><iframe id="drayviaFuelWorkspaceFrame" title="Importy a kontrola PHM" src="/settings/fuel-transactions" style="display:block;width:100%;height:900px;border:0;background:#f4f7fb;"></iframe></div>
             </section>
         </div>
     `;
