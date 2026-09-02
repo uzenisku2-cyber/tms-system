@@ -7,6 +7,7 @@ use App\Modules\Fuel\Controllers\FuelSurchargeController;
 use App\Modules\Fuel\Controllers\FuelTransactionController;
 use App\Modules\Fuel\Controllers\FuelTransactionDriverAttributionController;
 use App\Modules\Fuel\Controllers\FuelTransactionImportController;
+use App\Modules\Fuel\Controllers\FuelTransactionReconciliationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'organization'])
@@ -67,6 +68,18 @@ Route::middleware(['auth:sanctum', 'organization'])
             Route::get('/{fuelTransaction}/driver-attribution', [FuelTransactionDriverAttributionController::class, 'show'])->whereUuid('fuelTransaction')->name('driver-attribution.show');
             Route::get('/{fuelTransaction}/eligible-drivers', [FuelTransactionDriverAttributionController::class, 'eligibleDrivers'])->whereUuid('fuelTransaction')->name('eligible-drivers.index');
             Route::post('/{fuelTransaction}/driver-attributions', [FuelTransactionDriverAttributionController::class, 'store'])->whereUuid('fuelTransaction')->name('driver-attributions.store');
+        });
+    });
+Route::middleware(['auth:sanctum', 'organization'])
+    ->prefix('fuel-transactions')
+    ->name('fuel-transactions.')
+    ->group(function (): void {
+        Route::middleware('perm:compensation.view')->group(function (): void {
+            Route::get('/{fuelTransaction}/reconciliation', [FuelTransactionReconciliationController::class, 'show'])->whereUuid('fuelTransaction')->name('reconciliation.show');
+        });
+        Route::middleware('perm:compensation.manage')->group(function (): void {
+            Route::post('/{fuelTransaction}/reconciliation/evaluate', [FuelTransactionReconciliationController::class, 'evaluate'])->whereUuid('fuelTransaction')->name('reconciliation.evaluate');
+            Route::post('/{fuelTransaction}/reconciliation/decisions', [FuelTransactionReconciliationController::class, 'decide'])->whereUuid('fuelTransaction')->name('reconciliation.decisions.store');
         });
     });
 Route::middleware(['auth:sanctum', 'organization'])
