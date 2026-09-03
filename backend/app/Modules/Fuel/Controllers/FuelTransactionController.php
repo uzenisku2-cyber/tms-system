@@ -11,6 +11,14 @@ use Illuminate\Http\JsonResponse;
 
 final class FuelTransactionController
 {
+    public function overview(
+        IndexFuelTransactionRequest $request,
+        OrganizationContext $context,
+        FuelTransactionAdministrationService $service,
+    ): JsonResponse {
+        return response()->json(['data' => $service->overview($context->requireId(), $request->validated())]);
+    }
+
     public function index(
         IndexFuelTransactionRequest $request,
         OrganizationContext $context,

@@ -18,8 +18,7 @@ final class FuelTransactionAdministrationService
      */
     public function index(int $organizationId, array $filters): array
     {
-        $query = FuelTransaction::query()
-            ->where('owner_organization_id', $organizationId)
+        $query = $this->baseQuery($organizationId)
             ->with([
                 'importedDriver:id,first_name,last_name',
                 'actualDriver:id,first_name,last_name',
@@ -58,6 +57,105 @@ final class FuelTransactionAdministrationService
                 ],
             ],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    public function overview(int $organizationId, array $filters): array
+    {
+        $query = $this->baseQuery($organizationId);
+        $this->applyFilters($query, $filters);
+
+        $pending = $this->statusCount($query, FuelTransactionReconciliation::STATUS_PENDING);
+        $matched = $this->statusCount($query, FuelTransactionReconciliation::STATUS_MATCHED);
+        $reviewRequired = $this->statusCount($query, FuelTransactionReconciliation::STATUS_REVIEW_REQUIRED);
+        $resolved = $this->statusCount($query, FuelTransactionReconciliation::STATUS_RESOLVED);
+
+        $providers = (clone $query)
+            ->selectRaw('provider, COUNT(*) as transaction_count')
+            ->groupBy('provider')
+            ->orderBy('provider')
+            ->get()
+            ->map(fn (FuelTransaction $transaction): array => [
+                'provider' => (string) $transaction->provider,
+                'transaction_count' => (int) $transaction->getAttribute('transaction_count'),
+            ])
+            ->values()
+            ->all();
+
+        $currencyTotals = (clone $query)
+            ->selectRaw('currency, COUNT(*) as transaction_count, COALESCE(SUM(gross_amount), 0) as gross_amount')
+            ->groupBy('currency')
+            ->orderBy('currency')
+            ->get()
+            ->map(fn (FuelTransaction $transaction): array => [
+                'currency' => (string) $transaction->currency,
+                'transaction_count' => (int) $transaction->getAttribute('transaction_count'),
+                'gross_amount' => (string) $transaction->getAttribute('gross_amount'),
+            ])
+            ->values()
+            ->all();
+
+        $driverRows = (clone $query)
+            ->selectRaw('COALESCE(actual_driver_id, driver_id) as effective_driver_id, COUNT(*) as transaction_count')
+            ->groupByRaw('COALESCE(actual_driver_id, driver_id)')
+            ->get();
+        $driverIds = $driverRows->pluck('effective_driver_id')->filter()->map(fn (mixed $id): int => (int) $id)->all();
+        $driverNames = Driver::query()
+            ->whereIn('id', $driverIds)
+            ->get(['id', 'first_name', 'last_name'])
+            ->mapWithKeys(fn (Driver $driver): array => [(int) $driver->getKey() => $driver->full_name]);
+        $drivers = $driverRows
+            ->map(function (FuelTransaction $transaction) use ($driverNames): array {
+                $driverId = $transaction->getAttribute('effective_driver_id');
+                $normalizedId = $driverId === null ? null : (int) $driverId;
+
+                return [
+                    'driver_id' => $normalizedId,
+                    'driver_name' => $normalizedId === null ? null : $driverNames->get($normalizedId),
+                    'transaction_count' => (int) $transaction->getAttribute('transaction_count'),
+                ];
+            })
+            ->sortBy(fn (array $driver): string => (string) ($driver['driver_name'] ?? ''))
+            ->values()
+            ->all();
+
+        return [
+            'summary' => [
+                'total' => (int) (clone $query)->count(),
+                'pending' => $pending,
+                'matched' => $matched,
+                'review_required' => $reviewRequired,
+                'resolved' => $resolved,
+                'attention_required' => $pending + $reviewRequired,
+            ],
+            'providers' => $providers,
+            'drivers' => $drivers,
+            'currency_totals' => $currencyTotals,
+        ];
+    }
+
+    /** @return Builder<FuelTransaction> */
+    private function baseQuery(int $organizationId): Builder
+    {
+        return FuelTransaction::query()->where('owner_organization_id', $organizationId);
+    }
+
+    private function statusCount(Builder $query, string $status): int
+    {
+        $statusQuery = clone $query;
+        if ($status === FuelTransactionReconciliation::STATUS_PENDING) {
+            $statusQuery->where(function (Builder $pendingQuery): void {
+                $pendingQuery->whereDoesntHave('reconciliation')
+                    ->orWhereHas('reconciliation', fn (Builder $reconciliationQuery): Builder => $reconciliationQuery->where('status', FuelTransactionReconciliation::STATUS_PENDING));
+            });
+        } else {
+            $statusQuery->whereHas('reconciliation', fn (Builder $reconciliationQuery): Builder => $reconciliationQuery->where('status', $status));
+        }
+
+        return (int) $statusQuery->count();
     }
 
     /** @param array<string, mixed> $filters */
