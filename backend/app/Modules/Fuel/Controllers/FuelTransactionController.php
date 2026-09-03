@@ -16,8 +16,11 @@ final class FuelTransactionController
         OrganizationContext $context,
         FuelTransactionAdministrationService $service,
     ): JsonResponse {
-        return response()->json([
-            'data' => $service->index($context->requireId(), $request->validated()),
-        ]);
+        $data = $service->index($context->requireId(), $request->validated());
+        $data['capabilities'] = [
+            'can_manage_reconciliation' => $request->user()?->can('compensation.manage') ?? false,
+        ];
+
+        return response()->json(['data' => $data]);
     }
 }

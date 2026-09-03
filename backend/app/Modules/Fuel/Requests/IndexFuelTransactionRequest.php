@@ -24,6 +24,7 @@ final class IndexFuelTransactionRequest extends FormRequest
             'driver_id' => ['nullable', 'integer', 'min:1'],
             'card' => ['nullable', 'string', 'max:128'],
             'search' => ['nullable', 'string', 'max:100'],
+            'reconciliation_status' => ['nullable', Rule::in(['pending', 'matched', 'review_required', 'resolved'])],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', Rule::in([15, 25, 50, 100])],
         ];
