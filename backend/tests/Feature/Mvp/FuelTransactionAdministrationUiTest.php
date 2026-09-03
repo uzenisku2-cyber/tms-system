@@ -20,6 +20,9 @@ final class FuelTransactionAdministrationUiTest extends TestCase
             ->assertSee('id="card"', false)
             ->assertSee('id="search"', false)
             ->assertSee('id="reconciliationStatus"', false)
+            ->assertSee('id="exportCsv"', false)
+            ->assertSee('Exportovat CSV', false)
+            ->assertSee('/api/v1/fuel-transactions/export?', false)
             ->assertSee('id="operationalOverview"', false)
             ->assertSee('id="overviewAttention"', false)
             ->assertSee('id="overviewProviders"', false)
@@ -52,6 +55,19 @@ final class FuelTransactionAdministrationUiTest extends TestCase
             ->assertDontSee('raw_payload', false)
             ->assertDontSee('normalized_payload', false)
             ->assertDontSee('Opraven&#225; data (JSON)', false);
+    }
+
+    public function test_csv_export_uses_active_filters_and_authenticated_download(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/fuel-transactions.blade.php'));
+        self::assertIsString($source);
+        self::assertStringContainsString("document.querySelector('#exportCsv').onclick=exportCsv", $source);
+        self::assertStringContainsString('fuel-transactions/export?${overviewQuery()}', $source);
+        self::assertStringContainsString("headers.set('X-Organization-ID',org)", $source);
+        self::assertStringContainsString("headers.set('Authorization',`Bearer \${token}`)", $source);
+        self::assertStringContainsString("response.headers.get('Content-Disposition')", $source);
+        self::assertStringNotContainsString('raw_payload', $source);
+        self::assertStringNotContainsString('normalized_payload', $source);
     }
 
     public function test_source_transaction_time_preserves_provider_wall_clock(): void

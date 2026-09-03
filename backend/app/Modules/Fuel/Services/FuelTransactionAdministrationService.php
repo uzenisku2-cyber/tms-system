@@ -8,6 +8,7 @@ use App\Modules\Drivers\Models\Driver;
 use App\Modules\Fuel\Models\FuelTransaction;
 use App\Modules\Fuel\Models\FuelTransactionReconciliation;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Str;
 
 final class FuelTransactionAdministrationService
@@ -135,6 +136,28 @@ final class FuelTransactionAdministrationService
             'drivers' => $drivers,
             'currency_totals' => $currencyTotals,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LazyCollection<int, array<string, mixed>>
+     */
+    public function exportRows(int $organizationId, array $filters): LazyCollection
+    {
+        $query = $this->baseQuery($organizationId)
+            ->with([
+                'importedDriver:id,first_name,last_name',
+                'actualDriver:id,first_name,last_name',
+                'reconciliation:id,fuel_transaction_id,status,result_code,candidate_count,matched_daily_report_id,revision,evaluated_at,resolved_at',
+            ]);
+
+        $this->applyFilters($query, $filters);
+
+        return $query
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id')
+            ->lazy(500)
+            ->map(fn (FuelTransaction $transaction): array => $this->item($transaction));
     }
 
     /** @return Builder<FuelTransaction> */
