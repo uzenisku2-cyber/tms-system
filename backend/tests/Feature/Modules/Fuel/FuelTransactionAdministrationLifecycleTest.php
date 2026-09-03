@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Drivers\Models\Driver;
 use App\Modules\Fuel\Models\FuelImportBatch;
 use App\Modules\Fuel\Models\FuelTransaction;
+use App\Modules\Fuel\Models\FuelTransactionReconciliation;
 use App\Modules\Fuel\Services\FuelTransactionAdministrationService;
 use App\Modules\Organizations\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,6 +31,16 @@ final class FuelTransactionAdministrationLifecycleTest extends TestCase
 
         $visible = $this->transaction($owner, $ownerBatch, $holder, 'ORLEN', '2026-08-15 10:30:00', 'CARD-000044');
         $visible->forceFill(['actual_driver_id' => $actual->id, 'driver_attribution_revision' => 1])->save();
+        FuelTransactionReconciliation::query()->create([
+            'public_id' => (string) Str::uuid(),
+            'owner_organization_id' => $owner->id,
+            'fuel_transaction_id' => $visible->id,
+            'status' => FuelTransactionReconciliation::STATUS_REVIEW_REQUIRED,
+            'result_code' => 'vehicle_mismatch',
+            'service_date' => '2026-08-15',
+            'candidate_count' => 2,
+            'revision' => 1,
+        ]);
         $this->transaction($owner, $ownerBatch, $holder, 'MOL', '2026-07-01 08:00:00', 'CARD-000055');
         $this->transaction($outsider, $outsiderBatch, $holder, 'ORLEN', '2026-08-15 11:00:00', 'CARD-000066');
 
@@ -40,6 +51,7 @@ final class FuelTransactionAdministrationLifecycleTest extends TestCase
             'driver_id' => (int) $actual->id,
             'card' => '0044',
             'search' => 'Plzen',
+            'reconciliation_status' => 'review_required',
             'per_page' => 15,
         ]);
 
@@ -53,6 +65,10 @@ final class FuelTransactionAdministrationLifecycleTest extends TestCase
         self::assertSame((int) $actual->id, $item['actual_driver']['id']);
         self::assertSame((int) $actual->id, $item['effective_driver']['id']);
         self::assertSame(1, $item['driver_attribution_revision']);
+        self::assertSame('review_required', $item['reconciliation']['status']);
+        self::assertSame('vehicle_mismatch', $item['reconciliation']['result_code']);
+        self::assertSame(2, $item['reconciliation']['candidate_count']);
+        self::assertSame(1, $item['reconciliation']['revision']);
         self::assertArrayNotHasKey('raw_payload', $item);
         self::assertArrayNotHasKey('normalized_payload', $item);
         self::assertArrayNotHasKey('provider_card_identifier', $item);

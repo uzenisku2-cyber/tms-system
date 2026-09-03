@@ -13,15 +13,18 @@ final class FuelTransactionAdministrationContractTest extends TestCase
         $service = file_get_contents(app_path('Modules/Fuel/Services/FuelTransactionAdministrationService.php'));
         $request = file_get_contents(app_path('Modules/Fuel/Requests/IndexFuelTransactionRequest.php'));
         $routes = file_get_contents(app_path('Modules/Fuel/Routes/api.php'));
+        $model = file_get_contents(app_path('Modules/Fuel/Models/FuelTransaction.php'));
 
         self::assertIsString($service);
         self::assertIsString($request);
         self::assertIsString($routes);
-        foreach (['owner_organization_id', 'date_from', 'date_to', 'provider', 'driver_id', 'card', 'search', 'masked_card', 'effective_driver', 'pagination'] as $marker) {
+        self::assertIsString($model);
+        foreach (['owner_organization_id', 'date_from', 'date_to', 'provider', 'driver_id', 'card', 'search', 'reconciliation_status', 'masked_card', 'effective_driver', 'reconciliation', 'candidate_count', 'pagination'] as $marker) {
             self::assertStringContainsString($marker, $service.$request);
         }
         self::assertStringContainsString("Route::get('/', [FuelTransactionController::class, 'index'])", $routes);
         self::assertStringContainsString("middleware('perm:compensation.view')", $routes);
+        self::assertStringContainsString('function reconciliation(): HasOne', $model);
         self::assertStringNotContainsString("'raw_payload' =>", $service);
         self::assertStringNotContainsString("'normalized_payload' =>", $service);
         self::assertStringNotContainsString("'provider_card_identifier' =>", $service);

@@ -6,6 +6,7 @@ namespace App\Modules\Fuel\Services;
 
 use App\Modules\Drivers\Models\Driver;
 use App\Modules\Fuel\Models\FuelTransaction;
+use App\Modules\Fuel\Models\FuelTransactionReconciliation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
@@ -22,6 +23,7 @@ final class FuelTransactionAdministrationService
             ->with([
                 'importedDriver:id,first_name,last_name',
                 'actualDriver:id,first_name,last_name',
+                'reconciliation:id,fuel_transaction_id,status,result_code,candidate_count,matched_daily_report_id,revision,evaluated_at,resolved_at',
             ]);
 
         $this->applyFilters($query, $filters);
@@ -48,6 +50,12 @@ final class FuelTransactionAdministrationService
                 'providers' => ['ORLEN', 'MOL'],
                 'drivers' => $this->filterDrivers($organizationId),
                 'per_page_options' => [15, 25, 50, 100],
+                'reconciliation_statuses' => [
+                    FuelTransactionReconciliation::STATUS_PENDING,
+                    FuelTransactionReconciliation::STATUS_MATCHED,
+                    FuelTransactionReconciliation::STATUS_REVIEW_REQUIRED,
+                    FuelTransactionReconciliation::STATUS_RESOLVED,
+                ],
             ],
         ];
     }
@@ -72,6 +80,17 @@ final class FuelTransactionAdministrationService
                         $importedQuery->whereNull('actual_driver_id')->where('driver_id', $driverId);
                     });
             });
+        }
+        if (is_string($filters['reconciliation_status'] ?? null)) {
+            $status = $filters['reconciliation_status'];
+            if ($status === FuelTransactionReconciliation::STATUS_PENDING) {
+                $query->where(function (Builder $reconciliationQuery): void {
+                    $reconciliationQuery->whereDoesntHave('reconciliation')
+                        ->orWhereHas('reconciliation', fn (Builder $projectionQuery): Builder => $projectionQuery->where('status', FuelTransactionReconciliation::STATUS_PENDING));
+                });
+            } else {
+                $query->whereHas('reconciliation', fn (Builder $reconciliationQuery): Builder => $reconciliationQuery->where('status', $status));
+            }
         }
         if (is_string($filters['card'] ?? null) && trim($filters['card']) !== '') {
             $query->where('provider_card_identifier', 'like', '%'.trim($filters['card']).'%');
@@ -122,6 +141,22 @@ final class FuelTransactionAdministrationService
     {
         $cardIdentifier = (string) $transaction->provider_card_identifier;
         $effectiveDriver = $transaction->actualDriver ?? $transaction->importedDriver;
+        $reconciliation = $transaction->getRelation('reconciliation');
+        $reconciliationSummary = $reconciliation instanceof FuelTransactionReconciliation
+            ? [
+                'status' => $reconciliation->status,
+                'result_code' => $reconciliation->result_code,
+                'candidate_count' => (int) $reconciliation->candidate_count,
+                'matched_daily_report_id' => $reconciliation->matched_daily_report_id === null ? null : (int) $reconciliation->matched_daily_report_id,
+                'revision' => (int) $reconciliation->revision,
+            ]
+            : [
+                'status' => FuelTransactionReconciliation::STATUS_PENDING,
+                'result_code' => null,
+                'candidate_count' => 0,
+                'matched_daily_report_id' => null,
+                'revision' => 0,
+            ];
 
         return [
             'public_id' => $transaction->public_id,
@@ -152,6 +187,7 @@ final class FuelTransactionAdministrationService
             'vehicle_registration' => $transaction->vehicle_registration,
             'odometer' => $transaction->odometer,
             'match_status' => $transaction->match_status,
+            'reconciliation' => $reconciliationSummary,
             'source_row' => (int) $transaction->source_row,
         ];
     }

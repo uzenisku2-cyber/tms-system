@@ -10,11 +10,13 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property-read Driver|null $importedDriver
  * @property-read Driver|null $actualDriver
  * @property-read Collection<int, FuelTransactionDriverAttribution> $driverAttributions
+ * @property-read FuelTransactionReconciliation|null $reconciliation
  */
 final class FuelTransaction extends Model
 {
@@ -45,6 +47,12 @@ final class FuelTransaction extends Model
     public function driverAttributions(): HasMany
     {
         return $this->hasMany(FuelTransactionDriverAttribution::class)->orderBy('revision');
+    }
+
+    /** @return HasOne<FuelTransactionReconciliation, $this> */
+    public function reconciliation(): HasOne
+    {
+        return $this->hasOne(FuelTransactionReconciliation::class);
     }
 
     public function effectiveDriverId(): ?int
