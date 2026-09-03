@@ -62,6 +62,7 @@ Route::middleware(['auth:sanctum', 'organization'])
     ->name('fuel-transactions.')
     ->group(function (): void {
         Route::middleware('perm:compensation.view')->group(function (): void {
+            Route::get('/export', [FuelTransactionController::class, 'export'])->name('export');
             Route::get('/overview', [FuelTransactionController::class, 'overview'])->name('overview');
             Route::get('/', [FuelTransactionController::class, 'index'])->name('index');
         });

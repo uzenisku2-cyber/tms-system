@@ -10,6 +10,7 @@ use App\Modules\Fuel\Models\FuelImportBatch;
 use App\Modules\Fuel\Models\FuelTransaction;
 use App\Modules\Fuel\Models\FuelTransactionReconciliation;
 use App\Modules\Fuel\Services\FuelTransactionAdministrationService;
+use App\Modules\Fuel\Services\FuelTransactionCsvExportService;
 use App\Modules\Organizations\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -126,6 +127,49 @@ final class FuelTransactionAdministrationLifecycleTest extends TestCase
         self::assertSame(4, $result['currency_totals'][0]['transaction_count']);
         self::assertSame(5780.0, (float) $result['currency_totals'][0]['gross_amount']);
         self::assertSame($pending->public_id, $pending->fresh()->public_id);
+    }
+
+    public function test_csv_export_reuses_scoped_filters_and_excludes_sensitive_source_data(): void
+    {
+        $owner = $this->organization('Export Owner');
+        $outsider = $this->organization('Export Outsider');
+        $holder = $this->driver('Card', 'Holder');
+        $actual = $this->driver('Actual', 'Driver');
+        $actor = User::factory()->create();
+        $ownerBatch = $this->batch($owner, $actor, 'E');
+        $outsiderBatch = $this->batch($outsider, $actor, 'G');
+
+        $visible = $this->transaction($owner, $ownerBatch, $holder, 'ORLEN', '2026-09-03 10:30:00', 'SECRET-CARD-0123');
+        $visible->forceFill(['actual_driver_id' => $actual->id, 'driver_attribution_revision' => 1])->save();
+        $this->transaction($owner, $ownerBatch, $holder, 'MOL', '2026-09-03 11:00:00', 'SECRET-CARD-0456');
+        $this->transaction($outsider, $outsiderBatch, $holder, 'ORLEN', '2026-09-03 12:00:00', 'SECRET-CARD-9999');
+
+        $rows = app(FuelTransactionAdministrationService::class)->exportRows((int) $owner->id, [
+            'date_from' => '2026-09-01',
+            'date_to' => '2026-09-30',
+            'provider' => 'ORLEN',
+            'driver_id' => (int) $actual->id,
+        ]);
+        $output = fopen('php://temp', 'w+b');
+        self::assertIsResource($output);
+        app(FuelTransactionCsvExportService::class)->write($rows, $output);
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+
+        self::assertIsString($csv);
+        self::assertStringStartsWith("\xEF\xBB\xBF", $csv);
+        $lines = preg_split('/\r\n|\n|\r/', substr($csv, 3), -1, PREG_SPLIT_NO_EMPTY);
+        self::assertIsArray($lines);
+        self::assertCount(2, $lines);
+        $headers = str_getcsv($lines[0], ';', '"', '');
+        $data = str_getcsv($lines[1], ';', '"', '');
+        self::assertSame(["Datum a \u{010D}as", 'Poskytovatel', 'Stanice'], array_slice($headers, 0, 3));
+        self::assertSame(['03.09.2026 10:30:00', 'ORLEN', 'ORLEN Plzen', 'Diesel', '42,5', 'L', '1445,00', 'CZK', '**** 0123', 'Card Holder', 'Actual Driver'], array_slice($data, 0, 11));
+        self::assertStringNotContainsString('SECRET-CARD-0123', $csv);
+        self::assertStringNotContainsString('SECRET-CARD-0456', $csv);
+        self::assertStringNotContainsString('SECRET-CARD-9999', $csv);
+        self::assertStringNotContainsString('raw_payload', $csv);
     }
 
     private function organization(string $name): Organization
