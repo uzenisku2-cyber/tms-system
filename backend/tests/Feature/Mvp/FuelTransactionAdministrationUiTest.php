@@ -113,4 +113,20 @@ final class FuelTransactionAdministrationUiTest extends TestCase
         self::assertStringNotContainsString('normalized_payload', $source);
         self::assertStringNotContainsString('bearer_token', $source);
     }
+
+    public function test_settlement_application_is_administered_with_revision_guards_and_safe_history(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/fuel-transactions.blade.php'));
+        self::assertIsString($source);
+        foreach (['id="settlementModal"', 'id="evaluateEligibility"', 'id="applySettlement"', 'id="reverseSettlement"', 'id="settlementReversalReason"', 'Historie vypo', 'can_manage_reconciliation', 'expected_eligibility_revision', 'expected_revision', '/settlement-eligibility/evaluate', '/settlement-application/reverse'] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+        self::assertStringContainsString('reason.length<3', $source);
+        self::assertStringContainsString('P\u0159ipraveno', $source);
+        self::assertStringContainsString('Zp\u016fsobilost', $source);
+        self::assertStringContainsString('D&#367;vod storna', $source);
+        self::assertStringNotContainsString('financial_calculation_id}</', $source);
+        self::assertStringNotContainsString('raw_payload', $source);
+        self::assertStringNotContainsString('normalized_payload', $source);
+    }
 }
