@@ -19,6 +19,8 @@ final class FuelTransactionSettlementApplicationEvent extends Model
 
     public const TYPE_REVERSED = 'reversed';
 
+    public const TYPE_FINANCIAL_CALCULATION_ATTACHED = 'financial_calculation_attached';
+
     protected $fillable = ['public_id', 'fuel_transaction_settlement_application_id', 'revision', 'event_type', 'from_status', 'to_status', 'acted_by_user_id', 'reason', 'metadata', 'occurred_at', 'created_at'];
 
     public function uniqueIds(): array
