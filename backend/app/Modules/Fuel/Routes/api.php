@@ -89,6 +89,7 @@ Route::middleware(['auth:sanctum', 'organization'])
             Route::post('/{fuelTransaction}/reconciliation/decisions', [FuelTransactionReconciliationController::class, 'decide'])->whereUuid('fuelTransaction')->name('reconciliation.decisions.store');
             Route::post('/{fuelTransaction}/settlement-eligibility/evaluate', [FuelTransactionSettlementEligibilityController::class, 'evaluate'])->whereUuid('fuelTransaction')->name('settlement-eligibility.evaluate');
             Route::post('/{fuelTransaction}/settlement-application', [FuelTransactionSettlementApplicationController::class, 'apply'])->whereUuid('fuelTransaction')->name('settlement-application.apply');
+            Route::post('/{fuelTransaction}/settlement-application/financial-calculation', [FuelTransactionSettlementApplicationController::class, 'attachFinancialCalculation'])->whereUuid('fuelTransaction')->name('settlement-application.financial-calculation.attach');
             Route::post('/{fuelTransaction}/settlement-application/reverse', [FuelTransactionSettlementApplicationController::class, 'reverse'])->whereUuid('fuelTransaction')->name('settlement-application.reverse');
         });
     });

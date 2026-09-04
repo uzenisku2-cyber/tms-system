@@ -11,6 +11,7 @@ use App\Modules\Fuel\Models\FuelTransactionReconciliation;
 use App\Modules\Fuel\Models\FuelTransactionSettlementApplication;
 use App\Modules\Fuel\Models\FuelTransactionSettlementApplicationEvent;
 use App\Modules\Fuel\Models\FuelTransactionSettlementEligibility;
+use App\Modules\Pricing\Models\FinancialCalculation;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -87,6 +88,64 @@ final class FuelTransactionSettlementApplicationService
         });
     }
 
+    public function attachFinancialCalculation(FuelTransaction $transaction, int $organizationId, User $actor, int $expectedRevision, string $financialCalculationPublicId): array
+    {
+        $this->assertOwned($transaction, $organizationId);
+
+        return DB::transaction(function () use ($transaction, $organizationId, $actor, $expectedRevision, $financialCalculationPublicId): array {
+            $application = FuelTransactionSettlementApplication::query()->where('fuel_transaction_id', $transaction->getKey())->where('owner_organization_id', $organizationId)->lockForUpdate()->firstOrFail();
+            $calculation = FinancialCalculation::query()->where('public_id', $financialCalculationPublicId)->where('organization_id', $organizationId)->lockForUpdate()->first();
+            if (! $calculation instanceof FinancialCalculation) {
+                throw ValidationException::withMessages(['financial_calculation_public_id' => ['The financial calculation does not exist in the settlement organization.']]);
+            }
+            if ($application->financial_calculation_id !== null) {
+                if ((int) $application->financial_calculation_id === (int) $calculation->getKey()) {
+                    return $this->serialize($application->load('events'));
+                }
+
+                throw ValidationException::withMessages(['financial_calculation_public_id' => ['The settlement application is already attached to another financial calculation.']]);
+            }
+            if ((int) $application->revision !== $expectedRevision) {
+                throw ValidationException::withMessages(['expected_revision' => ['The settlement application revision is stale.']]);
+            }
+            if ($application->status !== FuelTransactionSettlementApplication::STATUS_APPLIED) {
+                throw ValidationException::withMessages(['settlement_application' => ['Only an applied settlement application may be attached to a financial calculation.']]);
+            }
+            if ($calculation->status !== FinancialCalculation::STATUS_CALCULATED) {
+                throw ValidationException::withMessages(['financial_calculation_public_id' => ['Only a calculated financial calculation may receive a fuel settlement.']]);
+            }
+            if ($calculation->currency !== $application->currency) {
+                throw ValidationException::withMessages(['financial_calculation_public_id' => ['The financial calculation currency does not match the fuel settlement.']]);
+            }
+            $snapshot = $calculation->input_snapshot;
+            if (! is_array($snapshot)) {
+                throw ValidationException::withMessages(['financial_calculation_public_id' => ['The financial calculation snapshot is unavailable.']]);
+            }
+            if ($application->target_driver_id !== null && (int) ($snapshot['performed_by_driver_id'] ?? 0) !== (int) $application->target_driver_id) {
+                throw ValidationException::withMessages(['financial_calculation_public_id' => ['The financial calculation driver does not match the fuel settlement target.']]);
+            }
+            if ($application->target_organization_id !== null && (int) ($snapshot['organization_id'] ?? 0) !== (int) $application->target_organization_id) {
+                throw ValidationException::withMessages(['financial_calculation_public_id' => ['The financial calculation organization does not match the fuel settlement target.']]);
+            }
+            if ($application->target_driver_id !== null) {
+                $this->authorization->findVisibleDriver($actor, $organizationId, (int) $application->target_driver_id);
+            }
+            $nextRevision = $expectedRevision + 1;
+            $attachedAt = now();
+            FuelTransactionSettlementApplicationEvent::query()->create([
+                'public_id' => (string) Str::uuid(), 'fuel_transaction_settlement_application_id' => $application->getKey(), 'revision' => $nextRevision,
+                'event_type' => FuelTransactionSettlementApplicationEvent::TYPE_FINANCIAL_CALCULATION_ATTACHED,
+                'from_status' => FuelTransactionSettlementApplication::STATUS_APPLIED, 'to_status' => FuelTransactionSettlementApplication::STATUS_APPLIED,
+                'acted_by_user_id' => (int) $actor->getAuthIdentifier(),
+                'metadata' => ['financial_calculation_public_id' => $calculation->public_id, 'financial_calculation_id' => (int) $calculation->getKey(), 'calculation_version' => (int) $calculation->calculation_version, 'applied_amount' => $application->applied_amount, 'currency' => $application->currency],
+                'occurred_at' => $attachedAt,
+            ]);
+            $application->forceFill(['financial_calculation_id' => $calculation->getKey(), 'revision' => $nextRevision])->save();
+
+            return $this->serialize($application->refresh()->load('events'));
+        });
+    }
+
     public function reverse(FuelTransaction $transaction, int $organizationId, User $actor, int $expectedRevision, string $reason): array
     {
         $this->assertOwned($transaction, $organizationId);
@@ -112,7 +171,7 @@ final class FuelTransactionSettlementApplicationService
                 'public_id' => (string) Str::uuid(), 'fuel_transaction_settlement_application_id' => $application->getKey(), 'revision' => $nextRevision,
                 'event_type' => FuelTransactionSettlementApplicationEvent::TYPE_REVERSED, 'from_status' => FuelTransactionSettlementApplication::STATUS_APPLIED,
                 'to_status' => FuelTransactionSettlementApplication::STATUS_REVERSED, 'acted_by_user_id' => (int) $actor->getAuthIdentifier(),
-                'reason' => $normalizedReason, 'metadata' => ['eligibility_revision' => (int) $application->eligibility_revision, 'reconciliation_revision' => (int) $application->reconciliation_revision], 'occurred_at' => $reversedAt,
+                'reason' => $normalizedReason, 'metadata' => ['eligibility_revision' => (int) $application->eligibility_revision, 'reconciliation_revision' => (int) $application->reconciliation_revision, 'financial_calculation_id' => $application->financial_calculation_id === null ? null : (int) $application->financial_calculation_id], 'occurred_at' => $reversedAt,
             ]);
             $application->forceFill(['status' => FuelTransactionSettlementApplication::STATUS_REVERSED, 'revision' => $nextRevision, 'reversed_by_user_id' => (int) $actor->getAuthIdentifier(), 'reversed_at' => $reversedAt, 'reversal_reason' => $normalizedReason])->save();
 
