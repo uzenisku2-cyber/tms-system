@@ -89,4 +89,28 @@ final class FuelTransactionAdministrationUiTest extends TestCase
         self::assertSame(0, substr_count($source, "frame.src = '/settings/fuel-imports'"));
         $this->get('/settings/fuel-transactions')->assertOk();
     }
+
+    public function test_export_audit_history_is_rendered_safely_with_independent_pagination(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/fuel-transactions.blade.php'));
+
+        self::assertIsString($source);
+        self::assertStringContainsString('id="exportAudit"', $source);
+        self::assertStringContainsString('Historie export&#367;', $source);
+        self::assertStringContainsString('id="exportAuditRows"', $source);
+        self::assertStringContainsString('id="exportAuditPerPage"', $source);
+        self::assertStringContainsString('id="exportAuditPrevious"', $source);
+        self::assertStringContainsString('id="exportAuditNext"', $source);
+        self::assertStringContainsString('/api/v1/fuel-transactions/export-history?', $source);
+        self::assertStringContainsString('loadExportHistory()', $source);
+        self::assertStringContainsString('await loadExportHistory()', $source);
+        self::assertStringContainsString("card_last_four:'Karta'", $source);
+        self::assertStringContainsString('**** ${value}', $source);
+        self::assertStringContainsString('x.exported_by?.name', $source);
+        self::assertStringContainsString('x.filename', $source);
+        self::assertStringContainsString('x.row_count', $source);
+        self::assertStringNotContainsString('raw_payload', $source);
+        self::assertStringNotContainsString('normalized_payload', $source);
+        self::assertStringNotContainsString('bearer_token', $source);
+    }
 }
