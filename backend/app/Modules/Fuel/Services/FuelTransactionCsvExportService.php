@@ -46,7 +46,7 @@ final class FuelTransactionCsvExportService
      * @param  iterable<array<string, mixed>>  $items
      * @param  resource  $output
      */
-    public function write(iterable $items, mixed $output): void
+    public function write(iterable $items, mixed $output): int
     {
         if (! is_resource($output)) {
             throw new RuntimeException('The CSV output must be a writable resource.');
@@ -54,6 +54,7 @@ final class FuelTransactionCsvExportService
 
         fwrite($output, "\xEF\xBB\xBF");
         $this->put($output, self::HEADERS);
+        $rowCount = 0;
 
         foreach ($items as $item) {
             $reconciliation = is_array($item['reconciliation'] ?? null) ? $item['reconciliation'] : [];
@@ -73,7 +74,10 @@ final class FuelTransactionCsvExportService
                 self::STATUS_LABELS[(string) ($reconciliation['status'] ?? 'pending')] ?? (string) ($reconciliation['status'] ?? ''),
                 self::RESULT_LABELS[(string) ($reconciliation['result_code'] ?? '')] ?? (string) ($reconciliation['result_code'] ?? ''),
             ]);
+            $rowCount++;
         }
+
+        return $rowCount;
     }
 
     /**
