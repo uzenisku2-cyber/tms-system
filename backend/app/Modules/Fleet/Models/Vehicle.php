@@ -13,9 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
+ * @property string|null $public_id
  * @property int|null $user_id
  * @property string $registration_number
  * @property string $vin
@@ -30,94 +32,96 @@ use Illuminate\Support\Carbon;
  * @property string|null $body_style
  * @property string|null $fuel_type
  * @property int $mileage
+ * @property string $odometer_unit
+ * @property Carbon|null $first_registered_on
+ * @property string $lifecycle_status
+ * @property int $current_revision
  * @property bool $active
+ * @property Carbon|null $archived_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User|null $user
  * @property-read Collection<int, Trip> $trips
  * @property-read Collection<int, VehiclePosition> $positions
  * @property-read VehiclePosition|null $latestPosition
+ * @property-read Collection<int, VehicleOwnership> $ownerships
+ * @property-read Collection<int, VehicleResponsibility> $responsibilities
+ * @property-read Collection<int, VehicleDocument> $documents
+ * @property-read Collection<int, VehicleRegistryEvent> $registryEvents
  * @property-read string $label
  */
 class Vehicle extends Model
 {
     protected $fillable = [
-        'user_id',
-        'registration_number',
-        'vin',
-        'manufacturer',
-        'model',
-        'year',
-        'vehicle_type',
-        'vehicle_size',
-        'color',
-        'icon',
-        'manufacturer_logo',
-        'body_style',
-        'fuel_type',
-        'mileage',
-        'active',
+        'public_id', 'user_id', 'registration_number', 'vin', 'manufacturer', 'model',
+        'year', 'vehicle_type', 'vehicle_size', 'color', 'icon', 'manufacturer_logo',
+        'body_style', 'fuel_type', 'mileage', 'odometer_unit', 'first_registered_on',
+        'lifecycle_status', 'current_revision', 'active', 'archived_at',
     ];
 
     protected $casts = [
-        'active' => 'boolean',
-        'year' => 'integer',
-        'mileage' => 'integer',
+        'active' => 'boolean', 'year' => 'integer', 'mileage' => 'integer',
+        'current_revision' => 'integer', 'first_registered_on' => 'date', 'archived_at' => 'datetime',
     ];
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
+    protected static function booted(): void
+    {
+        static::creating(static function (Vehicle $vehicle): void {
+            $vehicle->public_id ??= (string) Str::uuid();
+        });
+    }
+
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * @return HasMany<Trip, $this>
-     */
+    /** @return HasMany<Trip, $this> */
     public function trips(): HasMany
     {
-        return $this->hasMany(
-            Trip::class,
-            'vehicle_id'
-        );
+        return $this->hasMany(Trip::class, 'vehicle_id');
     }
 
-    /**
-     * @return HasMany<VehiclePosition, $this>
-     */
+    /** @return HasMany<VehiclePosition, $this> */
     public function positions(): HasMany
     {
-        return $this->hasMany(
-            VehiclePosition::class,
-            'vehicle_id'
-        );
+        return $this->hasMany(VehiclePosition::class, 'vehicle_id');
     }
 
-    /**
-     * @return HasOne<VehiclePosition, $this>
-     */
+    /** @return HasOne<VehiclePosition, $this> */
     public function latestPosition(): HasOne
     {
-        return $this->hasOne(
-            VehiclePosition::class,
-            'vehicle_id'
-        )->latestOfMany();
+        return $this->hasOne(VehiclePosition::class, 'vehicle_id')->latestOfMany();
+    }
+
+    /** @return HasMany<VehicleOwnership, $this> */
+    public function ownerships(): HasMany
+    {
+        return $this->hasMany(VehicleOwnership::class);
+    }
+
+    /** @return HasMany<VehicleResponsibility, $this> */
+    public function responsibilities(): HasMany
+    {
+        return $this->hasMany(VehicleResponsibility::class);
+    }
+
+    /** @return HasMany<VehicleDocument, $this> */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(VehicleDocument::class);
+    }
+
+    /** @return HasMany<VehicleRegistryEvent, $this> */
+    public function registryEvents(): HasMany
+    {
+        return $this->hasMany(VehicleRegistryEvent::class);
     }
 
     public function hasActiveTrip(): bool
     {
-        return $this
-            ->trips()
-            ->whereIn(
-                'status',
-                [
-                    Trip::STATUS_ASSIGNED,
-                    Trip::STATUS_STARTED,
-                ]
-            )
-            ->exists();
+        return $this->trips()->whereIn('status', [Trip::STATUS_ASSIGNED, Trip::STATUS_STARTED])->exists();
     }
 
     public function isAvailable(): bool
@@ -127,13 +131,6 @@ class Vehicle extends Model
 
     public function getLabelAttribute(): string
     {
-        return trim(
-            $this->manufacturer
-            .' '
-            .$this->model
-            .' ('
-            .$this->registration_number
-            .')'
-        );
+        return trim($this->manufacturer.' '.$this->model.' ('.$this->registration_number.')');
     }
 }
