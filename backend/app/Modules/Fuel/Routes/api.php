@@ -8,6 +8,7 @@ use App\Modules\Fuel\Controllers\FuelTransactionController;
 use App\Modules\Fuel\Controllers\FuelTransactionDriverAttributionController;
 use App\Modules\Fuel\Controllers\FuelTransactionImportController;
 use App\Modules\Fuel\Controllers\FuelTransactionReconciliationController;
+use App\Modules\Fuel\Controllers\FuelTransactionSettlementApplicationController;
 use App\Modules\Fuel\Controllers\FuelTransactionSettlementEligibilityController;
 use Illuminate\Support\Facades\Route;
 
@@ -81,11 +82,14 @@ Route::middleware(['auth:sanctum', 'organization'])
         Route::middleware('perm:compensation.view')->group(function (): void {
             Route::get('/{fuelTransaction}/reconciliation', [FuelTransactionReconciliationController::class, 'show'])->whereUuid('fuelTransaction')->name('reconciliation.show');
             Route::get('/{fuelTransaction}/settlement-eligibility', [FuelTransactionSettlementEligibilityController::class, 'show'])->whereUuid('fuelTransaction')->name('settlement-eligibility.show');
+            Route::get('/{fuelTransaction}/settlement-application', [FuelTransactionSettlementApplicationController::class, 'show'])->whereUuid('fuelTransaction')->name('settlement-application.show');
         });
         Route::middleware('perm:compensation.manage')->group(function (): void {
             Route::post('/{fuelTransaction}/reconciliation/evaluate', [FuelTransactionReconciliationController::class, 'evaluate'])->whereUuid('fuelTransaction')->name('reconciliation.evaluate');
             Route::post('/{fuelTransaction}/reconciliation/decisions', [FuelTransactionReconciliationController::class, 'decide'])->whereUuid('fuelTransaction')->name('reconciliation.decisions.store');
             Route::post('/{fuelTransaction}/settlement-eligibility/evaluate', [FuelTransactionSettlementEligibilityController::class, 'evaluate'])->whereUuid('fuelTransaction')->name('settlement-eligibility.evaluate');
+            Route::post('/{fuelTransaction}/settlement-application', [FuelTransactionSettlementApplicationController::class, 'apply'])->whereUuid('fuelTransaction')->name('settlement-application.apply');
+            Route::post('/{fuelTransaction}/settlement-application/reverse', [FuelTransactionSettlementApplicationController::class, 'reverse'])->whereUuid('fuelTransaction')->name('settlement-application.reverse');
         });
     });
 Route::middleware(['auth:sanctum', 'organization'])
