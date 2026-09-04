@@ -10,6 +10,7 @@ use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Drivers\Services\DriverSupervisoryAuthorizationService;
 use App\Modules\Fuel\Models\FuelTransaction;
 use App\Modules\Fuel\Models\FuelTransactionDriverAttribution;
+use App\Modules\Fuel\Models\FuelTransactionReconciliation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -82,6 +83,25 @@ final class FuelTransactionDriverAttributionService
                 'corrected_by_user_id' => $actor->getKey(), 'corrected_at' => now(),
             ]);
             $locked->forceFill(['actual_driver_id' => $driverId, 'actual_driver_organization_assignment_id' => $assignment->getKey(), 'driver_attribution_revision' => $nextRevision])->save();
+
+            $reconciliation = FuelTransactionReconciliation::query()
+                ->where('fuel_transaction_id', $locked->getKey())
+                ->where('owner_organization_id', $organizationId)
+                ->lockForUpdate()
+                ->first();
+            if ($reconciliation instanceof FuelTransactionReconciliation) {
+                $reconciliation->forceFill([
+                    'status' => FuelTransactionReconciliation::STATUS_PENDING,
+                    'result_code' => null,
+                    'effective_driver_id' => null,
+                    'driver_organization_assignment_id' => null,
+                    'candidate_count' => 0,
+                    'matched_daily_report_id' => null,
+                    'revision' => (int) $reconciliation->revision + 1,
+                    'evaluated_at' => null,
+                    'resolved_at' => null,
+                ])->save();
+            }
 
             return $this->show($locked->refresh(), $organizationId);
         });
