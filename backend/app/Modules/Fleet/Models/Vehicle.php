@@ -52,6 +52,8 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, VehicleInsurancePolicy> $insurancePolicies
  * @property-read Collection<int, VehicleServiceRecord> $serviceRecords
  * @property-read Collection<int, VehicleIncident> $incidents
+ * @property-read Collection<int, VehicleProvisionAgreement> $provisionAgreements
+ * @property-read Collection<int, VehicleFinancingAgreement> $financingAgreements
  * @property-read string $label
  */
 class Vehicle extends Model
@@ -145,6 +147,18 @@ class Vehicle extends Model
     public function incidents(): HasMany
     {
         return $this->hasMany(VehicleIncident::class);
+    }
+
+    /** @return HasMany<VehicleProvisionAgreement, $this> */
+    public function provisionAgreements(): HasMany
+    {
+        return $this->hasMany(VehicleProvisionAgreement::class);
+    }
+
+    /** @return HasMany<VehicleFinancingAgreement, $this> */
+    public function financingAgreements(): HasMany
+    {
+        return $this->hasMany(VehicleFinancingAgreement::class);
     }
 
     public function hasActiveTrip(): bool
