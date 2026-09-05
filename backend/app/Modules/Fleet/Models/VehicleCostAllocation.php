@@ -56,4 +56,9 @@ class VehicleCostAllocation extends Model
     {
         return $this->hasMany(VehicleCostAllocationEvent::class);
     }
+
+    public function financialHandoffs(): HasMany
+    {
+        return $this->hasMany(VehicleCostAllocationFinancialHandoff::class);
+    }
 }
