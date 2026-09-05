@@ -38,4 +38,9 @@ final class VehicleCostAllocationFinancialHandoffInstruction extends Model
     {
         return $this->hasMany(VehicleCostAllocationFinancialHandoffExecution::class, 'financial_handoff_instruction_id');
     }
+
+    public function depositOffsetAcknowledgements(): HasMany
+    {
+        return $this->hasMany(VehicleCostAllocationDepositOffsetAcknowledgement::class, 'financial_handoff_instruction_id');
+    }
 }
