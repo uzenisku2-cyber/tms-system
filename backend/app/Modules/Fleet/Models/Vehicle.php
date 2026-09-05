@@ -48,6 +48,10 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, VehicleResponsibility> $responsibilities
  * @property-read Collection<int, VehicleDocument> $documents
  * @property-read Collection<int, VehicleRegistryEvent> $registryEvents
+ * @property-read Collection<int, VehicleComplianceRecord> $complianceRecords
+ * @property-read Collection<int, VehicleInsurancePolicy> $insurancePolicies
+ * @property-read Collection<int, VehicleServiceRecord> $serviceRecords
+ * @property-read Collection<int, VehicleIncident> $incidents
  * @property-read string $label
  */
 class Vehicle extends Model
@@ -117,6 +121,30 @@ class Vehicle extends Model
     public function registryEvents(): HasMany
     {
         return $this->hasMany(VehicleRegistryEvent::class);
+    }
+
+    /** @return HasMany<VehicleComplianceRecord, $this> */
+    public function complianceRecords(): HasMany
+    {
+        return $this->hasMany(VehicleComplianceRecord::class);
+    }
+
+    /** @return HasMany<VehicleInsurancePolicy, $this> */
+    public function insurancePolicies(): HasMany
+    {
+        return $this->hasMany(VehicleInsurancePolicy::class);
+    }
+
+    /** @return HasMany<VehicleServiceRecord, $this> */
+    public function serviceRecords(): HasMany
+    {
+        return $this->hasMany(VehicleServiceRecord::class);
+    }
+
+    /** @return HasMany<VehicleIncident, $this> */
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(VehicleIncident::class);
     }
 
     public function hasActiveTrip(): bool
