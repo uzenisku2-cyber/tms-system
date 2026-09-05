@@ -6,6 +6,7 @@ namespace App\Modules\Fleet\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use RuntimeException;
 
 final class VehicleCostAllocationFinancialHandoffInstruction extends Model
@@ -31,5 +32,10 @@ final class VehicleCostAllocationFinancialHandoffInstruction extends Model
     public function allocationLine(): BelongsTo
     {
         return $this->belongsTo(VehicleCostAllocationLine::class, 'vehicle_cost_allocation_line_id');
+    }
+
+    public function executions(): HasMany
+    {
+        return $this->hasMany(VehicleCostAllocationFinancialHandoffExecution::class, 'financial_handoff_instruction_id');
     }
 }
