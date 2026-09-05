@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Organizations\Models\Organization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VehicleDocument extends Model
 {
@@ -31,5 +32,29 @@ class VehicleDocument extends Model
     public function uploadedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by_user_id');
+    }
+
+    /** @return HasMany<VehicleComplianceRecord, $this> */
+    public function complianceRecords(): HasMany
+    {
+        return $this->hasMany(VehicleComplianceRecord::class, 'primary_document_id');
+    }
+
+    /** @return HasMany<VehicleInsurancePolicy, $this> */
+    public function insurancePolicies(): HasMany
+    {
+        return $this->hasMany(VehicleInsurancePolicy::class, 'primary_document_id');
+    }
+
+    /** @return HasMany<VehicleServiceRecord, $this> */
+    public function serviceRecords(): HasMany
+    {
+        return $this->hasMany(VehicleServiceRecord::class, 'primary_document_id');
+    }
+
+    /** @return HasMany<VehicleIncident, $this> */
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(VehicleIncident::class, 'primary_document_id');
     }
 }
