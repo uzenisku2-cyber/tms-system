@@ -1,6 +1,8 @@
 <?php
 
+use App\Modules\Fleet\Controllers\BankTransactionEvidenceController;
 use App\Modules\Fleet\Controllers\VehicleController;
+use App\Modules\Fleet\Controllers\VehicleCostAllocationBankMatchingExecutionController;
 use App\Modules\Fleet\Controllers\VehicleCostAllocationBankMatchingHandoffController;
 use App\Modules\Fleet\Controllers\VehicleCostAllocationBillingDocumentHandoffController;
 use App\Modules\Fleet\Controllers\VehicleCostAllocationController;
@@ -20,4 +22,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('vehicle-cost-allocation-financial-handoff-instructions/{instructionPublicId}/deposit-offset', [VehicleCostAllocationDepositOffsetController::class, 'acknowledge'])->name('vehicle-cost-allocation-financial-handoff-instructions.deposit-offset.acknowledge');
     Route::post('vehicle-cost-allocation-financial-handoff-instructions/{instructionPublicId}/repair-fund', [VehicleCostAllocationRepairFundController::class, 'reserve'])->name('vehicle-cost-allocation-financial-handoff-instructions.repair-fund.reserve');
     Route::post('vehicle-cost-allocation-financial-handoff-instructions/{instructionPublicId}/bank-matching', [VehicleCostAllocationBankMatchingHandoffController::class, 'prepare'])->name('vehicle-cost-allocation-financial-handoff-instructions.bank-matching.prepare');
+    Route::post('bank-transaction-evidence', [BankTransactionEvidenceController::class, 'store'])->name('bank-transaction-evidence.store');
+    Route::post('vehicle-cost-allocation-bank-matching-handoffs/{handoffPublicId}/execute', [VehicleCostAllocationBankMatchingExecutionController::class, 'execute'])->name('vehicle-cost-allocation-bank-matching-handoffs.execute');
 });
