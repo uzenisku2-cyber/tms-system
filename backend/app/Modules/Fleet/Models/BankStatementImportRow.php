@@ -13,10 +13,7 @@ final class BankStatementImportRow extends Model
 {
     protected $fillable = ['bank_statement_import_batch_id', 'source_row', 'status', 'row_fingerprint', 'transaction_fingerprint', 'raw_payload', 'normalized_payload', 'validation_messages', 'bank_transaction_evidence_id'];
 
-    protected function casts(): array
-    {
-        return ['source_row' => 'integer', 'raw_payload' => 'array', 'normalized_payload' => 'array', 'validation_messages' => 'array'];
-    }
+    protected $casts = ['source_row' => 'integer', 'raw_payload' => 'array', 'normalized_payload' => 'array', 'validation_messages' => 'array'];
 
     protected static function booted(): void
     {
