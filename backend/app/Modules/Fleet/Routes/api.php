@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\ResolveOrganizationContext;
+use App\Modules\Fleet\Controllers\BankStatementImportController;
 use App\Modules\Fleet\Controllers\BankTransactionEvidenceController;
 use App\Modules\Fleet\Controllers\VehicleController;
 use App\Modules\Fleet\Controllers\VehicleCostAllocationBankMatchingExecutionController;
@@ -22,6 +24,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('vehicle-cost-allocation-financial-handoff-instructions/{instructionPublicId}/deposit-offset', [VehicleCostAllocationDepositOffsetController::class, 'acknowledge'])->name('vehicle-cost-allocation-financial-handoff-instructions.deposit-offset.acknowledge');
     Route::post('vehicle-cost-allocation-financial-handoff-instructions/{instructionPublicId}/repair-fund', [VehicleCostAllocationRepairFundController::class, 'reserve'])->name('vehicle-cost-allocation-financial-handoff-instructions.repair-fund.reserve');
     Route::post('vehicle-cost-allocation-financial-handoff-instructions/{instructionPublicId}/bank-matching', [VehicleCostAllocationBankMatchingHandoffController::class, 'prepare'])->name('vehicle-cost-allocation-financial-handoff-instructions.bank-matching.prepare');
+    Route::middleware(ResolveOrganizationContext::class)->group(function (): void {
+        Route::get('bank-statement-imports', [BankStatementImportController::class, 'index'])->name('bank-statement-imports.index');
+        Route::post('bank-statement-imports', [BankStatementImportController::class, 'store'])->name('bank-statement-imports.store');
+        Route::get('bank-statement-imports/{batch}', [BankStatementImportController::class, 'show'])->name('bank-statement-imports.show');
+    });
     Route::post('bank-transaction-evidence', [BankTransactionEvidenceController::class, 'store'])->name('bank-transaction-evidence.store');
     Route::post('vehicle-cost-allocation-bank-matching-handoffs/{handoffPublicId}/execute', [VehicleCostAllocationBankMatchingExecutionController::class, 'execute'])->name('vehicle-cost-allocation-bank-matching-handoffs.execute');
 });
