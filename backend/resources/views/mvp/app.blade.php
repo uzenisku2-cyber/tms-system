@@ -16262,63 +16262,41 @@ const bindFuelWorkspace = () => {
                     </div>
                 </section>
             `;
+    const bindBankWorkspace = () => {
+        const frame = document.getElementById('drayviaBankWorkspaceFrame');
+        const reload = document.getElementById('drayviaBankWorkspaceReload');
+        const status = document.getElementById('drayviaBankWorkspaceStatus');
 
-
+        reload?.addEventListener('click', () => {
+            if (!frame) return;
+            if (status) status.textContent = 'NA\u010c\u00cdT\u00c1M BANKU\u2026';
+            frame.src = '/settings/bank-statement-imports';
+        });
+        frame?.addEventListener('load', () => {
+            if (status) status.textContent = 'BANKA P\u0158IPRAVENA';
+        });
+    };
 
     const bank = () => `
         ${header(
             'Banka',
-            'Import bankovního výpisu a kontrola skutečně provedených plateb.'
+            'Import bankovn\u00edho v\u00fdpisu a kontrola bankovn\u00ed evidence bez automatick\u00e9ho p\u00e1rov\u00e1n\u00ed.'
         )}
-
-        <div class="drayvia-preview-actions">
-            <button class="drayvia-preview-action primary" type="button">
-                Import bankovního výpisu
-            </button>
-            <button class="drayvia-preview-action" type="button">
-                Pravidla párování
-            </button>
-            <button class="drayvia-preview-action" type="button">
-                Kategorie plateb
-            </button>
-        </div>
-
-        <div class="drayvia-preview-grid" style="margin-top:18px;">
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Transakce</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Automaticky přiřazeno</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Nepřiřazeno</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-
-            <div class="drayvia-preview-card">
-                <div class="drayvia-preview-card-label">Kontrola plateb</div>
-                <div class="drayvia-preview-card-value">—</div>
-            </div>
-        </div>
-
-        <div class="drayvia-preview-panel">
+        <section class="drayvia-preview-panel">
             <div class="drayvia-preview-panel-head">
-                <h2 class="drayvia-preview-panel-title">Bankovní transakce</h2>
-                <div class="drayvia-preview-panel-subtitle">
-                    Platba · protistrana · částka · kategorie · přiřazení.
+                <div>
+                    <h2 class="drayvia-preview-panel-title">Bankovn\u00ed importy</h2>
+                    <div class="drayvia-preview-panel-subtitle">Nahr\u00e1n\u00ed \u010cSOB CSV, importn\u00ed d\u00e1vky a kandid\u00e1ti duplicit.</div>
+                </div>
+                <div class="drayvia-preview-actions">
+                    <button id="drayviaBankWorkspaceReload" class="drayvia-preview-action primary" type="button">OBNOVIT BANKU</button>
+                    <a class="drayvia-preview-action" href="/settings/bank-statement-imports" target="_blank" rel="noopener">OTEV\u0158\u00cdT V NOV\u00c9 KART\u011a</a>
+                    <span id="drayviaBankWorkspaceStatus" class="drayvia-preview-action">NA\u010c\u00cdT\u00c1M BANKU\u2026</span>
                 </div>
             </div>
-
-            <div class="drayvia-preview-panel-body">
-                Zde budeme řešit pouze položky, které systém nedokáže bezpečně přiřadit sám.
-            </div>
-        </div>
+            <div style="padding:0;overflow:hidden;margin-top:18px"><iframe id="drayviaBankWorkspaceFrame" title="Bankovn\u00ed importy" src="/settings/bank-statement-imports" style="display:block;width:100%;height:980px;border:0;background:#f4f7fb;"></iframe></div>
+        </section>
     `;
-
     // S028-01A DEPOT IMPORT READ-ONLY PREVIEW
     const depotImportState = {
         file: null,
@@ -25904,6 +25882,10 @@ const loadFinanceCustomers = async () => {
 
         if (page === 'fuel') {
             bindFuelWorkspace();
+        }
+
+        if (page === 'bank') {
+            bindBankWorkspace();
         }
 
         if (page === 'statistics') {
