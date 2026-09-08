@@ -21,7 +21,10 @@ final class BankStatementImportService
 {
     private const PARSER_VERSION = 'configurable-csv-v1';
 
-    public function __construct(private readonly BankTransactionEvidenceService $evidence) {}
+    public function __construct(
+        private readonly BankTransactionEvidenceService $evidence,
+        private readonly CsobBankStatementCsvAdapter $csob,
+    ) {}
 
     public function visibleBatches(int $organizationId, User $actor): Collection
     {
@@ -56,9 +59,18 @@ final class BankStatementImportService
             throw ValidationException::withMessages(['file' => ['This bank statement file was already imported in the organization context.']]);
         }
 
-        $records = $this->records($path, (string) $data['encoding'], (string) $data['delimiter']);
+        $adapter = (string) ($data['adapter'] ?? 'configurable_csv');
+        if ($adapter === 'csob_csv') {
+            $records = $this->csob->parse($path);
+        } else {
+            $records = [];
+            foreach ($this->records($path, (string) $data['encoding'], (string) $data['delimiter']) as $index => $raw) {
+                $records[] = ['source_row' => $index + 2, 'raw' => $raw, 'normalized' => null];
+            }
+        }
+        /** @var list<array{source_row:int,raw:array<string,string>,normalized:array<string,string|null>|null}> $records */
 
-        return DB::transaction(function () use ($data, $organizationId, $actor, $originalFilename, $fileSha256, $records): BankStatementImportBatch {
+        return DB::transaction(function () use ($data, $organizationId, $actor, $originalFilename, $fileSha256, $adapter, $records): BankStatementImportBatch {
             $batch = BankStatementImportBatch::query()->create([
                 'public_id' => (string) Str::uuid(),
                 'organization_context_id' => $organizationId,
@@ -66,22 +78,29 @@ final class BankStatementImportService
                 'status' => 'processing',
                 'original_filename' => $originalFilename,
                 'file_sha256' => $fileSha256,
-                'source_type' => 'configurable_csv',
-                'parser_version' => self::PARSER_VERSION,
-                'mapping_version' => $data['mapping_version'],
-                'delimiter' => $data['delimiter'],
-                'encoding' => $data['encoding'],
-                'mapping' => $data['mapping'],
+                'source_type' => $adapter,
+                'parser_version' => $adapter === 'csob_csv' ? CsobBankStatementCsvAdapter::VERSION : self::PARSER_VERSION,
+                'mapping_version' => $adapter === 'csob_csv' ? CsobBankStatementCsvAdapter::VERSION : $data['mapping_version'],
+                'delimiter' => $adapter === 'csob_csv' ? ';' : $data['delimiter'],
+                'encoding' => $adapter === 'csob_csv' ? 'UTF-8' : $data['encoding'],
+                'mapping' => $adapter === 'csob_csv' ? [] : $data['mapping'],
                 'imported_by_user_id' => $actor->id,
             ]);
 
             $counts = ['accepted' => 0, 'duplicate_candidate' => 0, 'rejected' => 0];
-            foreach ($records as $index => $raw) {
-                [$normalized, $messages] = $this->normalize($raw, $data);
+            foreach ($records as $record) {
+                $sourceRow = $record['source_row'];
+                $raw = $record['raw'];
+                if (is_array($record['normalized'])) {
+                    $normalized = $record['normalized'];
+                    $messages = [];
+                } else {
+                    [$normalized, $messages] = $this->normalize($raw, $data);
+                }
                 $rowFingerprint = hash('sha256', $this->json($raw));
                 if ($messages !== []) {
                     BankStatementImportRow::query()->create([
-                        'bank_statement_import_batch_id' => $batch->id, 'source_row' => $index + 2, 'status' => 'rejected',
+                        'bank_statement_import_batch_id' => $batch->id, 'source_row' => $sourceRow, 'status' => 'rejected',
                         'row_fingerprint' => $rowFingerprint, 'raw_payload' => $raw, 'validation_messages' => $messages,
                     ]);
                     $counts['rejected']++;
@@ -90,7 +109,10 @@ final class BankStatementImportService
                 }
 
                 $transactionFingerprint = hash('sha256', $this->json($normalized));
-                $sourceReference = 'bank-import:'.$transactionFingerprint;
+                $originalSourceReference = $normalized['original_source_reference'] ?? null;
+                $sourceReference = $adapter === 'csob_csv' && is_string($originalSourceReference) && $originalSourceReference !== ''
+                    ? 'bank-import:csob:'.hash('sha256', $originalSourceReference)
+                    : 'bank-import:'.$transactionFingerprint;
                 $candidate = BankTransactionEvidence::query()
                     ->where('organization_context_id', $organizationId)
                     ->where('source_type', 'bank_import')
@@ -112,7 +134,7 @@ final class BankStatementImportService
                 if ($candidate instanceof BankTransactionEvidence) {
                     $method = $candidate->source_reference === $sourceReference ? 'exact_fingerprint' : 'probable_core_fields';
                     $row = BankStatementImportRow::query()->create([
-                        'bank_statement_import_batch_id' => $batch->id, 'source_row' => $index + 2, 'status' => 'duplicate_candidate',
+                        'bank_statement_import_batch_id' => $batch->id, 'source_row' => $sourceRow, 'status' => 'duplicate_candidate',
                         'row_fingerprint' => $rowFingerprint, 'transaction_fingerprint' => $transactionFingerprint,
                         'raw_payload' => $raw, 'normalized_payload' => $normalized, 'validation_messages' => [],
                     ]);
@@ -129,12 +151,12 @@ final class BankStatementImportService
 
                 $payload = $normalized + [
                     'idempotency_key' => (string) Str::uuid(), 'source_type' => 'bank_import', 'source_reference' => $sourceReference,
-                    'evidence_note' => 'Normalized from bank statement import batch '.$batch->public_id.' source row '.($index + 2).'.',
+                    'evidence_note' => 'Normalized from bank statement import batch '.$batch->public_id.' source row '.$sourceRow.'.',
                 ];
                 $result = $this->evidence->record($payload, $organizationId, $actor);
                 $evidence = BankTransactionEvidence::query()->where('public_id', $result['bank_transaction_evidence_public_id'])->firstOrFail();
                 BankStatementImportRow::query()->create([
-                    'bank_statement_import_batch_id' => $batch->id, 'source_row' => $index + 2, 'status' => 'accepted',
+                    'bank_statement_import_batch_id' => $batch->id, 'source_row' => $sourceRow, 'status' => 'accepted',
                     'row_fingerprint' => $rowFingerprint, 'transaction_fingerprint' => $transactionFingerprint,
                     'raw_payload' => $raw, 'normalized_payload' => $normalized, 'validation_messages' => [], 'bank_transaction_evidence_id' => $evidence->id,
                 ]);

@@ -1,0 +1,5 @@
+# Sprint 069 – ČSOB Bank Statement CSV Adapter
+
+Adds a strict ČSOB UTF-8 BOM, semicolon-delimited CSV adapter with a two-line preamble and 24-column Czech header contract. It preserves raw rows and normalizes booking date, signed amount, direction, currency, accounts, symbols, message and stable ČSOB transaction ID. The committed fixture is synthetic; the supplied customer export is never copied into the repository. The adapter does not execute matching, mark payments or mutate billing documents.
+
+The import API accepts explicit `adapter=csob_csv` selection. In this mode it applies the strict adapter contract, records the adapter version on the import batch, preserves physical CSV source-row numbers and derives stable evidence identity from the CSOB transaction ID. Configurable CSV remains the backward-compatible default. Adapter selection never performs transaction matching, payment marking or billing mutation.
