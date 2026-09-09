@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class BillingDocument extends Model
 {
@@ -19,6 +20,8 @@ final class BillingDocument extends Model
     public const TYPE_CUSTOMER_INVOICE = 'customer_invoice';
 
     public const TYPE_EXTERNAL_CARRIER_SETTLEMENT = 'external_carrier_settlement';
+
+    public const TYPE_SUPPLIER_FUEL_INVOICE = 'supplier_fuel_invoice';
 
     public const TYPE_DRIVER_REMUNERATION = 'driver_remuneration';
 
@@ -97,6 +100,12 @@ final class BillingDocument extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(BillingDocumentLine::class)->orderBy('position');
+    }
+
+    /** @return HasOne<BillingDocumentCommercialIdentity, $this> */
+    public function commercialIdentity(): HasOne
+    {
+        return $this->hasOne(BillingDocumentCommercialIdentity::class);
     }
 
     /** @return BelongsTo<User, $this> */

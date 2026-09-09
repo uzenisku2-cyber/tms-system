@@ -6,8 +6,45 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\PriceListController;
+use App\Modules\Pricing\Controllers\SupplierFuelInvoiceController;
+use App\Modules\Pricing\Controllers\SupplierFuelInvoiceTransactionAllocationController;
 use Illuminate\Support\Facades\Route;
 
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices',
+        [SupplierFuelInvoiceController::class, 'store'],
+    )
+    ->name('supplier-fuel-invoices.store');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/fuel-transaction-allocations',
+        [SupplierFuelInvoiceTransactionAllocationController::class, 'store'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->name('supplier-fuel-invoices.fuel-transaction-allocations.store');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/fuel-transaction-allocations/{allocation}/reverse',
+        [SupplierFuelInvoiceTransactionAllocationController::class, 'reverse'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->whereUuid('allocation')
+    ->name('supplier-fuel-invoices.fuel-transaction-allocations.reverse');
 Route::middleware([
     'auth:sanctum',
     'organization',
