@@ -40,7 +40,7 @@ final class BankStatementImportService
             abort(404);
         }
 
-        return $batch->load(['rows' => static fn ($query) => $query->orderBy('source_row'), 'rows.duplicateCandidates.resolution']);
+        return $batch->load(['rows' => static fn ($query) => $query->orderBy('source_row'), 'rows.transactionEvidence', 'rows.duplicateCandidates.resolution']);
     }
 
     public function import(array $data, int $organizationId, User $actor, string $originalFilename, string $path): BankStatementImportBatch

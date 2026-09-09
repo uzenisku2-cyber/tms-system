@@ -59,4 +59,17 @@ final class BankStatementImportAdministrationUiTest extends TestCase
         self::assertStringContainsString('Důvod rozhodnutí je povinný.', $view);
         self::assertStringNotContainsString('window.prompt(', $view);
     }
+
+    public function test_amount_breakdown_editor_enforces_exact_cent_balance_and_financial_boundaries(): void
+    {
+        $view = file_get_contents(resource_path('views/mvp/bank-statement-imports.blade.php'));
+
+        self::assertIsString($view);
+        foreach (['id="amountBreakdownModal"', 'DPH', 'Spoluúčast', 'Vlastní položka', 'Přidat položku', 'Rozdíl:', 'minorFromInput', 'difference===0', 'expected_revision', '/amount-breakdowns', 'Uložit koncept', 'Finalizovat'] as $marker) {
+            self::assertStringContainsString($marker, $view);
+        }
+        foreach (['markAsPaid', 'payment_id', 'BillingDocument::', 'VehicleCostAllocationBankMatchingExecution'] as $forbidden) {
+            self::assertStringNotContainsString($forbidden, $view);
+        }
+    }
 }
