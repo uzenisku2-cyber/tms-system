@@ -42,4 +42,14 @@ final class BankTransactionEvidence extends Model
     {
         return $this->hasMany(BankTransactionEvidenceEvent::class, 'bank_transaction_evidence_id');
     }
+
+    public function amountBreakdowns(): HasMany
+    {
+        return $this->hasMany(BankTransactionAmountBreakdown::class, 'bank_transaction_evidence_id')->orderBy('revision');
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
 }
