@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ResolveOrganizationContext;
 use App\Modules\Fleet\Controllers\BankStatementImportController;
+use App\Modules\Fleet\Controllers\BankStatementImportDuplicateResolutionController;
 use App\Modules\Fleet\Controllers\BankTransactionEvidenceController;
 use App\Modules\Fleet\Controllers\VehicleController;
 use App\Modules\Fleet\Controllers\VehicleCostAllocationBankMatchingExecutionController;
@@ -28,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('bank-statement-imports', [BankStatementImportController::class, 'index'])->name('bank-statement-imports.index');
         Route::post('bank-statement-imports', [BankStatementImportController::class, 'store'])->name('bank-statement-imports.store');
         Route::get('bank-statement-imports/{batch}', [BankStatementImportController::class, 'show'])->name('bank-statement-imports.show');
+        Route::post('bank-statement-import-duplicate-candidates/{candidate}/resolution', [BankStatementImportDuplicateResolutionController::class, 'store'])->name('bank-statement-import-duplicate-candidates.resolution.store');
     });
     Route::post('bank-transaction-evidence', [BankTransactionEvidenceController::class, 'store'])->name('bank-transaction-evidence.store');
     Route::post('vehicle-cost-allocation-bank-matching-handoffs/{handoffPublicId}/execute', [VehicleCostAllocationBankMatchingExecutionController::class, 'execute'])->name('vehicle-cost-allocation-bank-matching-handoffs.execute');

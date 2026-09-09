@@ -40,7 +40,7 @@ final class BankStatementImportService
             abort(404);
         }
 
-        return $batch->load(['rows' => static fn ($query) => $query->orderBy('source_row'), 'rows.duplicateCandidates']);
+        return $batch->load(['rows' => static fn ($query) => $query->orderBy('source_row'), 'rows.duplicateCandidates.resolution']);
     }
 
     public function import(array $data, int $organizationId, User $actor, string $originalFilename, string $path): BankStatementImportBatch
@@ -119,7 +119,11 @@ final class BankStatementImportService
                     ->where('source_reference', $sourceReference)
                     ->first();
 
-                if (! $candidate instanceof BankTransactionEvidence) {
+                if (
+                    ! $candidate instanceof BankTransactionEvidence
+                    && $normalized['variable_symbol'] !== null
+                    && $normalized['variable_symbol'] !== ''
+                ) {
                     $candidate = BankTransactionEvidence::query()
                         ->where('organization_context_id', $organizationId)
                         ->where('source_type', 'bank_import')
@@ -128,7 +132,8 @@ final class BankStatementImportService
                             && (string) $existing->direction === $normalized['direction']
                             && (string) $existing->amount === $normalized['amount']
                             && (string) $existing->currency === $normalized['currency']
-                            && (string) ($existing->counterparty_account_identifier ?? '') === (string) ($normalized['counterparty_account_identifier'] ?? ''));
+                            && (string) ($existing->counterparty_account_identifier ?? '') === (string) ($normalized['counterparty_account_identifier'] ?? '')
+                            && (string) ($existing->variable_symbol ?? '') === (string) $normalized['variable_symbol']);
                 }
 
                 if ($candidate instanceof BankTransactionEvidence) {
@@ -141,7 +146,7 @@ final class BankStatementImportService
                     BankStatementImportDuplicateCandidate::query()->create([
                         'public_id' => (string) Str::uuid(), 'bank_statement_import_row_id' => $row->id,
                         'candidate_bank_transaction_evidence_id' => $candidate->id, 'comparison_method' => $method,
-                        'matching_fields' => $method === 'exact_fingerprint' ? ['transaction_fingerprint'] : ['booked_at', 'direction', 'amount', 'currency', 'counterparty_account_identifier'],
+                        'matching_fields' => $method === 'exact_fingerprint' ? ['transaction_fingerprint'] : ['booked_at', 'direction', 'amount', 'currency', 'counterparty_account_identifier', 'variable_symbol'],
                         'confidence' => $method === 'exact_fingerprint' ? 1 : 0.8, 'decision' => 'unresolved', 'detected_at' => now(),
                     ]);
                     $counts['duplicate_candidate']++;
