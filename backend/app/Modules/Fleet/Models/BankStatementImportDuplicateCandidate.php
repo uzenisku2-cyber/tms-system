@@ -6,6 +6,7 @@ namespace App\Modules\Fleet\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use RuntimeException;
 
 final class BankStatementImportDuplicateCandidate extends Model
@@ -21,6 +22,16 @@ final class BankStatementImportDuplicateCandidate extends Model
     {
         self::updating(static fn (): never => throw new RuntimeException('Bank statement duplicate candidates are append-only.'));
         self::deleting(static fn (): never => throw new RuntimeException('Bank statement duplicate candidates are append-only.'));
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
+
+    public function resolution(): HasOne
+    {
+        return $this->hasOne(BankStatementImportDuplicateResolution::class, 'bank_statement_import_duplicate_candidate_id');
     }
 
     public function row(): BelongsTo

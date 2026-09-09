@@ -47,6 +47,7 @@ final class BankStatementImportLifecycleTest extends TestCase
         $firstFile = $this->csv("Booked;Value;Amount;Currency;Account;Counterparty;CounterpartyAccount;VS;Message;Reference;Statement\n2026-09-07;2026-09-08;1250,50;CZK;CZ-MASTER;Customer One;CZ-COUNTERPARTY;68001;Invoice 68001;BANK-68001;STATEMENT-09\n");
         $exactFile = $this->csv("Booked;Value;Amount;Currency;Account;Counterparty;CounterpartyAccount;VS;Message;Reference;Statement;Ignored\n2026-09-07;2026-09-08;1250,50;CZK;CZ-MASTER;Customer One;CZ-COUNTERPARTY;68001;Invoice 68001;BANK-68001;STATEMENT-09;different-file\n");
         $probableFile = $this->csv("Booked;Value;Amount;Currency;Account;Counterparty;CounterpartyAccount;VS;Message;Reference;Statement\n2026-09-07;2026-09-08;1250,50;CZK;CZ-MASTER;Customer One;CZ-COUNTERPARTY;68001;Changed message;BANK-68001-CORRECTED;STATEMENT-09\n");
+        $differentVariableSymbolFile = $this->csv("Booked;Value;Amount;Currency;Account;Counterparty;CounterpartyAccount;VS;Message;Reference;Statement\n2026-09-07;2026-09-08;1250,50;CZK;CZ-MASTER;Customer One;CZ-COUNTERPARTY;68002;Invoice 68002;BANK-68002;STATEMENT-09\n");
 
         try {
             $service = app(BankStatementImportService::class);
@@ -69,34 +70,39 @@ final class BankStatementImportLifecycleTest extends TestCase
             }
 
             $exact = $service->import($this->input((string) Str::uuid()), (int) $organization->id, $actor, 'exact-candidate.csv', $exactFile);
+            $differentVariableSymbol = $service->import($this->input((string) Str::uuid()), (int) $organization->id, $actor, 'different-variable-symbol.csv', $differentVariableSymbolFile);
             $probable = $service->import($this->input((string) Str::uuid()), (int) $organization->id, $actor, 'probable-candidate.csv', $probableFile);
 
             self::assertSame('completed_with_review', $exact->status);
             self::assertSame(1, $exact->duplicate_candidate_row_count);
+            self::assertSame('completed', $differentVariableSymbol->status);
+            self::assertSame(1, $differentVariableSymbol->accepted_row_count);
+            self::assertSame(0, $differentVariableSymbol->duplicate_candidate_row_count);
             self::assertSame('completed_with_review', $probable->status);
             self::assertSame(1, $probable->duplicate_candidate_row_count);
         } finally {
             @unlink($firstFile);
             @unlink($exactFile);
             @unlink($probableFile);
+            @unlink($differentVariableSymbolFile);
         }
 
-        self::assertDatabaseCount('bank_statement_import_batches', 3);
-        self::assertDatabaseCount('bank_statement_import_rows', 3);
-        self::assertDatabaseCount('bank_transaction_evidence', 1);
-        self::assertDatabaseCount('bank_transaction_evidence_events', 1);
+        self::assertDatabaseCount('bank_statement_import_batches', 4);
+        self::assertDatabaseCount('bank_statement_import_rows', 4);
+        self::assertDatabaseCount('bank_transaction_evidence', 2);
+        self::assertDatabaseCount('bank_transaction_evidence_events', 2);
         self::assertDatabaseCount('bank_statement_import_duplicate_candidates', 2);
         self::assertDatabaseCount('vehicle_cost_allocation_bank_matching_executions', 0);
         self::assertDatabaseCount('billing_documents', 0);
         self::assertDatabaseCount('financial_calculations', 0);
 
-        $accepted = BankStatementImportRow::query()->where('status', 'accepted')->sole();
+        $accepted = BankStatementImportRow::query()->where('status', 'accepted')->orderBy('id')->firstOrFail();
         self::assertSame('1250.50', $accepted->normalized_payload['amount']);
         self::assertSame('2026-09-07', $accepted->normalized_payload['booked_at']);
         self::assertSame('1250,50', $accepted->raw_payload['Amount']);
         self::assertNotNull($accepted->bank_transaction_evidence_id);
 
-        $evidence = BankTransactionEvidence::query()->sole();
+        $evidence = BankTransactionEvidence::query()->orderBy('id')->firstOrFail();
         self::assertSame('bank_import', $evidence->source_type);
         self::assertSame('credit', $evidence->direction);
         self::assertSame('1250.50', $evidence->amount);
@@ -104,7 +110,7 @@ final class BankStatementImportLifecycleTest extends TestCase
 
         $methods = BankStatementImportDuplicateCandidate::query()->orderBy('id')->pluck('comparison_method')->all();
         self::assertSame(['exact_fingerprint', 'probable_core_fields'], $methods);
-        self::assertSame(3, BankStatementImportBatch::query()->where('organization_context_id', $organization->id)->count());
+        self::assertSame(4, BankStatementImportBatch::query()->where('organization_context_id', $organization->id)->count());
     }
 
     private function input(string $idempotencyKey): array
