@@ -145,4 +145,14 @@ final class SupplierFuelInvoiceReadApiLifecycleTest extends TestCase
             'name' => $name, 'type' => Organization::TYPE_MASTER, 'status' => Organization::STATUS_ACTIVE,
         ]);
     }
+
+    public function test_read_presentation_exposes_payment_and_rebilling_control_without_automatic_matching(): void
+    {
+        $source = file_get_contents(__DIR__.'/../../../../app/Modules/Pricing/Services/SupplierFuelInvoiceService.php');
+        self::assertIsString($source);
+        foreach (['payment_summary', 'rebilling_coverage_summary', 'paid_amount_minor', 'unpaid_amount_minor', 'margin_minor', 'not_evaluated', 'automatic_bank_matching_performed'] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+        self::assertStringNotContainsString("'automatic_bank_matching_performed' => true", $source);
+    }
 }

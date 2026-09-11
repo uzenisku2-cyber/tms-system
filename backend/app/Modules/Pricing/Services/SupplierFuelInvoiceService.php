@@ -10,6 +10,8 @@ use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentityEvent;
 use App\Modules\Pricing\Models\BillingDocumentLine;
+use App\Modules\Pricing\Models\SupplierFuelInvoiceBankPayment;
+use App\Modules\Pricing\Models\SupplierFuelInvoiceRebillingCoverage;
 use App\Modules\Pricing\Models\SupplierFuelInvoiceTransactionAllocation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -219,6 +221,19 @@ final class SupplierFuelInvoiceService
         return $whole.'.'.str_pad($fraction, 2, '0');
     }
 
+    private function dateTimeValue(mixed $value): ?string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format(DATE_ATOM);
+        }
+
+        if (is_string($value) && $value !== '') {
+            return (new \DateTimeImmutable($value))->format(DATE_ATOM);
+        }
+
+        return null;
+    }
+
     private function dateValue(mixed $value): ?string
     {
         if ($value instanceof \DateTimeInterface) {
@@ -263,6 +278,45 @@ final class SupplierFuelInvoiceService
             ? 'unallocated'
             : ($unallocatedMinor === 0 ? 'fully_allocated' : 'partially_allocated');
 
+        $paidMinor = (int) SupplierFuelInvoiceBankPayment::query()
+            ->where('billing_document_id', $document->getKey())
+            ->where('status', SupplierFuelInvoiceBankPayment::STATUS_ACTIVE)
+            ->sum('allocated_amount_minor');
+        $unpaidMinor = max($invoiceMinor - $paidMinor, 0);
+        $paymentState = $paidMinor === 0 ? 'unpaid' : ($unpaidMinor === 0 ? 'paid' : 'partially_paid');
+
+        $coverage = SupplierFuelInvoiceRebillingCoverage::query()
+            ->where('owner_organization_id', (int) $document->owner_organization_id)
+            ->where('billing_document_id', $document->getKey())
+            ->with('lines')
+            ->orderByDesc('id')
+            ->first();
+        $coverageSummary = $coverage instanceof SupplierFuelInvoiceRebillingCoverage
+            ? [
+                'public_id' => $coverage->public_id,
+                'comparison_basis' => $coverage->comparison_basis,
+                'state' => $coverage->status,
+                'purchase_amount_minor' => (int) $coverage->purchase_amount_minor,
+                'rebilled_amount_minor' => (int) $coverage->rebilled_amount_minor,
+                'unrebilled_amount_minor' => (int) $coverage->unrebilled_amount_minor,
+                'margin_minor' => (int) $coverage->margin_minor,
+                'currency' => $coverage->currency,
+                'evaluated_at' => $this->dateTimeValue($coverage->getAttribute('evaluated_at')),
+                'lines' => $coverage->lines->toArray(),
+            ]
+            : [
+                'public_id' => null,
+                'comparison_basis' => null,
+                'state' => 'not_evaluated',
+                'purchase_amount_minor' => $invoiceMinor,
+                'rebilled_amount_minor' => 0,
+                'unrebilled_amount_minor' => $invoiceMinor,
+                'margin_minor' => -$invoiceMinor,
+                'currency' => $document->currency,
+                'evaluated_at' => null,
+                'lines' => [],
+            ];
+
         return [
             'public_id' => $identity->public_id,
             'direction' => $identity->direction,
@@ -283,8 +337,17 @@ final class SupplierFuelInvoiceService
             ],
             'allocations' => $allocations,
             'events' => $identity->events->toArray(),
-            'bank_matching_performed' => false,
-            'payment_marked' => false,
+            'payment_summary' => [
+                'state' => $paymentState,
+                'invoice_amount_minor' => $invoiceMinor,
+                'paid_amount_minor' => $paidMinor,
+                'unpaid_amount_minor' => $unpaidMinor,
+                'currency' => $document->currency,
+            ],
+            'rebilling_coverage_summary' => $coverageSummary,
+            'automatic_bank_matching_performed' => false,
+            'bank_matching_performed' => $paidMinor > 0,
+            'payment_marked' => $paymentState === 'paid',
             'fuel_transaction_allocation_performed' => $activeAllocatedMinor > 0,
         ];
     }

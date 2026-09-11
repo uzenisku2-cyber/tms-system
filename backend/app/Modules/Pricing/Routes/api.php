@@ -8,7 +8,9 @@ use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
 use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
 use App\Modules\Pricing\Controllers\PriceListController;
+use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankPaymentController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceController;
+use App\Modules\Pricing\Controllers\SupplierFuelInvoiceRebillingCoverageController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceTransactionAllocationController;
 use Illuminate\Support\Facades\Route;
 
@@ -107,6 +109,18 @@ Route::middleware([
     ->whereUuid('supplierFuelInvoice')
     ->whereUuid('allocation')
     ->name('supplier-fuel-invoices.fuel-transaction-allocations.reverse');
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/rebilling-coverages',
+        [SupplierFuelInvoiceRebillingCoverageController::class, 'store'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->name('supplier-fuel-invoices.rebilling-coverages.store');
+
 Route::middleware([
     'auth:sanctum',
     'organization',
@@ -365,3 +379,27 @@ Route::middleware([
             ->whereUuid('financialCalculation')
             ->name('show');
     });
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/bank-payments',
+        [SupplierFuelInvoiceBankPaymentController::class, 'store'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->name('supplier-fuel-invoices.bank-payments.store');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/bank-payments/{payment}/reverse',
+        [SupplierFuelInvoiceBankPaymentController::class, 'reverse'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->whereUuid('payment')
+    ->name('supplier-fuel-invoices.bank-payments.reverse');
