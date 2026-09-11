@@ -9,7 +9,7 @@
 </head>
 <body>
 <main class="page">
-<div class="top"><a class="back" href="/settings">&larr; Nastaven&#237;</a><div class="actions"><a class="button secondary" href="/settings/fuel-imports">Importy soubor&#367;</a><button id="exportCsv" type="button" class="secondary">Exportovat CSV</button><button id="reload" class="secondary">Obnovit</button></div></div>
+<div class="top"><a class="back" href="/settings">&larr; Nastaven&#237;</a><div class="actions"><a class="button secondary" href="/settings/supplier-fuel-invoices">Dodavatelsk&#233; faktury PHM</a><a class="button secondary" href="/settings/fuel-imports">Importy soubor&#367;</a><button id="exportCsv" type="button" class="secondary">Exportovat CSV</button><button id="reload" class="secondary">Obnovit</button></div></div>
 <h1>P&#345;ehled tankov&#225;n&#237;</h1><p class="lead">V&#353;echna importovan&#225; tankov&#225;n&#237;, skute&#269;n&#237; &#345;idi&#269;i a provozn&#237; shody na jednom m&#237;st&#283;.</p>
 <section class="panel"><form id="filters" class="filters">
 <div class="field"><label for="dateFrom">Od</label><input id="dateFrom" type="date"></div><div class="field"><label for="dateTo">Do</label><input id="dateTo" type="date"></div>
