@@ -5,10 +5,50 @@ declare(strict_types=1);
 use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
+use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
+use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceTransactionAllocationController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post('financial-settlement-statements', [FinancialSettlementStatementController::class, 'store'])
+    ->name('financial-settlement-statements.store');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post('financial-settlement-statements/{financialSettlementStatement}/transitions', [FinancialSettlementStatementController::class, 'transition'])
+    ->name('financial-settlement-statements.transitions.store');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post('financial-settlement-statements/{financialSettlementStatement}/materialize-output', [FinancialSettlementStatementController::class, 'materializeOutput'])
+    ->name('financial-settlement-statements.output.store');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->prefix('financial-mutual-charges')
+    ->name('financial-mutual-charges.')
+    ->group(function (): void {
+        Route::post('/', [FinancialMutualChargeController::class, 'store'])->name('store');
+        Route::post('/{financialMutualCharge}/confirm', [FinancialMutualChargeController::class, 'confirm'])->whereUuid('financialMutualCharge')->name('confirm');
+        Route::post('/{financialMutualCharge}/dispute', [FinancialMutualChargeController::class, 'dispute'])->whereUuid('financialMutualCharge')->name('dispute');
+        Route::post('/{financialMutualCharge}/reverse', [FinancialMutualChargeController::class, 'reverse'])->whereUuid('financialMutualCharge')->name('reverse');
+    });
 
 Route::middleware([
     'auth:sanctum',
