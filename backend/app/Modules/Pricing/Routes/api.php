@@ -55,6 +55,28 @@ Route::middleware([
     'organization',
     'perm:compensation.manage',
 ])
+    ->get(
+        'supplier-fuel-invoices',
+        [SupplierFuelInvoiceController::class, 'index'],
+    )
+    ->name('supplier-fuel-invoices.index');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->get(
+        'supplier-fuel-invoices/{supplierFuelInvoice}',
+        [SupplierFuelInvoiceController::class, 'show'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->name('supplier-fuel-invoices.show');
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
     ->post(
         'supplier-fuel-invoices',
         [SupplierFuelInvoiceController::class, 'store'],

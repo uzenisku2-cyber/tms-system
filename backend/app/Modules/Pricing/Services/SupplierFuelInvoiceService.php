@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Pricing\Services;
 
 use App\Models\User;
+use App\Modules\Fuel\Models\FuelTransaction;
 use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentityEvent;
 use App\Modules\Pricing\Models\BillingDocumentLine;
+use App\Modules\Pricing\Models\SupplierFuelInvoiceTransactionAllocation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -113,6 +115,76 @@ final class SupplierFuelInvoiceService
         });
     }
 
+    public function index(array $filters, int $organizationId, ?User $actor): array
+    {
+        $this->ensureCanManage($actor);
+        $query = BillingDocumentCommercialIdentity::query()
+            ->where('owner_organization_id', $organizationId)
+            ->where('direction', BillingDocumentCommercialIdentity::DIRECTION_PAYABLE)
+            ->whereHas('billingDocument', function ($query): void {
+                $query->where('document_type', BillingDocument::TYPE_SUPPLIER_FUEL_INVOICE);
+            });
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        if ($search !== '') {
+            $query->where(function ($query) use ($search): void {
+                $query->where('document_number', 'like', '%'.$search.'%')
+                    ->orWhere('variable_symbol', 'like', '%'.$search.'%')
+                    ->orWhere('counterparty_name', 'like', '%'.$search.'%');
+            });
+        }
+        if (isset($filters['status'])) {
+            $status = (string) $filters['status'];
+            $query->whereHas('billingDocument', function ($query) use ($status): void {
+                $query->where('document_type', BillingDocument::TYPE_SUPPLIER_FUEL_INVOICE)
+                    ->where('status', $status);
+            });
+        }
+
+        $perPage = (int) ($filters['per_page'] ?? 25);
+        $paginator = $query->orderByDesc('issued_on')->orderByDesc('id')->paginate($perPage);
+        $items = [];
+        foreach ($paginator->items() as $identity) {
+            if ($identity instanceof BillingDocumentCommercialIdentity) {
+                $items[] = $this->present($identity);
+            }
+        }
+
+        return [
+            'items' => $items,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+            'bank_matching_performed' => false,
+            'payment_marked' => false,
+        ];
+    }
+
+    public function show(string $publicId, int $organizationId, ?User $actor): array
+    {
+        $this->ensureCanManage($actor);
+        $identity = BillingDocumentCommercialIdentity::query()
+            ->where('public_id', $publicId)
+            ->where('owner_organization_id', $organizationId)
+            ->where('direction', BillingDocumentCommercialIdentity::DIRECTION_PAYABLE)
+            ->whereHas('billingDocument', function ($query): void {
+                $query->where('document_type', BillingDocument::TYPE_SUPPLIER_FUEL_INVOICE);
+            })
+            ->firstOrFail();
+
+        return $this->present($identity);
+    }
+
+    private function ensureCanManage(?User $actor): void
+    {
+        if (! $actor instanceof User || ! $actor->can('compensation.manage')) {
+            abort(403);
+        }
+    }
+
     private function normalized(array $data): array
     {
         $nullable = static fn (mixed $value): ?string => is_string($value) && trim($value) !== '' ? trim($value) : null;
@@ -163,15 +235,89 @@ final class SupplierFuelInvoiceService
     private function present(BillingDocumentCommercialIdentity $identity): array
     {
         $identity->loadMissing(['billingDocument.lines', 'events']);
+        $document = $identity->billingDocument;
+        if (! $document instanceof BillingDocument) {
+            throw new \LogicException('Supplier fuel invoice has no billing document.');
+        }
 
-        return ['public_id' => $identity->public_id, 'direction' => $identity->direction,
-            'document_number' => $identity->document_number, 'variable_symbol' => $identity->variable_symbol,
+        $allocations = [];
+        $activeAllocatedMinor = 0;
+        $allocationModels = SupplierFuelInvoiceTransactionAllocation::query()
+            ->where('billing_document_id', $document->getKey())
+            ->with(['fuelTransaction', 'events'])
+            ->orderBy('id')
+            ->get();
+        foreach ($allocationModels as $allocation) {
+            if (! $allocation instanceof SupplierFuelInvoiceTransactionAllocation) {
+                continue;
+            }
+            if ($allocation->status === SupplierFuelInvoiceTransactionAllocation::STATUS_ACTIVE) {
+                $activeAllocatedMinor += (int) $allocation->allocated_amount_minor;
+            }
+            $allocations[] = $this->presentAllocation($allocation);
+        }
+
+        $invoiceMinor = $this->minor((string) $document->gross_amount);
+        $unallocatedMinor = $invoiceMinor - $activeAllocatedMinor;
+        $allocationState = $activeAllocatedMinor === 0
+            ? 'unallocated'
+            : ($unallocatedMinor === 0 ? 'fully_allocated' : 'partially_allocated');
+
+        return [
+            'public_id' => $identity->public_id,
+            'direction' => $identity->direction,
+            'document_number' => $identity->document_number,
+            'variable_symbol' => $identity->variable_symbol,
             'issued_on' => $this->dateValue($identity->getAttribute('issued_on')),
             'taxable_supply_on' => $this->dateValue($identity->getAttribute('taxable_supply_on')),
             'due_on' => $this->dateValue($identity->getAttribute('due_on')),
             'counterparty_snapshot' => $identity->counterparty_snapshot,
-            'revision' => $identity->revision, 'billing_document' => $identity->billingDocument?->toArray(),
-            'events' => $identity->events->toArray(), 'bank_matching_performed' => false,
-            'payment_marked' => false, 'fuel_transaction_allocation_performed' => false];
+            'revision' => (int) $identity->revision,
+            'billing_document' => $document->toArray(),
+            'allocation_summary' => [
+                'state' => $allocationState,
+                'invoice_amount_minor' => $invoiceMinor,
+                'active_allocated_amount_minor' => $activeAllocatedMinor,
+                'unallocated_amount_minor' => $unallocatedMinor,
+                'currency' => $document->currency,
+            ],
+            'allocations' => $allocations,
+            'events' => $identity->events->toArray(),
+            'bank_matching_performed' => false,
+            'payment_marked' => false,
+            'fuel_transaction_allocation_performed' => $activeAllocatedMinor > 0,
+        ];
+    }
+
+    private function presentAllocation(SupplierFuelInvoiceTransactionAllocation $allocation): array
+    {
+        $transaction = $allocation->fuelTransaction;
+        if (! $transaction instanceof FuelTransaction) {
+            throw new \LogicException('Supplier fuel invoice allocation has no fuel transaction.');
+        }
+
+        return [
+            'public_id' => $allocation->public_id,
+            'allocated_amount_minor' => (int) $allocation->allocated_amount_minor,
+            'currency' => $allocation->currency,
+            'status' => $allocation->status,
+            'revision' => (int) $allocation->revision,
+            'reason' => $allocation->reason,
+            'reversed_at' => $allocation->getAttribute('reversed_at'),
+            'fuel_transaction' => [
+                'public_id' => $transaction->public_id,
+                'provider' => $transaction->provider,
+                'provider_transaction_identifier' => $transaction->provider_transaction_identifier,
+                'occurred_at' => $transaction->getAttribute('occurred_at'),
+                'station_name' => $transaction->station_name,
+                'product_name' => $transaction->product_name,
+                'quantity' => $transaction->quantity,
+                'unit_of_measure' => $transaction->unit_of_measure,
+                'gross_amount' => $transaction->gross_amount,
+                'currency' => $transaction->currency,
+                'invoice_reference' => $transaction->invoice_reference,
+            ],
+            'events' => $allocation->events->toArray(),
+        ];
     }
 }
