@@ -8,6 +8,7 @@ use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
 use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
 use App\Modules\Pricing\Controllers\PriceListController;
+use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankMatchCandidateController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankPaymentController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceRebillingCoverageController;
@@ -379,6 +380,56 @@ Route::middleware([
             ->whereUuid('financialCalculation')
             ->name('show');
     });
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.view',
+])
+    ->get(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/bank-match-candidates',
+        [SupplierFuelInvoiceBankMatchCandidateController::class, 'index'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->name('supplier-fuel-invoices.bank-match-candidates.index');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/bank-match-candidates',
+        [SupplierFuelInvoiceBankMatchCandidateController::class, 'store'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->name('supplier-fuel-invoices.bank-match-candidates.store');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/bank-match-candidates/{candidate}/review',
+        [SupplierFuelInvoiceBankMatchCandidateController::class, 'review'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->whereUuid('candidate')
+    ->name('supplier-fuel-invoices.bank-match-candidates.review');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'supplier-fuel-invoices/{supplierFuelInvoice}/bank-match-candidates/{candidate}/materialize',
+        [SupplierFuelInvoiceBankMatchCandidateController::class, 'materialize'],
+    )
+    ->whereUuid('supplierFuelInvoice')
+    ->whereUuid('candidate')
+    ->name('supplier-fuel-invoices.bank-match-candidates.materialize');
+
 Route::middleware([
     'auth:sanctum',
     'organization',

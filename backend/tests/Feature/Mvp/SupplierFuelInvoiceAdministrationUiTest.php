@@ -35,6 +35,16 @@ final class SupplierFuelInvoiceAdministrationUiTest extends TestCase
             ->assertSee('Dodavatelsk&#233; faktury PHM', false);
     }
 
+    public function test_ui_exposes_explainable_candidate_review_and_separate_payment_materialization(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/supplier-fuel-invoices.blade.php'));
+        self::assertIsString($source);
+        foreach (['id="proposeMatch"', 'id="candidateRows"', 'score_basis_points', 'match_reasons', 'data-candidate-decision', 'data-materialize', '/bank-match-candidates', '/review', '/materialize'] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+        self::assertStringNotContainsString('payment_marked:true', $source);
+    }
+
     public function test_ui_does_not_mark_payment_or_execute_bank_matching(): void
     {
         $source = file_get_contents(resource_path('views/mvp/supplier-fuel-invoices.blade.php'));
