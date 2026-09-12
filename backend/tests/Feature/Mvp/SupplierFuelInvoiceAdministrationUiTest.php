@@ -24,7 +24,7 @@ final class SupplierFuelInvoiceAdministrationUiTest extends TestCase
             ->assertSee('allocated_amount_minor', false)
             ->assertSee('unallocated_amount_minor', false)
             ->assertSee("headers.set('X-Organization-ID',org)", false)
-            ->assertSee('Bankovní párování', false);
+            ->assertSee('Automatické propojení s bankou zůstává vypnuté.', false);
     }
 
     public function test_fuel_transaction_administration_links_to_supplier_fuel_invoices(): void
@@ -42,5 +42,17 @@ final class SupplierFuelInvoiceAdministrationUiTest extends TestCase
         self::assertStringNotContainsString('/bank-matching', $source);
         self::assertStringNotContainsString('/payments', $source);
         self::assertStringNotContainsString('payment_marked:true', $source);
+    }
+
+    public function test_administration_ui_presents_payment_and_rebilling_controls_without_payment_mutation(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/supplier-fuel-invoices.blade.php'));
+        self::assertIsString($source);
+        foreach (['payment_summary', 'rebilling_coverage_summary', 'paid_amount_minor', 'margin_minor', 'id="evaluateCoverage"', '/rebilling-coverages', 'comparison_basis'] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+        foreach (['/bank-matching', '/payments', 'payment_marked:true'] as $forbidden) {
+            self::assertStringNotContainsString($forbidden, $source);
+        }
     }
 }
