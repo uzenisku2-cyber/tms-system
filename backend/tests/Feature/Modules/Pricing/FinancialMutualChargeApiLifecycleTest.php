@@ -74,7 +74,22 @@ final class FinancialMutualChargeApiLifecycleTest extends TestCase
             ->assertJsonPath('data.visibility_status', 'shared')->assertJsonPath('data.revision', 2);
         $this->postJson("/api/v1/financial-mutual-charges/{$publicId}/confirm", $confirm)->assertOk()->assertJsonPath('data.revision', 2);
 
+        $this->getJson('/api/v1/financial-mutual-charges')
+            ->assertOk()->assertJsonPath('data.items.0.public_id', $publicId)
+            ->assertJsonPath('data.items.0.amount_minor', 125000)
+            ->assertJsonPath('data.items.0.visibility_status', 'shared');
+        $this->getJson("/api/v1/financial-mutual-charges/{$publicId}")
+            ->assertOk()->assertJsonPath('data.public_id', $publicId)
+            ->assertJsonPath('data.source_snapshot.margin_minor', 25000)
+            ->assertJsonPath('data.events.1.event_type', 'confirmed')
+            ->assertJsonPath('data.payment_marked', false)
+            ->assertJsonPath('data.bank_matching_performed', false);
+
         $this->authenticate($counterpartyActor, $counterparty);
+        $this->getJson('/api/v1/financial-mutual-charges')
+            ->assertOk()->assertJsonPath('data.items.0.public_id', $publicId);
+        $this->getJson("/api/v1/financial-mutual-charges/{$publicId}")
+            ->assertOk()->assertJsonPath('data.amount_minor', 125000);
         $dispute = ['idempotency_key' => '4cd1694b-9daa-4b7b-bfab-8889e32d65ac', 'expected_revision' => 2, 'reason' => 'Counterparty requests source review.'];
         $this->postJson("/api/v1/financial-mutual-charges/{$publicId}/dispute", $dispute)
             ->assertCreated()->assertJsonPath('data.status', 'disputed')->assertJsonPath('data.revision', 3);
@@ -110,6 +125,7 @@ final class FinancialMutualChargeApiLifecycleTest extends TestCase
         $registrar->setPermissionsTeamId((int) $organization->id);
         $registrar->forgetCachedPermissions();
         $user->givePermissionTo(Permission::findOrCreate('compensation.manage', 'web'));
+        $user->givePermissionTo(Permission::findOrCreate('compensation.view', 'web'));
         $user->unsetRelation('permissions');
         $registrar->forgetCachedPermissions();
     }

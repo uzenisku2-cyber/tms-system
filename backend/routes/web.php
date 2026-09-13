@@ -58,6 +58,8 @@ Route::view('/settings', 'mvp.settings')->name('mvp.settings');
 Route::view('/settings/fuel-imports', 'mvp.fuel-imports')->name('mvp.settings.fuel-imports');
 Route::view('/settings/fuel-transactions', 'mvp.fuel-transactions')->name('mvp.settings.fuel-transactions');
 Route::view('/settings/supplier-fuel-invoices', 'mvp.supplier-fuel-invoices')->name('mvp.settings.supplier-fuel-invoices');
+Route::view('/settings/financial-mutual-charges', 'mvp.financial-mutual-charges')->name('mvp.settings.financial-mutual-charges');
+Route::view('/settings/financial-settlement-statements', 'mvp.financial-settlement-statements')->name('mvp.settings.financial-settlement-statements');
 Route::view('/settings/bank-statement-imports', 'mvp.bank-statement-imports')->name('mvp.settings.bank-statement-imports');
 Route::view('/settings/catalogs', 'mvp.settings-catalogs')->name('mvp.settings.catalogs');
 Route::view('/settings/catalogs/routes', 'mvp.settings-route-catalog-crud')->name('mvp.settings.catalogs.routes');

@@ -35,6 +35,7 @@ final class FinancialSettlementStatementDraftApiTest extends TestCase
         $registrar->setPermissionsTeamId((int) $owner->id);
         $registrar->forgetCachedPermissions();
         $actor->givePermissionTo(Permission::findOrCreate('compensation.manage', 'web'));
+        $actor->givePermissionTo(Permission::findOrCreate('compensation.view', 'web'));
         Sanctum::actingAs($actor);
         $this->withHeader('X-Organization-ID', (string) $owner->id);
         $charge = FinancialMutualCharge::query()->create([
@@ -64,6 +65,19 @@ final class FinancialSettlementStatementDraftApiTest extends TestCase
             ->assertJsonPath('data.billing_document_created', false)->assertJsonPath('data.payment_marked', false)
             ->assertJsonPath('data.bank_matching_performed', false);
         $this->postJson('/api/v1/financial-settlement-statements', $payload)->assertOk()->assertJsonPath('data.public_id', $created->json('data.public_id'));
+        $publicId = (string) $created->json('data.public_id');
+        $this->getJson('/api/v1/financial-settlement-statements')
+            ->assertOk()->assertJsonPath('data.items.0.public_id', $publicId)
+            ->assertJsonPath('data.items.0.deduction_amount_minor', 125000)
+            ->assertJsonPath('data.items.0.net_balance_minor', -125000);
+        $this->getJson("/api/v1/financial-settlement-statements/{$publicId}")
+            ->assertOk()->assertJsonPath('data.public_id', $publicId)
+            ->assertJsonPath('data.lines.0.amount_minor', 125000)
+            ->assertJsonPath('data.lines.0.source_snapshot.source.margin_minor', 25000)
+            ->assertJsonPath('data.events.0.event_type', 'draft_created')
+            ->assertJsonPath('data.billing_document_created', false)
+            ->assertJsonPath('data.payment_marked', false)
+            ->assertJsonPath('data.bank_matching_performed', false);
         self::assertDatabaseCount('financial_settlement_statements', 1);
         self::assertDatabaseCount('financial_settlement_statement_lines', 1);
         self::assertDatabaseCount('financial_settlement_statement_events', 1);

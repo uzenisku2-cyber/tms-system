@@ -6,6 +6,7 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
+use App\Modules\Pricing\Controllers\FinancialSettlementAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankMatchCandidateController;
@@ -14,6 +15,14 @@ use App\Modules\Pricing\Controllers\SupplierFuelInvoiceController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceRebillingCoverageController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceTransactionAllocationController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
+    ->group(function (): void {
+        Route::get('financial-mutual-charges', [FinancialSettlementAdministrationReadController::class, 'mutualCharges'])->name('financial-mutual-charges.index');
+        Route::get('financial-mutual-charges/{financialMutualCharge}', [FinancialSettlementAdministrationReadController::class, 'mutualCharge'])->whereUuid('financialMutualCharge')->name('financial-mutual-charges.show');
+        Route::get('financial-settlement-statements', [FinancialSettlementAdministrationReadController::class, 'statements'])->name('financial-settlement-statements.index');
+        Route::get('financial-settlement-statements/{financialSettlementStatement}', [FinancialSettlementAdministrationReadController::class, 'statement'])->whereUuid('financialSettlementStatement')->name('financial-settlement-statements.show');
+    });
 
 Route::middleware([
     'auth:sanctum',
