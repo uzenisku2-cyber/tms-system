@@ -40,6 +40,8 @@
             <p>Obtížnost tras, výchozí tolerance a pravidla provozního hodnocení.</p>
         </a>
         <a class="card" href="/settings/fuel-imports" data-testid="settings-fuel-imports"><h2>Importy paliva</h2><p>ORLEN a MOL, kontrola problematickĂ˝ch Ĺ™ĂˇdkĹŻ a auditovanĂ© opravy.</p></a>
+        <a class="card" href="/settings/financial-mutual-charges" data-testid="settings-financial-mutual-charges"><h2>Vz&#225;jemn&#233; n&#225;klady</h2><p>Sd&#237;len&#233; zapo&#269;itateln&#233; n&#225;klady a jejich auditn&#237; historie.</p></a>
+        <a class="card" href="/settings/financial-settlement-statements" data-testid="settings-financial-settlement-statements"><h2>Vy&#250;&#269;tov&#225;n&#237;</h2><p>Vy&#250;&#269;tov&#225;n&#237; &#345;idi&#269;&#367; a extern&#237;ch dopravc&#367;, saldo, doklady a audit.</p></a>
     </div>
 </div>
 </body>
