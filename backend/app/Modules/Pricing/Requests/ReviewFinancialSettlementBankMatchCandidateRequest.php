@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Pricing\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+final class ReviewFinancialSettlementBankMatchCandidateRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->can('compensation.manage') === true;
+    }
+
+    /** @return array<string, mixed> */
+    public function rules(): array
+    {
+        return [
+            'idempotency_key' => ['required', 'uuid'],
+            'expected_revision' => ['required', 'integer', 'min:1'],
+            'decision' => ['required', Rule::in(['accepted', 'rejected', 'superseded'])],
+            'reason' => ['required', 'string', 'min:3', 'max:1000'],
+        ];
+    }
+}

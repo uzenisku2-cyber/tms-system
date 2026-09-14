@@ -7,6 +7,7 @@ use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAdministrationReadController;
+use App\Modules\Pricing\Controllers\FinancialSettlementBankMatchCandidateController;
 use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankMatchCandidateController;
@@ -463,3 +464,15 @@ Route::middleware([
     ->whereUuid('supplierFuelInvoice')
     ->whereUuid('payment')
     ->name('supplier-fuel-invoices.bank-payments.reverse');
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'financial-settlement-statements/{financialSettlementStatement}/bank-match-candidates/{candidate}/review',
+        [FinancialSettlementBankMatchCandidateController::class, 'review'],
+    )
+    ->whereUuid('financialSettlementStatement')
+    ->whereUuid('candidate')
+    ->name('financial-settlement-statements.bank-match-candidates.review');
