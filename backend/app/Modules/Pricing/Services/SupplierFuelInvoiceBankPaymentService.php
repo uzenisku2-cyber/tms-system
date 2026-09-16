@@ -6,6 +6,7 @@ namespace App\Modules\Pricing\Services;
 
 use App\Models\User;
 use App\Modules\Fleet\Models\BankTransactionEvidence;
+use App\Modules\Fleet\Services\BankTransactionEvidenceCapacityService;
 use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\SupplierFuelInvoiceBankPayment;
@@ -17,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 final class SupplierFuelInvoiceBankPaymentService
 {
+    public function __construct(private readonly BankTransactionEvidenceCapacityService $capacity) {}
+
     /** @param array<string, mixed> $data @return array{data: array<string, mixed>, replayed: bool} */
     public function store(string $invoicePublicId, array $data, int $organizationId, User $actor): array
     {
@@ -64,10 +67,7 @@ final class SupplierFuelInvoiceBankPaymentService
                 ->where('status', SupplierFuelInvoiceBankPayment::STATUS_ACTIVE)
                 ->sum('allocated_amount_minor');
             $evidenceMinor = $this->minor((string) $evidence->amount);
-            $evidenceAllocated = (int) SupplierFuelInvoiceBankPayment::query()
-                ->where('bank_transaction_evidence_id', $evidence->id)
-                ->where('status', SupplierFuelInvoiceBankPayment::STATUS_ACTIVE)
-                ->sum('allocated_amount_minor');
+            $evidenceAllocated = $this->capacity->allocatedMinor($evidence);
             if ($amountMinor <= 0 || $amountMinor > $invoiceMinor - $invoiceAllocated) {
                 throw ValidationException::withMessages(['allocated_amount' => ['Allocated amount exceeds the unpaid supplier invoice amount.']]);
             }
@@ -186,8 +186,7 @@ final class SupplierFuelInvoiceBankPaymentService
         $paidMinor = (int) SupplierFuelInvoiceBankPayment::query()->where('billing_document_id', $document->id)
             ->where('status', SupplierFuelInvoiceBankPayment::STATUS_ACTIVE)->sum('allocated_amount_minor');
         $evidenceMinor = $this->minor((string) $evidence->amount);
-        $evidenceAllocated = (int) SupplierFuelInvoiceBankPayment::query()->where('bank_transaction_evidence_id', $evidence->id)
-            ->where('status', SupplierFuelInvoiceBankPayment::STATUS_ACTIVE)->sum('allocated_amount_minor');
+        $evidenceAllocated = $this->capacity->allocatedMinor($evidence);
         $state = $paidMinor === 0 ? 'unpaid' : ($paidMinor === $invoiceMinor ? 'paid' : 'partially_paid');
 
         return [
