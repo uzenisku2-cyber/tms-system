@@ -15,7 +15,8 @@ final class FinancialSettlementBankMatchCandidateProposalContractTest extends Te
         foreach ([
             'owner_organization_id', 'organization_context_id', "->where('status', 'recorded')",
             'OUTPUT_CARRIER_PAYABLE', 'OUTPUT_CARRIER_RECEIVABLE', "=> 'debit'", "=> 'credit'",
-            'bankAmountMinor !== $outstandingMinor', 'minimum_score_basis_points', 'date_window_days',
+            'settlementPaidMinor', 'outstandingMinor', 'remainingMinor', 'proposedAmountMinor',
+            'minimum_score_basis_points', 'date_window_days', 'amount_partial',
             'amount_exact', 'direction_exact', 'currency_exact', 'variable_symbol_exact',
             'counterparty_account_exact', 'counterparty_name_exact', 'date_within_window',
             'candidate_fingerprint', 'lockForUpdate', 'candidate_proposed', 'replayed',

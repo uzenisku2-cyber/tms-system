@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 final class FinancialSettlementBankPaymentContractTest extends TestCase
 {
-    public function test_materialization_is_exact_shared_idempotent_audited_and_non_mutating(): void
+    public function test_materialization_is_partial_repeated_dynamic_shared_idempotent_audited_and_non_mutating(): void
     {
         $root = dirname(__DIR__, 4);
         $service = file_get_contents($root.'/app/Modules/Pricing/Services/FinancialSettlementBankPaymentService.php');
@@ -20,7 +20,11 @@ final class FinancialSettlementBankPaymentContractTest extends TestCase
         self::assertStringContainsString('STATUS_ACCEPTED', $service);
         self::assertStringContainsString('expected_candidate_revision', $service);
         self::assertStringContainsString('proposed_amount_minor', $service);
-        self::assertStringContainsString('settlement_outstanding_amount_minor', $service);
+        self::assertStringNotContainsString('settlement_outstanding_amount_minor', $service);
+        self::assertStringContainsString('settlementPaidMinor', $service);
+        self::assertStringContainsString('settlementUnpaidMinor', $service);
+        self::assertStringContainsString("'partially_paid'", $service);
+        self::assertStringContainsString('exceeds the current unpaid settlement balance', $service);
         self::assertStringContainsString('command_fingerprint', $service);
         self::assertStringContainsString('lockForUpdate()', $service);
         self::assertStringContainsString('SupplierFuelInvoiceBankPayment::query()', $capacity);

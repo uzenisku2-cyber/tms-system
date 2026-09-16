@@ -30,7 +30,7 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_accepted_candidate_materializes_exactly_once_without_mutating_sources(): void
+    public function test_partial_payments_repeat_to_paid_and_reversal_restores_dynamic_remainder(): void
     {
         $organization = Organization::query()->create(['name' => 'S080 master', 'type' => Organization::TYPE_MASTER, 'status' => Organization::STATUS_ACTIVE]);
         $carrier = Organization::query()->create(['name' => 'S080 carrier', 'type' => Organization::TYPE_CARRIER, 'status' => Organization::STATUS_ACTIVE]);
@@ -70,7 +70,7 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
             'idempotency_key' => (string) Str::uuid(), 'source_type' => 'manual_evidence',
             'source_reference' => 'BANK-S080-001', 'bank_statement_reference' => 'S080',
             'direction' => 'debit', 'booked_at' => '2026-09-17', 'value_date' => '2026-09-17',
-            'amount' => '1250.00', 'currency' => 'CZK', 'account_identifier' => 'CZ-MASTER',
+            'amount' => '500.00', 'currency' => 'CZK', 'account_identifier' => 'CZ-MASTER',
             'counterparty_name' => 'S080 carrier', 'counterparty_account_identifier' => '123/0100',
             'variable_symbol' => '80001', 'message' => 'Settlement payment', 'evidence_note' => 'Runtime probe.',
             'status' => 'recorded', 'recorded_by_user_id' => $actor->id, 'recorded_at' => now(), 'revision' => 1,
@@ -80,10 +80,10 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
             'financial_settlement_statement_id' => $statement->id, 'billing_document_id' => $document->id,
             'bank_transaction_evidence_id' => $evidence->id, 'bank_transaction_evidence_revision' => 1,
             'idempotency_key' => (string) Str::uuid(), 'candidate_fingerprint' => hash('sha256', 's080-candidate'),
-            'currency' => 'CZK', 'expected_bank_direction' => 'debit', 'bank_amount_minor' => 125000,
-            'settlement_outstanding_amount_minor' => 125000, 'proposed_amount_minor' => 125000,
-            'score_basis_points' => 10000, 'status' => FinancialSettlementBankMatchCandidate::STATUS_ACCEPTED,
-            'match_reasons' => ['amount_exact' => true], 'source_snapshot' => [], 'revision' => 2,
+            'currency' => 'CZK', 'expected_bank_direction' => 'debit', 'bank_amount_minor' => 50000,
+            'settlement_outstanding_amount_minor' => 125000, 'proposed_amount_minor' => 50000,
+            'score_basis_points' => 8500, 'status' => FinancialSettlementBankMatchCandidate::STATUS_ACCEPTED,
+            'match_reasons' => ['amount_exact' => false, 'amount_partial' => true], 'source_snapshot' => [], 'revision' => 2,
             'proposed_by_user_id' => $actor->id, 'proposed_at' => now(), 'reviewed_by_user_id' => $actor->id,
             'reviewed_at' => now(), 'review_reason' => 'Accepted for exact runtime materialization.',
         ]);
@@ -96,9 +96,11 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         self::assertFalse($first['replayed']);
         self::assertTrue($again['replayed']);
         self::assertSame($first['data']['public_id'], $again['data']['public_id']);
-        self::assertSame(125000, $first['data']['allocated_amount_minor']);
-        self::assertSame('paid', $first['data']['settlement_payment_state']);
-        self::assertSame(125000, $first['data']['bank_transaction_allocated_amount_minor']);
+        self::assertSame(50000, $first['data']['allocated_amount_minor']);
+        self::assertSame('partially_paid', $first['data']['settlement_payment_state']);
+        self::assertSame(50000, $first['data']['settlement_paid_amount_minor']);
+        self::assertSame(75000, $first['data']['settlement_unpaid_amount_minor']);
+        self::assertSame(50000, $first['data']['bank_transaction_allocated_amount_minor']);
         self::assertSame(0, $first['data']['bank_transaction_unallocated_amount_minor']);
         self::assertTrue($first['data']['bank_matching_performed']);
         self::assertTrue($first['data']['payment_marked']);
@@ -127,7 +129,7 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         self::assertSame(FinancialSettlementBankPayment::STATUS_REVERSED, $reversed['data']['status']);
         self::assertSame('unpaid', $reversed['data']['settlement_payment_state']);
         self::assertSame(0, $reversed['data']['bank_transaction_allocated_amount_minor']);
-        self::assertSame(125000, $reversed['data']['bank_transaction_unallocated_amount_minor']);
+        self::assertSame(50000, $reversed['data']['bank_transaction_unallocated_amount_minor']);
         self::assertFalse($reversed['data']['bank_matching_performed']);
         self::assertFalse($reversed['data']['payment_marked']);
         self::assertDatabaseCount('financial_settlement_bank_payment_events', 2);
@@ -146,10 +148,45 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         $secondCandidate->save();
         $second = $service->materialize((string) $statement->public_id, (string) $secondCandidate->public_id, ['idempotency_key' => (string) Str::uuid(), 'expected_candidate_revision' => 2, 'reason' => 'Reuse released shared bank capacity.'], (int) $organization->id, $actor);
         self::assertFalse($second['replayed']);
-        self::assertSame(125000, $second['data']['bank_transaction_allocated_amount_minor']);
+        self::assertSame(50000, $second['data']['bank_transaction_allocated_amount_minor']);
         self::assertSame(0, $second['data']['bank_transaction_unallocated_amount_minor']);
-        self::assertDatabaseCount('financial_settlement_bank_payments', 2);
-        self::assertDatabaseCount('financial_settlement_bank_payment_events', 3);
+        self::assertSame('partially_paid', $second['data']['settlement_payment_state']);
+        self::assertSame(75000, $second['data']['settlement_unpaid_amount_minor']);
+
+        $staleCandidate = $candidate->replicate(['public_id', 'idempotency_key', 'candidate_fingerprint']);
+        $staleCandidate->public_id = (string) Str::uuid();
+        $staleCandidate->idempotency_key = (string) Str::uuid();
+        $staleCandidate->candidate_fingerprint = hash('sha256', 's081-stale-candidate');
+        $staleCandidate->proposed_amount_minor = 80000;
+        $staleCandidate->save();
+        try {
+            $service->materialize((string) $statement->public_id, (string) $staleCandidate->public_id, ['idempotency_key' => (string) Str::uuid(), 'expected_candidate_revision' => 2, 'reason' => 'Reject stale amount above the dynamic remainder.'], (int) $organization->id, $actor);
+            self::fail('Stale candidate unexpectedly exceeded the dynamic remainder.');
+        } catch (ValidationException $exception) {
+            self::assertArrayHasKey('candidate', $exception->errors());
+        }
+
+        $finalEvidence = $evidence->replicate(['public_id', 'idempotency_key', 'source_reference']);
+        $finalEvidence->public_id = (string) Str::uuid();
+        $finalEvidence->idempotency_key = (string) Str::uuid();
+        $finalEvidence->source_reference = 'BANK-S081-002';
+        $finalEvidence->amount = 750.00;
+        $finalEvidence->save();
+        $finalCandidate = $candidate->replicate(['public_id', 'idempotency_key', 'candidate_fingerprint']);
+        $finalCandidate->public_id = (string) Str::uuid();
+        $finalCandidate->idempotency_key = (string) Str::uuid();
+        $finalCandidate->candidate_fingerprint = hash('sha256', 's081-final-candidate');
+        $finalCandidate->bank_transaction_evidence_id = $finalEvidence->id;
+        $finalCandidate->bank_amount_minor = 75000;
+        $finalCandidate->settlement_outstanding_amount_minor = 75000;
+        $finalCandidate->proposed_amount_minor = 75000;
+        $finalCandidate->save();
+        $final = $service->materialize((string) $statement->public_id, (string) $finalCandidate->public_id, ['idempotency_key' => (string) Str::uuid(), 'expected_candidate_revision' => 2, 'reason' => 'Complete the remaining settlement balance.'], (int) $organization->id, $actor);
+        self::assertSame('paid', $final['data']['settlement_payment_state']);
+        self::assertSame(125000, $final['data']['settlement_paid_amount_minor']);
+        self::assertSame(0, $final['data']['settlement_unpaid_amount_minor']);
+        self::assertDatabaseCount('financial_settlement_bank_payments', 3);
+        self::assertDatabaseCount('financial_settlement_bank_payment_events', 4);
         self::assertSame(5, (int) $statement->fresh()->revision);
         self::assertSame('draft', $document->fresh()->status);
     }

@@ -28,7 +28,7 @@ final class FinancialSettlementBankMatchCandidateProposalServiceTest extends Tes
         parent::tearDown();
     }
 
-    public function test_proposal_is_exact_directional_explainable_idempotent_and_non_executing(): void
+    public function test_proposal_is_partial_directional_explainable_idempotent_and_non_executing(): void
     {
         $organization = Organization::query()->create([
             'name' => 'S079 master', 'type' => Organization::TYPE_MASTER, 'status' => Organization::STATUS_ACTIVE,
@@ -79,7 +79,7 @@ final class FinancialSettlementBankMatchCandidateProposalServiceTest extends Tes
             'idempotency_key' => (string) Str::uuid(), 'source_type' => 'manual_evidence',
             'source_reference' => 'BANK-S079-WRONG-AMOUNT', 'bank_statement_reference' => 'S079-STATEMENT',
             'direction' => 'debit', 'booked_at' => '2026-09-18', 'value_date' => '2026-09-18',
-            'amount' => '1249.99', 'currency' => 'CZK', 'account_identifier' => 'CZ-MASTER',
+            'amount' => '1249.99', 'currency' => 'EUR', 'account_identifier' => 'CZ-MASTER',
             'counterparty_name' => 'S079 Carrier s.r.o.', 'counterparty_account_identifier' => '123456789/0100',
             'variable_symbol' => '79001', 'message' => 'Wrong amount', 'evidence_note' => 'Must be ignored.',
         ], (int) $organization->id, $actor);
@@ -87,24 +87,25 @@ final class FinancialSettlementBankMatchCandidateProposalServiceTest extends Tes
             'idempotency_key' => (string) Str::uuid(), 'source_type' => 'manual_evidence',
             'source_reference' => 'BANK-S079-EXACT', 'bank_statement_reference' => 'S079-STATEMENT',
             'direction' => 'debit', 'booked_at' => '2026-09-18', 'value_date' => '2026-09-18',
-            'amount' => '1250.00', 'currency' => 'CZK', 'account_identifier' => 'CZ-MASTER',
+            'amount' => '750.00', 'currency' => 'CZK', 'account_identifier' => 'CZ-MASTER',
             'counterparty_name' => 'S079 Carrier s.r.o.', 'counterparty_account_identifier' => '123456789/0100',
-            'variable_symbol' => '79001', 'message' => 'Exact settlement output', 'evidence_note' => 'S079 proposal evidence.',
+            'variable_symbol' => '79001', 'message' => 'Partial settlement output', 'evidence_note' => 'S081 proposal evidence.',
         ], (int) $organization->id, $actor);
 
         $payload = [
             'idempotency_key' => '0da985d3-60bb-4405-945f-ff07fcfdf274',
             'minimum_score_basis_points' => 6000, 'date_window_days' => 7,
-            'reason' => 'Propose an exact carrier settlement bank match candidate.',
+            'reason' => 'Propose a partial carrier settlement bank match candidate.',
         ];
         $created = app(FinancialSettlementBankMatchCandidateProposalService::class)
             ->propose((string) $statement->public_id, $payload, (int) $organization->id, $actor);
         self::assertFalse($created['replayed']);
         self::assertSame('debit', $created['data']['expected_bank_direction']);
-        self::assertSame(125000, $created['data']['bank_amount_minor']);
-        self::assertSame(125000, $created['data']['proposed_amount_minor']);
-        self::assertSame(10000, $created['data']['score_basis_points']);
-        self::assertTrue($created['data']['match_reasons']['amount_exact']);
+        self::assertSame(75000, $created['data']['bank_amount_minor']);
+        self::assertSame(75000, $created['data']['proposed_amount_minor']);
+        self::assertSame(8500, $created['data']['score_basis_points']);
+        self::assertFalse($created['data']['match_reasons']['amount_exact']);
+        self::assertTrue($created['data']['match_reasons']['amount_partial']);
         self::assertFalse($created['data']['payment_allocation_created']);
         self::assertFalse($created['data']['payment_marked']);
         self::assertFalse($created['data']['bank_matching_performed']);
