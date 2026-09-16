@@ -18,7 +18,10 @@ use Illuminate\Validation\ValidationException;
 
 final class VehicleCostAllocationBankMatchingExecutionService
 {
-    public function __construct(private readonly DriverSupervisoryAuthorizationService $authorization) {}
+    public function __construct(
+        private readonly DriverSupervisoryAuthorizationService $authorization,
+        private readonly BankTransactionEvidenceCapacityService $capacity,
+    ) {}
 
     public function execute(string $handoffPublicId, array $data, int $organizationId, User $actor): array
     {
@@ -81,7 +84,7 @@ final class VehicleCostAllocationBankMatchingExecutionService
             $handoffMinor = $this->minorUnits((string) $handoff->evidence_amount);
             $evidenceMinor = $this->minorUnits((string) $evidence->amount);
             $documentMinor = $this->minorUnits((string) $billingDocument->gross_amount);
-            $allocatedEvidenceMinor = $this->minorUnits((string) VehicleCostAllocationBankMatchingExecution::query()->where('bank_transaction_evidence_id', $evidence->id)->where('status', 'executed')->sum('matched_amount'));
+            $allocatedEvidenceMinor = $this->capacity->allocatedMinor($evidence);
             $allocatedDocumentMinor = $this->minorUnits((string) VehicleCostAllocationBankMatchingExecution::query()->where('billing_document_id', $billingDocument->id)->where('status', 'executed')->sum('matched_amount'));
 
             if ($matchedMinor > $handoffMinor) {

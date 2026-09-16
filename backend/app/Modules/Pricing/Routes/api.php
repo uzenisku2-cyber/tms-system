@@ -476,3 +476,25 @@ Route::middleware([
     ->whereUuid('financialSettlementStatement')
     ->whereUuid('candidate')
     ->name('financial-settlement-statements.bank-match-candidates.review');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
+        'financial-settlement-statements/{financialSettlementStatement}/bank-match-candidates/{candidate}/materialize',
+        [FinancialSettlementBankMatchCandidateController::class, 'materialize'],
+    )
+    ->whereUuid('financialSettlementStatement')
+    ->whereUuid('candidate')
+    ->name('financial-settlement-statements.bank-match-candidates.materialize');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post(
+        'financial-settlement-statements/{financialSettlementStatement}/bank-payments/{payment}/reverse',
+        [FinancialSettlementBankMatchCandidateController::class, 'reverse'],
+    )
+    ->whereUuid('financialSettlementStatement')
+    ->whereUuid('payment')
+    ->name('financial-settlement-statements.bank-payments.reverse');
