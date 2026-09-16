@@ -86,8 +86,14 @@ final class FinancialSettlementBankPaymentService
                 throw ValidationException::withMessages(['candidate' => ['The candidate direction or currency no longer matches its sources.']]);
             }
             $amountMinor = (int) $candidate->proposed_amount_minor;
-            if ($amountMinor !== (int) $candidate->settlement_outstanding_amount_minor) {
-                throw ValidationException::withMessages(['candidate' => ['Sprint 080 supports exact settlement payment materialization only.']]);
+            $settlementTotalMinor = abs((int) $statement->net_balance_minor);
+            $settlementPaidMinor = (int) FinancialSettlementBankPayment::query()
+                ->where('financial_settlement_statement_id', $statement->id)
+                ->where('status', FinancialSettlementBankPayment::STATUS_ACTIVE)
+                ->sum('allocated_amount_minor');
+            $settlementUnpaidMinor = max(0, $settlementTotalMinor - $settlementPaidMinor);
+            if ($amountMinor <= 0 || $amountMinor > $settlementUnpaidMinor) {
+                throw ValidationException::withMessages(['candidate' => ['The accepted candidate exceeds the current unpaid settlement balance.']]);
             }
             if ($this->capacity->remainingMinor($evidence) < $amountMinor) {
                 throw ValidationException::withMessages(['candidate' => ['The bank transaction evidence no longer has sufficient shared capacity.']]);
@@ -125,6 +131,8 @@ final class FinancialSettlementBankPaymentService
                     'billing_document_public_id' => $document->public_id,
                     'bank_transaction_evidence_public_id' => $evidence->public_id,
                     'allocated_amount_minor' => $amountMinor,
+                    'settlement_paid_amount_minor_before' => $settlementPaidMinor,
+                    'settlement_unpaid_amount_minor_before' => $settlementUnpaidMinor,
                     'currency' => $candidate->currency,
                     'bank_matching_performed' => true,
                     'billing_document_modified' => false,
@@ -226,6 +234,18 @@ final class FinancialSettlementBankPaymentService
             throw new \LogicException('Payment allocation relations are incomplete.');
         }
 
+        $settlementTotalMinor = abs((int) $statement->net_balance_minor);
+        $settlementPaidMinor = (int) FinancialSettlementBankPayment::query()
+            ->where('financial_settlement_statement_id', $statement->id)
+            ->where('status', FinancialSettlementBankPayment::STATUS_ACTIVE)
+            ->sum('allocated_amount_minor');
+        $settlementUnpaidMinor = max(0, $settlementTotalMinor - $settlementPaidMinor);
+        $settlementPaymentState = match (true) {
+            $settlementPaidMinor === 0 => 'unpaid',
+            $settlementUnpaidMinor === 0 => 'paid',
+            default => 'partially_paid',
+        };
+
         return [
             'public_id' => $payment->public_id,
             'financial_settlement_statement_public_id' => $statement->public_id,
@@ -236,7 +256,10 @@ final class FinancialSettlementBankPaymentService
             'currency' => $payment->currency,
             'status' => $payment->status,
             'revision' => (int) $payment->revision,
-            'settlement_payment_state' => $payment->status === FinancialSettlementBankPayment::STATUS_ACTIVE ? 'paid' : 'unpaid',
+            'settlement_payment_state' => $settlementPaymentState,
+            'settlement_total_amount_minor' => $settlementTotalMinor,
+            'settlement_paid_amount_minor' => $settlementPaidMinor,
+            'settlement_unpaid_amount_minor' => $settlementUnpaidMinor,
             'bank_transaction_allocated_amount_minor' => $this->capacity->allocatedMinor($evidence),
             'bank_transaction_unallocated_amount_minor' => $this->capacity->remainingMinor($evidence),
             'events' => $payment->events->toArray(),

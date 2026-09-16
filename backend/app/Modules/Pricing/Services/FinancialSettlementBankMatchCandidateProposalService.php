@@ -6,10 +6,12 @@ namespace App\Modules\Pricing\Services;
 
 use App\Models\User;
 use App\Modules\Fleet\Models\BankTransactionEvidence;
+use App\Modules\Fleet\Services\BankTransactionEvidenceCapacityService;
 use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\FinancialSettlementBankMatchCandidate;
 use App\Modules\Pricing\Models\FinancialSettlementBankMatchCandidateEvent;
+use App\Modules\Pricing\Models\FinancialSettlementBankPayment;
 use App\Modules\Pricing\Models\FinancialSettlementStatement;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Arr;
@@ -19,6 +21,8 @@ use Illuminate\Validation\ValidationException;
 
 final class FinancialSettlementBankMatchCandidateProposalService
 {
+    public function __construct(private readonly BankTransactionEvidenceCapacityService $capacity) {}
+
     /** @param array<string, mixed> $data @return array{data: array<string, mixed>, replayed: bool} */
     public function propose(string $statementPublicId, array $data, int $organizationId, User $actor): array
     {
@@ -62,7 +66,17 @@ final class FinancialSettlementBankMatchCandidateProposalService
                 ->where('billing_document_id', $billingDocument->id)
                 ->where('owner_organization_id', $organizationId)
                 ->firstOrFail();
-            $outstandingMinor = abs((int) $statement->net_balance_minor);
+            $settlementTotalMinor = abs((int) $statement->net_balance_minor);
+            $settlementPaidMinor = (int) FinancialSettlementBankPayment::query()
+                ->where('financial_settlement_statement_id', $statement->id)
+                ->where('status', FinancialSettlementBankPayment::STATUS_ACTIVE)
+                ->sum('allocated_amount_minor');
+            $outstandingMinor = max(0, $settlementTotalMinor - $settlementPaidMinor);
+            if ($outstandingMinor === 0) {
+                throw ValidationException::withMessages([
+                    'bank_match_candidate' => ['The settlement statement is already fully paid.'],
+                ]);
+            }
             $minimumScore = (int) ($data['minimum_score_basis_points'] ?? 6000);
             $dateWindowDays = (int) ($data['date_window_days'] ?? 7);
             if ($minimumScore < 1 || $minimumScore > 10000) {
@@ -72,7 +86,7 @@ final class FinancialSettlementBankMatchCandidateProposalService
                 throw ValidationException::withMessages(['date_window_days' => ['The date window must be between 0 and 366 days.']]);
             }
 
-            /** @var array{evidence: BankTransactionEvidence, bank_amount_minor: int, score_basis_points: int, match_reasons: array<string, bool|int|float>}|null $best */
+            /** @var array{evidence: BankTransactionEvidence, bank_amount_minor: int, proposed_amount_minor: int, score_basis_points: int, match_reasons: array<string, bool|int|float>}|null $best */
             $best = null;
             $evidenceRecords = BankTransactionEvidence::query()
                 ->where('organization_context_id', $organizationId)
@@ -86,9 +100,12 @@ final class FinancialSettlementBankMatchCandidateProposalService
 
             foreach ($evidenceRecords as $evidence) {
                 $bankAmountMinor = $this->minor((string) $evidence->amount);
-                if ($bankAmountMinor !== $outstandingMinor) {
+                $bankRemainingMinor = $this->capacity->remainingMinor($evidence);
+                $proposedAmountMinor = min($outstandingMinor, $bankRemainingMinor);
+                if ($proposedAmountMinor <= 0) {
                     continue;
                 }
+                $amountExact = $proposedAmountMinor === $outstandingMinor;
                 $variableSymbolExact = $this->sameNonEmpty($evidence->variable_symbol, $identity->variable_symbol);
                 $accountExact = $this->sameNonEmpty($evidence->counterparty_account_identifier, $identity->counterparty_account_identifier);
                 $counterpartyExact = $this->normalize((string) $evidence->counterparty_name) === $this->normalize((string) $identity->counterparty_name)
@@ -96,7 +113,7 @@ final class FinancialSettlementBankMatchCandidateProposalService
                 $dateDistance = CarbonImmutable::parse((string) $evidence->booked_at)
                     ->diffInDays(CarbonImmutable::parse((string) $identity->due_on));
                 $dateWithinWindow = $dateDistance <= $dateWindowDays;
-                $score = 5000 + ($variableSymbolExact ? 2500 : 0) + ($accountExact ? 1500 : 0)
+                $score = ($amountExact ? 5000 : 3500) + ($variableSymbolExact ? 2500 : 0) + ($accountExact ? 1500 : 0)
                     + ($counterpartyExact ? 500 : 0) + ($dateWithinWindow ? 500 : 0);
                 if ($score < $minimumScore) {
                     continue;
@@ -104,9 +121,12 @@ final class FinancialSettlementBankMatchCandidateProposalService
                 $proposal = [
                     'evidence' => $evidence,
                     'bank_amount_minor' => $bankAmountMinor,
+                    'proposed_amount_minor' => $proposedAmountMinor,
                     'score_basis_points' => $score,
                     'match_reasons' => [
-                        'amount_exact' => true,
+                        'amount_exact' => $amountExact,
+                        'amount_partial' => ! $amountExact,
+                        'bank_remaining_capacity_minor' => $bankRemainingMinor,
                         'direction_exact' => true,
                         'currency_exact' => true,
                         'variable_symbol_exact' => $variableSymbolExact,
@@ -117,14 +137,16 @@ final class FinancialSettlementBankMatchCandidateProposalService
                     ],
                 ];
                 if ($best === null || $score > $best['score_basis_points']
-                    || ($score === $best['score_basis_points'] && (int) $evidence->id < (int) $best['evidence']->id)) {
+                    || ($score === $best['score_basis_points'] && $proposedAmountMinor > $best['proposed_amount_minor'])
+                    || ($score === $best['score_basis_points'] && $proposedAmountMinor === $best['proposed_amount_minor']
+                        && (int) $evidence->id < (int) $best['evidence']->id)) {
                     $best = $proposal;
                 }
             }
 
             if ($best === null) {
                 throw ValidationException::withMessages([
-                    'bank_match_candidate' => ['No eligible exact bank transaction reached the minimum matching score.'],
+                    'bank_match_candidate' => ['No eligible bank transaction with available capacity reached the minimum matching score.'],
                 ]);
             }
 
@@ -138,7 +160,7 @@ final class FinancialSettlementBankMatchCandidateProposalService
                 'expected_bank_direction' => $expectedDirection,
                 'settlement_outstanding_amount_minor' => $outstandingMinor,
                 'bank_amount_minor' => $best['bank_amount_minor'],
-                'proposed_amount_minor' => $outstandingMinor,
+                'proposed_amount_minor' => $best['proposed_amount_minor'],
                 'score_basis_points' => $best['score_basis_points'],
             ], JSON_THROW_ON_ERROR));
             $duplicate = FinancialSettlementBankMatchCandidate::query()
@@ -166,6 +188,9 @@ final class FinancialSettlementBankMatchCandidateProposalService
                 'bank_booked_at' => (string) $evidence->booked_at,
                 'minimum_score_basis_points' => $minimumScore,
                 'date_window_days' => $dateWindowDays,
+                'settlement_total_amount_minor' => $settlementTotalMinor,
+                'settlement_paid_amount_minor' => $settlementPaidMinor,
+                'settlement_unpaid_amount_minor' => $outstandingMinor,
                 'payment_allocation_created' => false,
                 'payment_marked' => false,
                 'bank_matching_performed' => false,
@@ -183,7 +208,7 @@ final class FinancialSettlementBankMatchCandidateProposalService
                 'expected_bank_direction' => $expectedDirection,
                 'bank_amount_minor' => $best['bank_amount_minor'],
                 'settlement_outstanding_amount_minor' => $outstandingMinor,
-                'proposed_amount_minor' => $outstandingMinor,
+                'proposed_amount_minor' => $best['proposed_amount_minor'],
                 'score_basis_points' => $best['score_basis_points'],
                 'status' => FinancialSettlementBankMatchCandidate::STATUS_PROPOSED,
                 'match_reasons' => $best['match_reasons'],
