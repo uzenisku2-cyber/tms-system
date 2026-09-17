@@ -12,7 +12,9 @@ use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\FinancialSettlementBankMatchCandidate;
 use App\Modules\Pricing\Models\FinancialSettlementBankPayment;
 use App\Modules\Pricing\Models\FinancialSettlementStatement;
+use App\Modules\Pricing\Services\FinancialSettlementAdministrationReadService;
 use App\Modules\Pricing\Services\FinancialSettlementBankPaymentService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -40,6 +42,7 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         $registrar->setPermissionsTeamId((int) $organization->id);
         $registrar->forgetCachedPermissions();
         $actor->givePermissionTo(Permission::findOrCreate('compensation.manage', 'web'));
+        $actor->givePermissionTo(Permission::findOrCreate('compensation.view', 'web'));
         $actor->unsetRelation('permissions');
         $registrar->forgetCachedPermissions();
 
@@ -88,6 +91,18 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
             'reviewed_at' => now(), 'review_reason' => 'Accepted for exact runtime materialization.',
         ]);
 
+        $readService = app(FinancialSettlementAdministrationReadService::class);
+        $unpaidRead = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        self::assertSame('unpaid', $unpaidRead['settlement_payment_state']);
+        self::assertSame(0, $unpaidRead['settlement_paid_amount_minor']);
+        self::assertSame(125000, $unpaidRead['settlement_remaining_amount_minor']);
+        self::assertCount(1, $unpaidRead['bank_match_candidates']);
+        self::assertSame((string) $candidate->public_id, $unpaidRead['bank_match_candidates'][0]['public_id']);
+        self::assertSame([], $unpaidRead['bank_payments']);
+        self::assertTrue($unpaidRead['can_manage_settlement_bank_payments']);
+        self::assertFalse($unpaidRead['payment_marked']);
+        self::assertFalse($unpaidRead['bank_matching_performed']);
+
         $input = ['idempotency_key' => (string) Str::uuid(), 'expected_candidate_revision' => 2, 'reason' => 'Approved exact settlement payment.'];
         $service = app(FinancialSettlementBankPaymentService::class);
         $first = $service->materialize((string) $statement->public_id, (string) $candidate->public_id, $input, (int) $organization->id, $actor);
@@ -108,6 +123,14 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         self::assertFalse($first['data']['settlement_statement_modified']);
         self::assertSame(5, (int) $statement->fresh()->revision);
         self::assertSame('draft', $document->fresh()->status);
+        $partialRead = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        self::assertSame('partially_paid', $partialRead['settlement_payment_state']);
+        self::assertSame(50000, $partialRead['settlement_paid_amount_minor']);
+        self::assertSame(75000, $partialRead['settlement_remaining_amount_minor']);
+        self::assertCount(1, $partialRead['bank_payments']);
+        self::assertSame('active', $partialRead['bank_payments'][0]['status']);
+        self::assertCount(1, $partialRead['bank_payments'][0]['events']);
+        self::assertSame((string) $candidate->public_id, $partialRead['bank_payments'][0]['candidate_public_id']);
         self::assertDatabaseCount('financial_settlement_bank_payments', 1);
         self::assertDatabaseCount('financial_settlement_bank_payment_events', 1);
         self::assertSame(FinancialSettlementBankPayment::STATUS_ACTIVE, FinancialSettlementBankPayment::query()->firstOrFail()->status);
@@ -132,6 +155,12 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         self::assertSame(50000, $reversed['data']['bank_transaction_unallocated_amount_minor']);
         self::assertFalse($reversed['data']['bank_matching_performed']);
         self::assertFalse($reversed['data']['payment_marked']);
+        $reversedRead = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        self::assertSame('unpaid', $reversedRead['settlement_payment_state']);
+        self::assertSame(0, $reversedRead['settlement_paid_amount_minor']);
+        self::assertSame(125000, $reversedRead['settlement_remaining_amount_minor']);
+        self::assertSame('reversed', $reversedRead['bank_payments'][0]['status']);
+        self::assertCount(2, $reversedRead['bank_payments'][0]['events']);
         self::assertDatabaseCount('financial_settlement_bank_payment_events', 2);
 
         try {
@@ -152,6 +181,11 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         self::assertSame(0, $second['data']['bank_transaction_unallocated_amount_minor']);
         self::assertSame('partially_paid', $second['data']['settlement_payment_state']);
         self::assertSame(75000, $second['data']['settlement_unpaid_amount_minor']);
+        $secondPartialRead = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        self::assertSame('partially_paid', $secondPartialRead['settlement_payment_state']);
+        self::assertSame(50000, $secondPartialRead['settlement_paid_amount_minor']);
+        self::assertSame(75000, $secondPartialRead['settlement_remaining_amount_minor']);
+        self::assertCount(2, $secondPartialRead['bank_payments']);
 
         $staleCandidate = $candidate->replicate(['public_id', 'idempotency_key', 'candidate_fingerprint']);
         $staleCandidate->public_id = (string) Str::uuid();
@@ -187,7 +221,23 @@ final class FinancialSettlementBankPaymentLifecycleTest extends TestCase
         self::assertSame(0, $final['data']['settlement_unpaid_amount_minor']);
         self::assertDatabaseCount('financial_settlement_bank_payments', 3);
         self::assertDatabaseCount('financial_settlement_bank_payment_events', 4);
+        $paidRead = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        self::assertSame('paid', $paidRead['settlement_payment_state']);
+        self::assertSame(125000, $paidRead['settlement_paid_amount_minor']);
+        self::assertSame(0, $paidRead['settlement_remaining_amount_minor']);
+        self::assertTrue($paidRead['payment_marked']);
+        self::assertFalse($paidRead['bank_matching_performed']);
+        self::assertCount(3, $paidRead['bank_payments']);
+        self::assertCount(4, $paidRead['bank_match_candidates']);
         self::assertSame(5, (int) $statement->fresh()->revision);
         self::assertSame('draft', $document->fresh()->status);
+
+        $foreignOrganization = Organization::query()->create(['name' => 'S082 foreign', 'type' => Organization::TYPE_MASTER, 'status' => Organization::STATUS_ACTIVE]);
+        try {
+            $readService->statement((string) $statement->public_id, (int) $foreignOrganization->id, $actor);
+            self::fail('Foreign organization unexpectedly read the settlement administration detail.');
+        } catch (ModelNotFoundException $exception) {
+            self::assertSame(FinancialSettlementStatement::class, $exception->getModel());
+        }
     }
 }

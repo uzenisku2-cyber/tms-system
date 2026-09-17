@@ -470,6 +470,18 @@ Route::middleware([
     'perm:compensation.manage',
 ])
     ->post(
+        'financial-settlement-statements/{financialSettlementStatement}/bank-match-candidates',
+        [FinancialSettlementBankMatchCandidateController::class, 'propose'],
+    )
+    ->whereUuid('financialSettlementStatement')
+    ->name('financial-settlement-statements.bank-match-candidates.store');
+
+Route::middleware([
+    'auth:sanctum',
+    'organization',
+    'perm:compensation.manage',
+])
+    ->post(
         'financial-settlement-statements/{financialSettlementStatement}/bank-match-candidates/{candidate}/review',
         [FinancialSettlementBankMatchCandidateController::class, 'review'],
     )
