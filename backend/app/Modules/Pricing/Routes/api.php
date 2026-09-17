@@ -8,6 +8,7 @@ use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementBankMatchCandidateController;
+use App\Modules\Pricing\Controllers\FinancialSettlementBankPaymentReconciliationController;
 use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankMatchCandidateController;
@@ -510,3 +511,21 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
     ->whereUuid('financialSettlementStatement')
     ->whereUuid('payment')
     ->name('financial-settlement-statements.bank-payments.reverse');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post(
+        'financial-settlement-statements/{financialSettlementStatement}/bank-payments/{payment}/reconciliation/confirm',
+        [FinancialSettlementBankPaymentReconciliationController::class, 'confirm']
+    )
+    ->whereUuid('financialSettlementStatement')
+    ->whereUuid('payment')
+    ->name('financial-settlement-statements.bank-payments.reconciliation.confirm');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post(
+        'financial-settlement-statements/{financialSettlementStatement}/bank-payments/{payment}/reconciliation/reopen',
+        [FinancialSettlementBankPaymentReconciliationController::class, 'reopen']
+    )
+    ->whereUuid('financialSettlementStatement')
+    ->whereUuid('payment')
+    ->name('financial-settlement-statements.bank-payments.reconciliation.reopen');
