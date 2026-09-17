@@ -53,6 +53,9 @@ final class FinancialSettlementStatementAdministrationUiTest extends TestCase
             'id="candidateRows"', 'score_basis_points', 'match_reasons', 'data-candidate-decision',
             'data-materialize', 'id="paymentRows"', 'data-reverse-payment', '/bank-match-candidates',
             '/review', '/materialize', '/bank-payments/', '/reverse',
+            'reconciliation', 'data-confirm-reconciliation', 'data-reopen-reconciliation',
+            '/reconciliation/confirm', '/reconciliation/reopen', 'expected_payment_revision',
+            'expected_reconciliation_revision', 'reconciliation_confirmed', 'reconciliation_reopened',
         ] as $marker) {
             self::assertStringContainsString($marker, $source);
         }

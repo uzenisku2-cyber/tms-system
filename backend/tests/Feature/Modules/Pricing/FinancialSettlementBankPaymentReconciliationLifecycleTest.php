@@ -14,6 +14,7 @@ use App\Modules\Pricing\Models\FinancialSettlementBankPayment;
 use App\Modules\Pricing\Models\FinancialSettlementBankPaymentReconciliation;
 use App\Modules\Pricing\Models\FinancialSettlementBankPaymentReconciliationEvent;
 use App\Modules\Pricing\Models\FinancialSettlementStatement;
+use App\Modules\Pricing\Services\FinancialSettlementAdministrationReadService;
 use App\Modules\Pricing\Services\FinancialSettlementBankPaymentReconciliationService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -43,6 +44,7 @@ final class FinancialSettlementBankPaymentReconciliationLifecycleTest extends Te
         $registrar->setPermissionsTeamId((int) $organization->id);
         $registrar->forgetCachedPermissions();
         $actor->givePermissionTo(Permission::findOrCreate('compensation.manage', 'web'));
+        $actor->givePermissionTo(Permission::findOrCreate('compensation.view', 'web'));
         $actor->unsetRelation('permissions');
         $registrar->forgetCachedPermissions();
 
@@ -103,6 +105,10 @@ final class FinancialSettlementBankPaymentReconciliationLifecycleTest extends Te
         $documentSnapshot = $document->only(['status', 'gross_amount']);
         $evidenceSnapshot = $evidence->only(['status', 'revision', 'amount']);
         $service = app(FinancialSettlementBankPaymentReconciliationService::class);
+        $readService = app(FinancialSettlementAdministrationReadService::class);
+        $unconfirmedReadModel = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        self::assertCount(1, $unconfirmedReadModel['bank_payments']);
+        self::assertNull($unconfirmedReadModel['bank_payments'][0]['reconciliation']);
 
         $confirmInput = ['idempotency_key' => (string) Str::uuid(), 'expected_payment_revision' => 1, 'expected_reconciliation_revision' => 0, 'reason' => 'Confirm reviewed settlement payment.'];
         $confirmed = $service->confirm((string) $statement->public_id, (string) $payment->public_id, $confirmInput, (int) $organization->id, $actor);
@@ -112,6 +118,15 @@ final class FinancialSettlementBankPaymentReconciliationLifecycleTest extends Te
         self::assertTrue($confirmReplay['replayed']);
         self::assertSame(FinancialSettlementBankPaymentReconciliation::STATUS_CONFIRMED, $confirmed['data']['status']);
         self::assertSame(1, $confirmed['data']['revision']);
+        $confirmedReadModel = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        $confirmedProjection = $confirmedReadModel['bank_payments'][0]['reconciliation'];
+        self::assertIsArray($confirmedProjection);
+        self::assertSame(FinancialSettlementBankPaymentReconciliation::STATUS_CONFIRMED, $confirmedProjection['status']);
+        self::assertSame(1, $confirmedProjection['revision']);
+        self::assertSame(1, $confirmedProjection['payment_revision']);
+        self::assertNotNull($confirmedProjection['confirmed_at']);
+        self::assertNull($confirmedProjection['reopened_at']);
+        self::assertCount(1, $confirmedProjection['events']);
 
         try {
             $changedReplay = $confirmInput;
@@ -136,6 +151,13 @@ final class FinancialSettlementBankPaymentReconciliationLifecycleTest extends Te
         self::assertTrue($reopenReplay['replayed']);
         self::assertSame(FinancialSettlementBankPaymentReconciliation::STATUS_OPEN, $reopened['data']['status']);
         self::assertSame(2, $reopened['data']['revision']);
+        $reopenedReadModel = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        $reopenedProjection = $reopenedReadModel['bank_payments'][0]['reconciliation'];
+        self::assertIsArray($reopenedProjection);
+        self::assertSame(FinancialSettlementBankPaymentReconciliation::STATUS_OPEN, $reopenedProjection['status']);
+        self::assertSame(2, $reopenedProjection['revision']);
+        self::assertNotNull($reopenedProjection['reopened_at']);
+        self::assertCount(2, $reopenedProjection['events']);
 
         try {
             $service->reopen((string) $statement->public_id, (string) $payment->public_id, ['idempotency_key' => (string) Str::uuid(), 'expected_revision' => 2, 'reason' => 'Second reopen must fail.'], (int) $organization->id, $actor);
@@ -151,6 +173,13 @@ final class FinancialSettlementBankPaymentReconciliationLifecycleTest extends Te
         self::assertDatabaseCount('financial_settlement_bank_payment_reconciliations', 1);
         self::assertDatabaseCount('financial_settlement_bank_payment_reconciliation_events', 3);
         self::assertSame(['reconciliation_confirmed', 'reconciliation_reopened', 'reconciliation_confirmed'], FinancialSettlementBankPaymentReconciliationEvent::query()->orderBy('revision')->pluck('event_type')->all());
+        $reconfirmedReadModel = $readService->statement((string) $statement->public_id, (int) $organization->id, $actor);
+        $reconfirmedProjection = $reconfirmedReadModel['bank_payments'][0]['reconciliation'];
+        self::assertIsArray($reconfirmedProjection);
+        self::assertSame(FinancialSettlementBankPaymentReconciliation::STATUS_CONFIRMED, $reconfirmedProjection['status']);
+        self::assertSame(3, $reconfirmedProjection['revision']);
+        self::assertCount(3, $reconfirmedProjection['events']);
+        self::assertSame(['reconciliation_confirmed', 'reconciliation_reopened', 'reconciliation_confirmed'], array_column($reconfirmedProjection['events'], 'event_type'));
 
         $foreignOrganization = Organization::query()->create(['name' => 'S083 foreign', 'type' => Organization::TYPE_MASTER, 'status' => Organization::STATUS_ACTIVE]);
         try {

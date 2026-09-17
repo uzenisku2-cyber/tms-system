@@ -9,6 +9,7 @@ use App\Modules\Fleet\Models\BankTransactionEvidence;
 use App\Modules\Pricing\Models\FinancialMutualCharge;
 use App\Modules\Pricing\Models\FinancialSettlementBankMatchCandidate;
 use App\Modules\Pricing\Models\FinancialSettlementBankPayment;
+use App\Modules\Pricing\Models\FinancialSettlementBankPaymentReconciliation;
 use App\Modules\Pricing\Models\FinancialSettlementStatement;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -207,11 +208,20 @@ final class FinancialSettlementAdministrationReadService
             ->where('financial_settlement_statement_id', $statement->id)
             ->orderByDesc('id')
             ->get();
+        $reconciliationsByPayment = FinancialSettlementBankPaymentReconciliation::query()
+            ->with('events')
+            ->where('owner_organization_id', $statement->owner_organization_id)
+            ->where('financial_settlement_statement_id', $statement->id)
+            ->whereIn('financial_settlement_bank_payment_id', $payments->pluck('id'))
+            ->get()
+            ->keyBy('financial_settlement_bank_payment_id');
         $paymentByCandidate = [];
         $presentedPayments = [];
         foreach ($payments as $payment) {
             /** @var BankTransactionEvidence|null $evidence */
             $evidence = $payment->bankTransactionEvidence()->first();
+            /** @var FinancialSettlementBankPaymentReconciliation|null $reconciliation */
+            $reconciliation = $reconciliationsByPayment->get((int) $payment->id);
             $paymentByCandidate[(int) $payment->financial_settlement_bank_match_candidate_id] = (string) $payment->public_id;
             $presentedPayments[] = [
                 'public_id' => $payment->public_id,
@@ -235,7 +245,16 @@ final class FinancialSettlementAdministrationReadService
                     'variable_symbol' => $evidence->variable_symbol,
                 ],
                 'events' => $payment->events->toArray(),
-            ];
+                'reconciliation' => $reconciliation === null ? null : [
+                    'public_id' => $reconciliation->public_id,
+                    'status' => $reconciliation->status,
+                    'payment_revision' => (int) $reconciliation->payment_revision,
+                    'revision' => (int) $reconciliation->revision,
+                    'reason' => $reconciliation->reason,
+                    'confirmed_at' => $reconciliation->confirmed_at === null ? null : (string) $reconciliation->getRawOriginal('confirmed_at'),
+                    'reopened_at' => $reconciliation->reopened_at === null ? null : (string) $reconciliation->getRawOriginal('reopened_at'),
+                    'events' => $reconciliation->events->toArray(),
+                ],            ];
         }
 
         $presentedCandidates = [];
