@@ -47,9 +47,16 @@ final class FinancialSettlementStatementAdministrationUiTest extends TestCase
         self::assertIsString($readService);
         self::assertStringContainsString("where('output_direction', \$filters['direction'])", $readService);
 
-        foreach (['/payments', '/bank-matching', 'payment_marked:true'] as $forbidden) {
-            self::assertStringNotContainsString($forbidden, $source);
+        foreach ([
+            'id="bankPaymentAdministration"', 'id="paymentSummary"', 'settlement_payment_state',
+            'settlement_paid_amount_minor', 'settlement_remaining_amount_minor', 'id="proposeMatch"',
+            'id="candidateRows"', 'score_basis_points', 'match_reasons', 'data-candidate-decision',
+            'data-materialize', 'id="paymentRows"', 'data-reverse-payment', '/bank-match-candidates',
+            '/review', '/materialize', '/bank-payments/', '/reverse',
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
         }
+        self::assertStringContainsString("'bank_matching_performed' => false", $readService);
     }
 
     public function test_settings_links_to_settlement_statement_administration(): void
