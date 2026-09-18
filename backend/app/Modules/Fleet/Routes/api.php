@@ -31,6 +31,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('bank-statement-imports', [BankStatementImportController::class, 'store'])->name('bank-statement-imports.store');
         Route::get('bank-statement-imports/{batch}', [BankStatementImportController::class, 'show'])->name('bank-statement-imports.show');
         Route::post('bank-statement-import-duplicate-candidates/{candidate}/resolution', [BankStatementImportDuplicateResolutionController::class, 'store'])->name('bank-statement-import-duplicate-candidates.resolution.store');
+        Route::get('bank-transaction-evidence', [BankTransactionEvidenceController::class, 'index'])->name('bank-transaction-evidence.index');
+        Route::get('bank-transaction-evidence/{evidence}', [BankTransactionEvidenceController::class, 'show'])->whereUuid('evidence')->name('bank-transaction-evidence.show');
         Route::get('bank-transaction-evidence/{evidence}/amount-breakdowns', [BankTransactionAmountBreakdownController::class, 'show'])->name('bank-transaction-evidence.amount-breakdowns.show');
         Route::post('bank-transaction-evidence/{evidence}/amount-breakdowns', [BankTransactionAmountBreakdownController::class, 'store'])->name('bank-transaction-evidence.amount-breakdowns.store');
     });
