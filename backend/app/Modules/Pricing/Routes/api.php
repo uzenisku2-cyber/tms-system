@@ -23,6 +23,7 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
         Route::get('financial-mutual-charges', [FinancialSettlementAdministrationReadController::class, 'mutualCharges'])->name('financial-mutual-charges.index');
         Route::get('financial-mutual-charges/{financialMutualCharge}', [FinancialSettlementAdministrationReadController::class, 'mutualCharge'])->whereUuid('financialMutualCharge')->name('financial-mutual-charges.show');
         Route::get('financial-settlement-statements', [FinancialSettlementAdministrationReadController::class, 'statements'])->name('financial-settlement-statements.index');
+        Route::get('financial-settlement-statements/reconciliation-export', [FinancialSettlementAdministrationReadController::class, 'reconciliationExport'])->name('financial-settlement-statements.reconciliation-export');
         Route::get('financial-settlement-statements/{financialSettlementStatement}', [FinancialSettlementAdministrationReadController::class, 'statement'])->whereUuid('financialSettlementStatement')->name('financial-settlement-statements.show');
     });
 

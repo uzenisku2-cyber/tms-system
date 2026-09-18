@@ -8,7 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Pricing\Requests\IndexFinancialAdministrationRequest;
 use App\Modules\Pricing\Services\FinancialSettlementAdministrationReadService;
+use App\Modules\Pricing\Services\FinancialSettlementBankPaymentReconciliationCsvExportService;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class FinancialSettlementAdministrationReadController extends Controller
 {
@@ -30,6 +32,32 @@ final class FinancialSettlementAdministrationReadController extends Controller
     public function statement(string $financialSettlementStatement, IndexFinancialAdministrationRequest $request, FinancialSettlementAdministrationReadService $service): JsonResponse
     {
         return response()->json(['data' => $service->statement($financialSettlementStatement, $this->organizationId($request), $this->actor($request))]);
+    }
+
+    public function reconciliationExport(IndexFinancialAdministrationRequest $request, FinancialSettlementBankPaymentReconciliationCsvExportService $export): StreamedResponse
+    {
+        $organizationId = $this->organizationId($request);
+        $actor = $this->actor($request);
+        abort_unless($actor->can('compensation.view'), 403);
+        $filters = $request->validated();
+        $filename = $export->filename();
+
+        return response()->streamDownload(
+            static function () use ($export, $organizationId, $actor, $filters): void {
+                $output = fopen('php://output', 'wb');
+                if ($output === false) {
+                    throw new \RuntimeException('Unable to open the CSV output stream.');
+                }
+
+                try {
+                    $export->write($organizationId, $actor, $filters, $output);
+                } finally {
+                    fclose($output);
+                }
+            },
+            $filename,
+            ['Content-Type' => 'text/csv; charset=UTF-8'],
+        );
     }
 
     private function organizationId(IndexFinancialAdministrationRequest $request): int

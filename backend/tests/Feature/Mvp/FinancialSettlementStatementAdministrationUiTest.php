@@ -37,7 +37,12 @@ final class FinancialSettlementStatementAdministrationUiTest extends TestCase
             ->assertSee('net_amount', false)
             ->assertSee('vat_amount', false)
             ->assertSee('vat_rate_basis_points', false)
-            ->assertSee('expected_revision', false);
+            ->assertSee('expected_revision', false)
+            ->assertSee('id="exportReconciliation"', false)
+            ->assertSee('/reconciliation-export?', false)
+            ->assertSee("'Accept':'text/csv'", false)
+            ->assertSee("'X-Organization-ID':organization", false)
+            ->assertSee('response.blob()', false);
 
         $source = file_get_contents(resource_path('views/mvp/financial-settlement-statements.blade.php'));
         self::assertIsString($source);
