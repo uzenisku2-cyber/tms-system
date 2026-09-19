@@ -8,6 +8,7 @@ use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingExecutionController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingHandoffController;
+use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingReversalController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementBankMatchCandidateController;
 use App\Modules\Pricing\Controllers\FinancialSettlementBankPaymentReconciliationController;
@@ -542,3 +543,10 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
     ->name('financial-settlement-statements.bank-payments.reconciliation.accounting-handoff.store');
 
 Route::post('financial-settlement-accounting-posting-handoffs/{handoff}/accounting-posting-executions', [FinancialSettlementAccountingPostingExecutionController::class, 'store'])->name('financial-settlement-accounting-posting-executions.store');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post(
+        'financial-settlement-accounting-posting-executions/{postingExecution}/reversal',
+        [FinancialSettlementAccountingPostingReversalController::class, 'store']
+    )
+    ->whereUuid('postingExecution')
+    ->name('financial-settlement-accounting-posting-reversals.store');
