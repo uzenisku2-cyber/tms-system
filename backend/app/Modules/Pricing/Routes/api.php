@@ -6,6 +6,7 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
+use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingExecutionController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingHandoffController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementBankMatchCandidateController;
@@ -539,3 +540,5 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
     ->whereUuid('financialSettlementStatement')
     ->whereUuid('payment')
     ->name('financial-settlement-statements.bank-payments.reconciliation.accounting-handoff.store');
+
+Route::post('financial-settlement-accounting-posting-handoffs/{handoff}/accounting-posting-executions', [FinancialSettlementAccountingPostingExecutionController::class, 'store'])->name('financial-settlement-accounting-posting-executions.store');
