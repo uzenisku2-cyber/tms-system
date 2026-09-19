@@ -6,6 +6,7 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
+use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingCorrectionController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingExecutionController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingHandoffController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingReversalController;
@@ -550,3 +551,10 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
     )
     ->whereUuid('postingExecution')
     ->name('financial-settlement-accounting-posting-reversals.store');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post(
+        'financial-settlement-accounting-posting-executions/{postingExecution}/correction',
+        [FinancialSettlementAccountingPostingCorrectionController::class, 'store']
+    )
+    ->whereUuid('postingExecution')
+    ->name('financial-settlement-accounting-posting-corrections.store');
