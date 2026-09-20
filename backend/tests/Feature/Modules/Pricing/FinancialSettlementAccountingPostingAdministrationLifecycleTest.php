@@ -159,7 +159,7 @@ final class FinancialSettlementAccountingPostingAdministrationLifecycleTest exte
             ->assertJsonPath('meta.total', 2)
             ->assertJsonCount(2, 'data');
         self::assertEqualsCanonicalizing(
-            [(string) $execution->public_id, (string) $replacement->public_id],
+            [(string) $execution->getAttribute('public_id'), (string) $replacement->getAttribute('public_id')],
             collect($index->json('data'))->pluck('public_id')->all(),
         );
 
@@ -170,14 +170,14 @@ final class FinancialSettlementAccountingPostingAdministrationLifecycleTest exte
 
         $detail = $this->actingAs($actor)
             ->withHeader('X-Organization-ID', (string) $organization->id)
-            ->getJson('/api/v1/financial-settlement-accounting-postings/'.$execution->public_id);
+            ->getJson('/api/v1/financial-settlement-accounting-postings/'.$execution->getAttribute('public_id'));
         $detail->assertOk()
-            ->assertJsonPath('data.public_id', (string) $execution->public_id)
-            ->assertJsonPath('data.handoff.public_id', (string) $handoff->public_id)
-            ->assertJsonPath('data.reversal.public_id', (string) $reversal->public_id)
-            ->assertJsonPath('data.correction.public_id', (string) $correction->public_id)
-            ->assertJsonPath('data.correction.original_execution_public_id', (string) $execution->public_id)
-            ->assertJsonPath('data.correction.replacement_execution_public_id', (string) $replacement->public_id)
+            ->assertJsonPath('data.public_id', (string) $execution->getAttribute('public_id'))
+            ->assertJsonPath('data.handoff.public_id', (string) $handoff->getAttribute('public_id'))
+            ->assertJsonPath('data.reversal.public_id', (string) $reversal->getAttribute('public_id'))
+            ->assertJsonPath('data.correction.public_id', (string) $correction->getAttribute('public_id'))
+            ->assertJsonPath('data.correction.original_execution_public_id', (string) $execution->getAttribute('public_id'))
+            ->assertJsonPath('data.correction.replacement_execution_public_id', (string) $replacement->getAttribute('public_id'))
             ->assertJsonCount(2, 'data.entries');
         $entries = collect($detail->json('data.entries'));
         self::assertSame(50000, (int) $entries->where('side', 'debit')->sum('amount_minor'));
@@ -187,7 +187,7 @@ final class FinancialSettlementAccountingPostingAdministrationLifecycleTest exte
         $this->useOrganization($foreignOrganization, $foreignActor);
         $this->actingAs($foreignActor)
             ->withHeader('X-Organization-ID', (string) $foreignOrganization->id)
-            ->getJson('/api/v1/financial-settlement-accounting-postings/'.$execution->public_id)
+            ->getJson('/api/v1/financial-settlement-accounting-postings/'.$execution->getAttribute('public_id'))
             ->assertNotFound();
 
         foreach ([$handoff, $execution, $debit, $credit, $reversal, $replacement, $correction] as $model) {
