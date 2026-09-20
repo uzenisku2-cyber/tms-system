@@ -6,6 +6,7 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
+use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPeriodAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPeriodController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingCorrectionController;
@@ -566,6 +567,11 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])->g
     Route::get('financial-settlement-accounting-postings/{postingExecution}', [FinancialSettlementAccountingPostingAdministrationReadController::class, 'show'])
         ->whereUuid('postingExecution')
         ->name('financial-settlement-accounting-postings.show');
+    Route::get('financial-settlement-accounting-periods', [FinancialSettlementAccountingPeriodAdministrationReadController::class, 'index'])
+        ->name('financial-settlement-accounting-periods.index');
+    Route::get('financial-settlement-accounting-periods/{accountingPeriod}', [FinancialSettlementAccountingPeriodAdministrationReadController::class, 'show'])
+        ->whereUuid('accountingPeriod')
+        ->name('financial-settlement-accounting-periods.show');
 });
 
 Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])->group(function (): void {
