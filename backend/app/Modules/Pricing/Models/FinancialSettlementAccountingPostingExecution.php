@@ -39,6 +39,28 @@ final class FinancialSettlementAccountingPostingExecution extends Model
 
     protected static function booted(): void
     {
+        self::creating(static function (self $execution): void {
+            if ($execution->getAttribute('financial_settlement_accounting_posting_handoff_id') === null) {
+                return;
+            }
+
+            $postingDate = $execution->getAttribute('posting_date');
+            $currency = $execution->getAttribute('currency');
+            $organizationId = $execution->getAttribute('owner_organization_id');
+            if ($postingDate === null || $currency === null || $organizationId === null) {
+                return;
+            }
+
+            $closed = FinancialSettlementAccountingPeriod::query()
+                ->where('owner_organization_id', $organizationId)
+                ->where('currency', strtoupper((string) $currency))
+                ->where('status', FinancialSettlementAccountingPeriod::STATUS_CLOSED)
+                ->whereDate('period_start', '<=', $postingDate)
+                ->whereDate('period_end', '>=', $postingDate)
+                ->exists();
+            abort_if($closed, 409, 'The accounting posting date belongs to a closed accounting period.');
+        });
+
         self::updating(static fn (): never => throw new RuntimeException('Financial settlement accounting posting executions are append-only.'));
         self::deleting(static fn (): never => throw new RuntimeException('Financial settlement accounting posting executions are append-only.'));
     }
