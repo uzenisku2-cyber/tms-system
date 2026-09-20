@@ -6,6 +6,7 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
+use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPeriodController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingCorrectionController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingExecutionController;
@@ -565,4 +566,10 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])->g
     Route::get('financial-settlement-accounting-postings/{postingExecution}', [FinancialSettlementAccountingPostingAdministrationReadController::class, 'show'])
         ->whereUuid('postingExecution')
         ->name('financial-settlement-accounting-postings.show');
+});
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])->group(function (): void {
+    Route::post('financial-settlement-accounting-periods', [FinancialSettlementAccountingPeriodController::class, 'store'])->name('financial-settlement-accounting-periods.store');
+    Route::post('financial-settlement-accounting-periods/{accountingPeriod}/close', [FinancialSettlementAccountingPeriodController::class, 'close'])->whereUuid('accountingPeriod')->name('financial-settlement-accounting-periods.close');
+    Route::post('financial-settlement-accounting-periods/{accountingPeriod}/reopen', [FinancialSettlementAccountingPeriodController::class, 'reopen'])->whereUuid('accountingPeriod')->name('financial-settlement-accounting-periods.reopen');
 });
