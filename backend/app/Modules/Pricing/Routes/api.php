@@ -6,6 +6,7 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
+use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingCorrectionController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingExecutionController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingHandoffController;
@@ -558,3 +559,10 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
     )
     ->whereUuid('postingExecution')
     ->name('financial-settlement-accounting-posting-corrections.store');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])->group(function (): void {
+    Route::get('financial-settlement-accounting-postings', [FinancialSettlementAccountingPostingAdministrationReadController::class, 'index'])
+        ->name('financial-settlement-accounting-postings.index');
+    Route::get('financial-settlement-accounting-postings/{postingExecution}', [FinancialSettlementAccountingPostingAdministrationReadController::class, 'show'])
+        ->whereUuid('postingExecution')
+        ->name('financial-settlement-accounting-postings.show');
+});
