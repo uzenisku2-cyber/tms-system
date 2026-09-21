@@ -7,6 +7,7 @@ namespace App\Modules\Pricing\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Pricing\Requests\IndexFinancialSettlementAccountingPeriodAdministrationRequest;
 use App\Modules\Pricing\Services\FinancialSettlementAccountingPeriodAdministrationReadService;
+use App\Modules\Pricing\Services\FinancialSettlementAccountingPeriodCloseReadinessService;
 use Illuminate\Http\JsonResponse;
 
 final class FinancialSettlementAccountingPeriodAdministrationReadController extends Controller
@@ -28,6 +29,19 @@ final class FinancialSettlementAccountingPeriodAdministrationReadController exte
                 'per_page' => $page->perPage(),
                 'total' => $page->total(),
             ],
+        ]);
+    }
+
+    public function closeReadiness(
+        string $accountingPeriod,
+        IndexFinancialSettlementAccountingPeriodAdministrationRequest $request,
+        FinancialSettlementAccountingPeriodCloseReadinessService $service,
+    ): JsonResponse {
+        return response()->json([
+            'data' => $service->forPeriod(
+                (int) $request->attributes->get('organization_id'),
+                $accountingPeriod,
+            ),
         ]);
     }
 

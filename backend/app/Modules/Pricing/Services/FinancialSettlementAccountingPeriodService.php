@@ -42,6 +42,11 @@ final class FinancialSettlementAccountingPeriodService
             abort_if((int) $period->getAttribute('revision') !== (int) $command['expected_revision'], 409, 'The accounting period revision changed.');
             $expectedStatus = $action === 'close' ? [FinancialSettlementAccountingPeriod::STATUS_OPEN, FinancialSettlementAccountingPeriod::STATUS_REOPENED] : [FinancialSettlementAccountingPeriod::STATUS_CLOSED];
             abort_unless(in_array((string) $period->getAttribute('status'), $expectedStatus, true), 409, 'The accounting period transition is not allowed.');
+            $readiness = null;
+            if ($action === 'close') {
+                $readiness = app(FinancialSettlementAccountingPeriodCloseReadinessService::class)->evaluate($period, true);
+                abort_unless((bool) $readiness['ready'], 409, 'The accounting period is not ready to close.');
+            }
             $revision = (int) $period->getAttribute('revision') + 1;
             $attributes = ['status' => $action === 'close' ? FinancialSettlementAccountingPeriod::STATUS_CLOSED : FinancialSettlementAccountingPeriod::STATUS_REOPENED, 'revision' => $revision, 'last_reason' => $command['reason']];
             if ($action === 'close') {
@@ -50,7 +55,11 @@ final class FinancialSettlementAccountingPeriodService
                 $attributes += ['reopened_by_user_id' => $actor->getKey(), 'reopened_at' => now()];
             }
             $period->forceFill($attributes)->saveOrFail();
-            $this->event($period, $actor, (string) $command['idempotency_key'], $fingerprint, $action === 'close' ? 'accounting_period_closed' : 'accounting_period_reopened', $revision, $command);
+            $eventPayload = $command;
+            if ($readiness !== null) {
+                $eventPayload['close_readiness'] = $readiness;
+            }
+            $this->event($period, $actor, (string) $command['idempotency_key'], $fingerprint, $action === 'close' ? 'accounting_period_closed' : 'accounting_period_reopened', $revision, $eventPayload);
 
             return $period;
         });
