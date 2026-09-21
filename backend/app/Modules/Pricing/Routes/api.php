@@ -569,6 +569,9 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])->g
         ->name('financial-settlement-accounting-postings.show');
     Route::get('financial-settlement-accounting-periods', [FinancialSettlementAccountingPeriodAdministrationReadController::class, 'index'])
         ->name('financial-settlement-accounting-periods.index');
+    Route::get('financial-settlement-accounting-periods/{accountingPeriod}/close-readiness', [FinancialSettlementAccountingPeriodAdministrationReadController::class, 'closeReadiness'])
+        ->whereUuid('accountingPeriod')
+        ->name('financial-settlement-accounting-periods.close-readiness');
     Route::get('financial-settlement-accounting-periods/{accountingPeriod}', [FinancialSettlementAccountingPeriodAdministrationReadController::class, 'show'])
         ->whereUuid('accountingPeriod')
         ->name('financial-settlement-accounting-periods.show');
