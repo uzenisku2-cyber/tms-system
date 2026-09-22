@@ -63,7 +63,7 @@
     };
     const actionButtons = item => {
         if (item.status === 'closed') return `<button type="button" class="secondary" data-period-action="reopen" data-period-id="${escapeHtml(item.public_id)}" data-period-revision="${escapeHtml(item.revision)}">Znovu otev&#345;&#237;t</button>`;
-        return `<button type="button" data-period-action="close" data-period-id="${escapeHtml(item.public_id)}" data-period-revision="${escapeHtml(item.revision)}">Uzav&#345;&#237;t</button>`;
+        return `<button type="button" data-period-action="close" data-period-id="${escapeHtml(item.public_id)}" data-period-revision="${escapeHtml(item.revision)}">Prov&#283;&#345;it uzav&#345;en&#237;</button>`;
     };
     const renderList = items => {
         rows.innerHTML = items.length ? items.map(item => `<tr><td><b>${escapeHtml(item.period_start)} &#8211; ${escapeHtml(item.period_end)}</b><br><span class="muted">${escapeHtml(item.public_id)}</span></td><td>${escapeHtml(item.currency)}</td><td><span class="badge ${escapeHtml(item.status)}">${statusLabel(item.status)}</span></td><td>${escapeHtml(item.revision)}</td><td>${escapeHtml(item.last_reason || '\u2014')}</td><td><button type="button" class="secondary" data-period-detail="${escapeHtml(item.public_id)}">Historie (${escapeHtml(item.event_count)})</button></td><td><div class="bank-actions">${actionButtons(item)}</div></td></tr>`).join('') : '<tr><td colspan="7">Vybran&#233;mu filtru neodpov&#237;d&#225; &#382;&#225;dn&#233; &#250;&#269;etn&#237; obdob&#237;.</td></tr>';
@@ -73,7 +73,22 @@
         detail.innerHTML = `<div class="head"><div><h3>${escapeHtml(item.period_start)} &#8211; ${escapeHtml(item.period_end)} | ${escapeHtml(item.currency)}</h3><p class="muted">${statusLabel(item.status)} | revize ${escapeHtml(item.revision)}</p></div><button type="button" class="secondary" data-close-accounting-period-detail>Zav&#345;&#237;t</button></div>${events || '<p class="muted">Bez auditn&#237;ch ud&#225;lost&#237;.</p>'}`;
         detail.classList.remove('hidden');
     };
-    const load = async () => {
+    const blockerLabel = value => ({pending_accounting_posting_handoffs:'Nevy\u0159\u00edzen\u00e9 p\u0159ed\u00e1n\u00ed do \u00fa\u010detnictv\u00ed', unbalanced_accounting_posting_executions:'Nevyrovnan\u00e9 \u00fa\u010detn\u00ed z\u00e1pisy'})[value] || value;
+    const renderReadiness = (id, fallbackRevision, readiness) => {
+        const summary = readiness.summary || {};
+        const blockers = readiness.blockers || [];
+        const blockerRows = blockers.map(blocker => `<div class="audit-item"><b>${escapeHtml(blockerLabel(blocker.code))}</b> | ${escapeHtml(blocker.count)}<br><span class="muted">${(blocker.public_ids || []).map(escapeHtml).join(', ') || '\u2014'}</span></div>`).join('');
+        const revision = readiness.period_revision ?? fallbackRevision;
+        detail.innerHTML = `<div class="head"><div><h3>Kontrola p\u0159ipravenosti k uzav\u0159en\u00ed</h3><p class="muted">Revize obdob\u00ed ${escapeHtml(revision)}</p></div><button type="button" class="secondary" data-close-accounting-period-detail>Zav\u0159\u00edt</button></div><p class="message${readiness.ready ? '' : ' error'}"><b>${readiness.ready ? 'Obdob\u00ed je p\u0159ipraveno k uzav\u0159en\u00ed.' : 'Obdob\u00ed nelze uzav\u0159\u00edt, dokud nebudou odstran\u011bny blok\u00e1tory.'}</b></p><div class="table-wrap"><table><thead><tr><th>P\u0159ed\u00e1n\u00ed</th><th>Nevy\u0159\u00edzen\u00e1 p\u0159ed\u00e1n\u00ed</th><th>\u00da\u010detn\u00ed z\u00e1pisy</th><th>Nevyrovnan\u00e9 z\u00e1pisy</th></tr></thead><tbody><tr><td>${escapeHtml(summary.handoff_count ?? 0)}</td><td>${escapeHtml(summary.pending_handoff_count ?? 0)}</td><td>${escapeHtml(summary.posting_execution_count ?? 0)}</td><td>${escapeHtml(summary.unbalanced_posting_execution_count ?? 0)}</td></tr></tbody></table></div><div style="margin-top:14px">${blockerRows || '<p class="muted">\u017d\u00e1dn\u00e9 blok\u00e1tory.</p>'}</div><div class="bank-actions" style="margin-top:14px"><button type="button" class="secondary" data-refresh-close-readiness data-period-id="${escapeHtml(id)}" data-period-revision="${escapeHtml(revision)}">Obnovit kontrolu</button>${readiness.ready ? `<button type="button" data-confirm-period-close data-period-id="${escapeHtml(id)}" data-period-revision="${escapeHtml(revision)}">Uzav\u0159\u00edt obdob\u00ed</button>` : ''}</div>`;
+        detail.classList.remove('hidden');
+    };
+    const inspectCloseReadiness = async (id, revision) => {
+        showMessage('');
+        detail.innerHTML = '<p>Kontroluji p\u0159ipravenost k uzav\u0159en\u00ed\u2026</p>';
+        detail.classList.remove('hidden');
+        try { renderReadiness(id, revision, (await request(`${endpoint}/${id}/close-readiness`)).data); }
+        catch (error) { detail.classList.add('hidden'); showMessage(`P\u0159ipravenost nelze ov\u011b\u0159it: ${error.message}`, true); }
+    };    const load = async () => {
         showMessage('');
         rows.innerHTML = '<tr><td colspan="7">Na&#269;&#237;t&#225;m&#8230;</td></tr>';
         const params = new URLSearchParams(new FormData(filterForm));
@@ -83,6 +98,7 @@
         catch (error) { rows.innerHTML = ''; showMessage(`Obdob\u00ed nelze na\u010d\u00edst: ${error.message}`, true); }
     };
     const transition = async (id, revision, action) => {
+        if (action === 'close') { await inspectCloseReadiness(id, revision); return; }
         const label = action === 'close' ? 'uzav\u0159en\u00ed' : 'znovuotev\u0159en\u00ed';
         const reason = prompt(`Uve\u010fte d\u016fvod ${label} obdob\u00ed (alespo\u0148 3 znaky):`, action === 'close' ? 'Kontrolovan\u00e9 uzav\u0159en\u00ed \u00fa\u010detn\u00edho obdob\u00ed.' : 'Kontrolovan\u00e9 znovuotev\u0159en\u00ed \u00fa\u010detn\u00edho obdob\u00ed.');
         if (reason === null || reason.trim().length < 3) return;
@@ -93,7 +109,16 @@
             await load();
         } catch (error) { showMessage(error.message, true); }
     };
-    createForm.addEventListener('submit', async event => {
+    const confirmClose = async (id, revision) => {
+        const reason = prompt('Uve\u010fte d\u016fvod uzav\u0159en\u00ed obdob\u00ed (alespo\u0148 3 znaky):', 'Kontrolovan\u00e9 uzav\u0159en\u00ed \u00fa\u010detn\u00edho obdob\u00ed.');
+        if (reason === null || reason.trim().length < 3) return;
+        try {
+            await request(`${endpoint}/${id}/close`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idempotency_key:crypto.randomUUID(), expected_revision:Number(revision), reason:reason.trim()})});
+            showMessage('\u00da\u010detn\u00ed obdob\u00ed bylo uzav\u0159eno.');
+            detail.classList.add('hidden');
+            await load();
+        } catch (error) { showMessage(error.message, true); await inspectCloseReadiness(id, revision); }
+    };    createForm.addEventListener('submit', async event => {
         event.preventDefault();
         const data = Object.fromEntries(new FormData(createForm));
         data.currency = String(data.currency || '').toUpperCase();
@@ -115,7 +140,13 @@
         try { renderDetail((await request(`${endpoint}/${show.dataset.periodDetail}`)).data); }
         catch (error) { showMessage(error.message, true); }
     });
-    detail.addEventListener('click', event => { if (event.target.closest('[data-close-accounting-period-detail]')) detail.classList.add('hidden'); });
+    detail.addEventListener('click', async event => {
+        if (event.target.closest('[data-close-accounting-period-detail]')) { detail.classList.add('hidden'); return; }
+        const refresh = event.target.closest('[data-refresh-close-readiness]');
+        if (refresh) { await inspectCloseReadiness(refresh.dataset.periodId, refresh.dataset.periodRevision); return; }
+        const confirm = event.target.closest('[data-confirm-period-close]');
+        if (confirm) await confirmClose(confirm.dataset.periodId, confirm.dataset.periodRevision);
+    });
     load();
 })();
 </script>
