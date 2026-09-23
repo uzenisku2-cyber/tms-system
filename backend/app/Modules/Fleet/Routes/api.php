@@ -13,9 +13,14 @@ use App\Modules\Fleet\Controllers\VehicleCostAllocationController;
 use App\Modules\Fleet\Controllers\VehicleCostAllocationDepositOffsetController;
 use App\Modules\Fleet\Controllers\VehicleCostAllocationFinancialHandoffController;
 use App\Modules\Fleet\Controllers\VehicleCostAllocationRepairFundController;
+use App\Modules\Fleet\Controllers\VehicleRegistryAdministrationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware([ResolveOrganizationContext::class, 'perm:vehicle.view'])->group(function (): void {
+        Route::get('vehicle-registry-administration', [VehicleRegistryAdministrationController::class, 'index'])->name('vehicle-registry-administration.index');
+        Route::get('vehicle-registry-administration/{vehicle}', [VehicleRegistryAdministrationController::class, 'show'])->whereUuid('vehicle')->name('vehicle-registry-administration.show');
+    });
     Route::apiResource('vehicles', VehicleController::class);
     Route::post('vehicle-cost-allocations', [VehicleCostAllocationController::class, 'store'])->name('vehicle-cost-allocations.store');
     Route::get('vehicle-cost-allocations/{allocationUid}', [VehicleCostAllocationController::class, 'show'])->name('vehicle-cost-allocations.show');

@@ -31,6 +31,7 @@
     <h1>Nastavení</h1>
     <p class="lead">Centrální místo pro správu provozních číselníků a pravidel TMS.</p>
     <div class="grid">
+        <a class="card" href="/settings/vehicles" data-testid="settings-vehicles"><h2>Vozidla</h2><p>Registr vozidel, vlastnictvĂ­, odpovÄ›dnost a souhrnnĂˇ provoznĂ­ sloĹľka.</p></a>
         <a class="card" href="/settings/catalogs" data-testid="settings-catalogs">
             <h2>Číselníky</h2>
             <p>Trasy, charakter tras a standardizované provozní důvody.</p>
