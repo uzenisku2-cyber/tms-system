@@ -55,6 +55,7 @@ Route::view(
 
 // S020-04F2A2 SETTINGS CATALOGS FOUNDATION
 Route::view('/settings', 'mvp.settings')->name('mvp.settings');
+Route::view('/settings/vehicles', 'mvp.vehicle-registry-administration')->name('mvp.settings.vehicles');
 Route::view('/settings/fuel-imports', 'mvp.fuel-imports')->name('mvp.settings.fuel-imports');
 Route::view('/settings/fuel-transactions', 'mvp.fuel-transactions')->name('mvp.settings.fuel-transactions');
 Route::view('/settings/supplier-fuel-invoices', 'mvp.supplier-fuel-invoices')->name('mvp.settings.supplier-fuel-invoices');
