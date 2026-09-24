@@ -17,7 +17,9 @@ final class VehicleRegistryAdministrationReadService
     public function index(array $filters, int $organizationId, User $actor): array
     {
         $this->authorize($actor, $organizationId);
-        $query = $this->visibleQuery($organizationId);
+        $query = $this->visibleQuery($organizationId)->with([
+            'recordFieldStatuses' => fn ($query) => $query->where('organization_context_id', $organizationId),
+        ]);
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {
             $query->where(static function (Builder $builder) use ($search): void {
@@ -50,9 +52,9 @@ final class VehicleRegistryAdministrationReadService
         if (! $vehicle instanceof Vehicle) {
             throw (new ModelNotFoundException)->setModel(Vehicle::class, [$publicId]);
         }
-        $vehicle->load(['ownerships' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('valid_from'), 'responsibilities' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('valid_from'), 'documents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'complianceRecords' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'insurancePolicies' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'serviceRecords' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'incidents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'financingAgreements' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'registryEvents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderBy('vehicle_revision')]);
+        $vehicle->load(['ownerships' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('valid_from'), 'responsibilities' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('valid_from'), 'documents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'complianceRecords' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'insurancePolicies' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'serviceRecords' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'incidents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'financingAgreements' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'registryEvents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderBy('vehicle_revision'), 'recordFieldStatuses' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderBy('field_key')]);
 
-        return ['vehicle' => $this->summary($vehicle), 'ownerships' => $vehicle->ownerships->toArray(), 'responsibilities' => $vehicle->responsibilities->toArray(), 'documents' => $vehicle->documents->toArray(), 'compliance_records' => $vehicle->complianceRecords->toArray(), 'insurance_policies' => $vehicle->insurancePolicies->toArray(), 'service_records' => $vehicle->serviceRecords->toArray(), 'incidents' => $vehicle->incidents->toArray(), 'financing_agreements' => $vehicle->financingAgreements->toArray(), 'events' => $vehicle->registryEvents->toArray(), 'capabilities' => ['can_manage_vehicles' => $actor->can('vehicle.manage')]];
+        return ['vehicle' => $this->summary($vehicle), 'ownerships' => $vehicle->ownerships->toArray(), 'responsibilities' => $vehicle->responsibilities->toArray(), 'documents' => $vehicle->documents->toArray(), 'compliance_records' => $vehicle->complianceRecords->toArray(), 'insurance_policies' => $vehicle->insurancePolicies->toArray(), 'service_records' => $vehicle->serviceRecords->toArray(), 'incidents' => $vehicle->incidents->toArray(), 'financing_agreements' => $vehicle->financingAgreements->toArray(), 'events' => $vehicle->registryEvents->toArray(), 'field_statuses' => $vehicle->recordFieldStatuses->toArray(), 'completeness' => $this->completeness($vehicle), 'capabilities' => ['can_manage_vehicles' => $actor->can('vehicle.manage')]];
     }
 
     private function visibleQuery(int $organizationId): Builder
@@ -83,8 +85,21 @@ final class VehicleRegistryAdministrationReadService
         abort_unless($membershipExists, 403, 'Organization access denied.');
     }
 
+    private function completeness(Vehicle $vehicle): array
+    {
+        $statuses = $vehicle->recordFieldStatuses;
+        $complete = $statuses->filter(static fn ($status): bool => in_array($status->status, ['verified', 'not_applicable'], true))->count();
+
+        return ['complete' => $complete, 'total' => $statuses->count(), 'percentage' => $statuses->count() === 0 ? 0 : (int) floor(($complete * 100) / $statuses->count())];
+    }
+
     private function summary(Vehicle $vehicle): array
     {
-        return ['public_id' => $vehicle->public_id, 'registration_number' => $vehicle->registration_number, 'vin' => $vehicle->vin, 'manufacturer' => $vehicle->manufacturer, 'model' => $vehicle->model, 'year' => $vehicle->year, 'vehicle_type' => $vehicle->vehicle_type, 'fuel_type' => $vehicle->fuel_type, 'mileage' => $vehicle->mileage, 'odometer_unit' => $vehicle->odometer_unit, 'lifecycle_status' => $vehicle->lifecycle_status, 'revision' => (int) $vehicle->current_revision, 'active' => (bool) $vehicle->active, 'archived_at' => $vehicle->archived_at?->toIso8601String()];
+        $mileageIsUnknown = $vehicle->recordFieldStatuses
+            ->where('field_key', 'mileage')
+            ->whereIn('status', ['missing', 'pending_document'])
+            ->isNotEmpty();
+
+        return ['public_id' => $vehicle->public_id, 'registration_number' => $vehicle->registration_number, 'vin' => $vehicle->vin, 'manufacturer' => $vehicle->manufacturer, 'model' => $vehicle->model, 'year' => $vehicle->year, 'vehicle_type' => $vehicle->vehicle_type, 'fuel_type' => $vehicle->fuel_type, 'mileage' => $mileageIsUnknown ? null : $vehicle->mileage, 'odometer_unit' => $vehicle->odometer_unit, 'lifecycle_status' => $vehicle->lifecycle_status, 'revision' => (int) $vehicle->current_revision, 'active' => (bool) $vehicle->active, 'archived_at' => $vehicle->archived_at?->toIso8601String()];
     }
 }

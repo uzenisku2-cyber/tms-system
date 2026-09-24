@@ -19,10 +19,10 @@ use Illuminate\Support\Str;
  * @property int $id
  * @property string|null $public_id
  * @property int|null $user_id
- * @property string $registration_number
- * @property string $vin
- * @property string $manufacturer
- * @property string $model
+ * @property string|null $registration_number
+ * @property string|null $vin
+ * @property string|null $manufacturer
+ * @property string|null $model
  * @property int|null $year
  * @property string|null $vehicle_type
  * @property string|null $vehicle_size
@@ -48,6 +48,7 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, VehicleResponsibility> $responsibilities
  * @property-read Collection<int, VehicleDocument> $documents
  * @property-read Collection<int, VehicleRegistryEvent> $registryEvents
+ * @property-read Collection<int, VehicleRecordFieldStatus> $recordFieldStatuses
  * @property-read Collection<int, VehicleComplianceRecord> $complianceRecords
  * @property-read Collection<int, VehicleInsurancePolicy> $insurancePolicies
  * @property-read Collection<int, VehicleServiceRecord> $serviceRecords
@@ -124,6 +125,12 @@ class Vehicle extends Model
     public function registryEvents(): HasMany
     {
         return $this->hasMany(VehicleRegistryEvent::class);
+    }
+
+    /** @return HasMany<VehicleRecordFieldStatus, $this> */
+    public function recordFieldStatuses(): HasMany
+    {
+        return $this->hasMany(VehicleRecordFieldStatus::class);
     }
 
     /** @return HasMany<VehicleComplianceRecord, $this> */
