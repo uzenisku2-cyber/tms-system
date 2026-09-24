@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->group(function () {
     Route::middleware([ResolveOrganizationContext::class, 'perm:vehicle.view'])->group(function (): void {
         Route::get('vehicle-registry-administration', [VehicleRegistryAdministrationController::class, 'index'])->name('vehicle-registry-administration.index');
+        Route::post('vehicle-registry-administration', [VehicleRegistryAdministrationController::class, 'store'])->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.store');
+        Route::put('vehicle-registry-administration/{vehicle}/field-statuses/{fieldKey}', [VehicleRegistryAdministrationController::class, 'updateFieldStatus'])->whereUuid('vehicle')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.field-statuses.update');
         Route::get('vehicle-registry-administration/{vehicle}', [VehicleRegistryAdministrationController::class, 'show'])->whereUuid('vehicle')->name('vehicle-registry-administration.show');
     });
     Route::apiResource('vehicles', VehicleController::class);
