@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Fleet\Requests\IndexVehicleRegistryAdministrationRequest;
 use App\Modules\Fleet\Requests\StoreProgressiveVehicleRecordRequest;
+use App\Modules\Fleet\Requests\UpdateProgressiveVehicleRecordRequest;
 use App\Modules\Fleet\Requests\UpdateVehicleRecordFieldStatusRequest;
 use App\Modules\Fleet\Services\ProgressiveVehicleRecordService;
 use App\Modules\Fleet\Services\VehicleRegistryAdministrationReadService;
@@ -30,6 +31,11 @@ final class VehicleRegistryAdministrationController extends Controller
     public function store(StoreProgressiveVehicleRecordRequest $request, OrganizationContext $context): JsonResponse
     {
         return response()->json($this->writeService->create($request->validated(), $context->requireId(), $this->actor($request)), 201);
+    }
+
+    public function update(UpdateProgressiveVehicleRecordRequest $request, OrganizationContext $context, string $vehicle): JsonResponse
+    {
+        return response()->json($this->writeService->update($vehicle, $request->validated(), $context->requireId(), $this->actor($request)));
     }
 
     public function updateFieldStatus(UpdateVehicleRecordFieldStatusRequest $request, OrganizationContext $context, string $vehicle, string $fieldKey): JsonResponse
