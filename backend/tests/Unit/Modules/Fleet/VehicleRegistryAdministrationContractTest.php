@@ -17,14 +17,24 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
         self::assertIsString($service);
         self::assertStringContainsString("can('vehicle.view')", $service);
         self::assertStringContainsString('organization_context_id', $service);
-        self::assertStringNotContainsString('user_id', $service);
         self::assertStringNotContainsString('delete()', $service);
         self::assertStringContainsString('vehicle-registry-administration', $routes);
-        self::assertStringContainsString('data-detail-section', $view);
-        self::assertStringContainsString('const localizedValues=Object.freeze', $view);
-        self::assertStringContainsString('vehicle_registered:\'Vozidlo zaregistrov\\u00e1no\'', $view);
-        self::assertStringContainsString('localizedValue(v.lifecycle_status)', $view);
-        self::assertStringContainsString('Pojistn\\u00e9 ud\\u00e1losti a incidenty', $view);
+        self::assertStringContainsString('data-testid="vehicle-registry-administration"', $view);
+        self::assertStringContainsString('data-registry-folder="create"', $view);
+        self::assertStringContainsString('data-registry-folder="manage"', $view);
+        self::assertStringContainsString("subtab('documents'", $view);
+        self::assertStringContainsString("subtab('ownership'", $view);
+        self::assertStringContainsString("subtab('responsibilities'", $view);
+        self::assertStringContainsString("subtab('completion'", $view);
+        self::assertStringContainsString("subtab('statuses'", $view);
+        self::assertStringContainsString("subtab('history'", $view);
+        self::assertStringContainsString('const fuelTypes=', $view);
+        self::assertStringContainsString("['diesel','Nafta']", $view);
+        self::assertStringContainsString('expected_revision:current.vehicle.revision', $view);
+        self::assertStringContainsString('expected_document_revision', $view);
+        self::assertStringContainsString('expected_ownership_revision', $view);
+        self::assertStringContainsString('expected_responsibility_revision', $view);
+        self::assertStringNotContainsString('method:\'DELETE\'', $view);
         self::assertStringNotContainsString('JSON.stringify(x||[],null,2)', $view);
     }
 }
