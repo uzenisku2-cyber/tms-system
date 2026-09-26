@@ -27,6 +27,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('vehicle-registry-administration/{vehicle}/documents/{document}/verification', [VehicleRegistryAdministrationController::class, 'reviewDocument'])->whereUuid('vehicle')->whereUuid('document')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.documents.verification.update');
         Route::post('vehicle-registry-administration/{vehicle}/ownerships', [VehicleRegistryAdministrationController::class, 'storeOwnership'])->middleware(CheckPermission::class.':vehicle.manage')->name('vehicle-registry-administration.ownerships.store');
         Route::put('vehicle-registry-administration/{vehicle}/ownerships/{ownership}/verification', [VehicleRegistryAdministrationController::class, 'reviewOwnership'])->middleware(CheckPermission::class.':vehicle.manage')->name('vehicle-registry-administration.ownerships.verification.update');
+        Route::post('vehicle-registry-administration/{vehicle}/responsibilities', [VehicleRegistryAdministrationController::class, 'storeResponsibility'])->middleware(CheckPermission::class.':vehicle.manage')->name('vehicle-registry-administration.responsibilities.store');
+        Route::put('vehicle-registry-administration/{vehicle}/responsibilities/{responsibility}/status', [VehicleRegistryAdministrationController::class, 'reviewResponsibility'])->middleware(CheckPermission::class.':vehicle.manage')->name('vehicle-registry-administration.responsibilities.status.update');
         Route::get('vehicle-registry-administration/{vehicle}', [VehicleRegistryAdministrationController::class, 'show'])->whereUuid('vehicle')->name('vehicle-registry-administration.show');
     });
     Route::apiResource('vehicles', VehicleController::class);
