@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\ResolveOrganizationContext;
 use App\Modules\Fleet\Controllers\BankStatementImportController;
 use App\Modules\Fleet\Controllers\BankStatementImportDuplicateResolutionController;
@@ -24,6 +25,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('vehicle-registry-administration/{vehicle}/field-statuses/{fieldKey}', [VehicleRegistryAdministrationController::class, 'updateFieldStatus'])->whereUuid('vehicle')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.field-statuses.update');
         Route::post('vehicle-registry-administration/{vehicle}/documents', [VehicleRegistryAdministrationController::class, 'storeDocument'])->whereUuid('vehicle')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.documents.store');
         Route::put('vehicle-registry-administration/{vehicle}/documents/{document}/verification', [VehicleRegistryAdministrationController::class, 'reviewDocument'])->whereUuid('vehicle')->whereUuid('document')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.documents.verification.update');
+        Route::post('vehicle-registry-administration/{vehicle}/ownerships', [VehicleRegistryAdministrationController::class, 'storeOwnership'])->middleware(CheckPermission::class.':vehicle.manage')->name('vehicle-registry-administration.ownerships.store');
+        Route::put('vehicle-registry-administration/{vehicle}/ownerships/{ownership}/verification', [VehicleRegistryAdministrationController::class, 'reviewOwnership'])->middleware(CheckPermission::class.':vehicle.manage')->name('vehicle-registry-administration.ownerships.verification.update');
         Route::get('vehicle-registry-administration/{vehicle}', [VehicleRegistryAdministrationController::class, 'show'])->whereUuid('vehicle')->name('vehicle-registry-administration.show');
     });
     Route::apiResource('vehicles', VehicleController::class);

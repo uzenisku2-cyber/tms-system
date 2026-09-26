@@ -9,12 +9,15 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Fleet\Requests\IndexVehicleRegistryAdministrationRequest;
 use App\Modules\Fleet\Requests\ReviewVehicleDocumentEvidenceRequest;
+use App\Modules\Fleet\Requests\ReviewVehicleOwnershipRequest;
 use App\Modules\Fleet\Requests\StoreProgressiveVehicleRecordRequest;
 use App\Modules\Fleet\Requests\StoreVehicleDocumentEvidenceRequest;
+use App\Modules\Fleet\Requests\StoreVehicleOwnershipRequest;
 use App\Modules\Fleet\Requests\UpdateProgressiveVehicleRecordRequest;
 use App\Modules\Fleet\Requests\UpdateVehicleRecordFieldStatusRequest;
 use App\Modules\Fleet\Services\ProgressiveVehicleRecordService;
 use App\Modules\Fleet\Services\VehicleDocumentEvidenceService;
+use App\Modules\Fleet\Services\VehicleOwnershipEvidenceService;
 use App\Modules\Fleet\Services\VehicleRegistryAdministrationReadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +28,7 @@ final class VehicleRegistryAdministrationController extends Controller
         private readonly VehicleRegistryAdministrationReadService $service,
         private readonly ProgressiveVehicleRecordService $writeService,
         private readonly VehicleDocumentEvidenceService $documentService,
+        private readonly VehicleOwnershipEvidenceService $ownershipService,
     ) {}
 
     public function index(IndexVehicleRegistryAdministrationRequest $request, OrganizationContext $context): JsonResponse
@@ -55,6 +59,16 @@ final class VehicleRegistryAdministrationController extends Controller
     public function reviewDocument(ReviewVehicleDocumentEvidenceRequest $request, OrganizationContext $context, string $vehicle, string $document): JsonResponse
     {
         return response()->json($this->documentService->review($vehicle, $document, $request->validated(), $context->requireId(), $this->actor($request)));
+    }
+
+    public function storeOwnership(StoreVehicleOwnershipRequest $request, OrganizationContext $context, string $vehicle): JsonResponse
+    {
+        return response()->json($this->ownershipService->store($vehicle, $request->validated(), $context->requireId(), $this->actor($request)), 201);
+    }
+
+    public function reviewOwnership(ReviewVehicleOwnershipRequest $request, OrganizationContext $context, string $vehicle, string $ownership): JsonResponse
+    {
+        return response()->json($this->ownershipService->review($vehicle, $ownership, $request->validated(), $context->requireId(), $this->actor($request)));
     }
 
     public function show(Request $request, OrganizationContext $context, string $vehicle): JsonResponse

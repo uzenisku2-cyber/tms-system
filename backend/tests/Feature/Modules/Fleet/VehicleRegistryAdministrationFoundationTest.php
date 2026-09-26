@@ -19,7 +19,7 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
     public function test_vehicle_registry_administration_routes_are_installed_without_delete_action(): void
     {
         $routes = collect(Route::getRoutes()->getRoutes())->filter(fn ($route): bool => str_contains($route->uri(), 'vehicle-registry-administration'));
-        self::assertCount(7, $routes);
+        self::assertCount(9, $routes);
         self::assertTrue($routes->contains(fn ($route): bool => in_array('GET', $route->methods(), true) && $route->uri() === 'api/v1/vehicle-registry-administration'));
         self::assertTrue($routes->contains(fn ($route): bool => in_array('GET', $route->methods(), true) && $route->uri() === 'api/v1/vehicle-registry-administration/{vehicle}'));
         self::assertTrue($routes->contains(fn ($route): bool => in_array('POST', $route->methods(), true) && $route->uri() === 'api/v1/vehicle-registry-administration'));
@@ -27,6 +27,8 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
         self::assertTrue($routes->contains(fn ($route): bool => in_array('PUT', $route->methods(), true) && $route->uri() === 'api/v1/vehicle-registry-administration/{vehicle}/field-statuses/{fieldKey}'));
         self::assertTrue($routes->contains(fn ($route): bool => in_array('POST', $route->methods(), true) && $route->uri() === 'api/v1/vehicle-registry-administration/{vehicle}/documents'));
         self::assertTrue($routes->contains(fn ($route): bool => in_array('PUT', $route->methods(), true) && $route->uri() === 'api/v1/vehicle-registry-administration/{vehicle}/documents/{document}/verification'));
+        self::assertTrue($routes->contains(fn ($route): bool => in_array('POST', $route->methods(), true) && $route->uri() === 'api/v1/vehicle-registry-administration/{vehicle}/ownerships'));
+        self::assertTrue($routes->contains(fn ($route): bool => in_array('PUT', $route->methods(), true) && $route->uri() === 'api/v1/vehicle-registry-administration/{vehicle}/ownerships/{ownership}/verification'));
         self::assertFalse($routes->contains(fn ($route): bool => in_array('DELETE', $route->methods(), true)));
     }
 }
