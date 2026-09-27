@@ -13,12 +13,14 @@ use App\Modules\Fleet\Requests\ReviewVehicleOwnershipRequest;
 use App\Modules\Fleet\Requests\ReviewVehicleResponsibilityRequest;
 use App\Modules\Fleet\Requests\ReviseVehicleComplianceEvidenceRequest;
 use App\Modules\Fleet\Requests\ReviseVehicleInsuranceEvidenceRequest;
+use App\Modules\Fleet\Requests\ReviseVehicleServiceEvidenceRequest;
 use App\Modules\Fleet\Requests\StoreProgressiveVehicleRecordRequest;
 use App\Modules\Fleet\Requests\StoreVehicleComplianceEvidenceRequest;
 use App\Modules\Fleet\Requests\StoreVehicleDocumentEvidenceRequest;
 use App\Modules\Fleet\Requests\StoreVehicleInsuranceEvidenceRequest;
 use App\Modules\Fleet\Requests\StoreVehicleOwnershipRequest;
 use App\Modules\Fleet\Requests\StoreVehicleResponsibilityRequest;
+use App\Modules\Fleet\Requests\StoreVehicleServiceEvidenceRequest;
 use App\Modules\Fleet\Requests\TransitionVehicleLifecycleRequest;
 use App\Modules\Fleet\Requests\UpdateProgressiveVehicleRecordRequest;
 use App\Modules\Fleet\Requests\UpdateVehicleRecordFieldStatusRequest;
@@ -30,6 +32,7 @@ use App\Modules\Fleet\Services\VehicleLifecycleTransitionService;
 use App\Modules\Fleet\Services\VehicleOwnershipEvidenceService;
 use App\Modules\Fleet\Services\VehicleRegistryAdministrationReadService;
 use App\Modules\Fleet\Services\VehicleResponsibilityEvidenceService;
+use App\Modules\Fleet\Services\VehicleServiceEvidenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -41,6 +44,7 @@ final class VehicleRegistryAdministrationController extends Controller
         private readonly VehicleDocumentEvidenceService $documentService,
         private readonly VehicleComplianceEvidenceService $complianceService,
         private readonly VehicleInsuranceEvidenceService $insuranceService,
+        private readonly VehicleServiceEvidenceService $serviceEvidenceService,
         private readonly VehicleOwnershipEvidenceService $ownershipService,
         private readonly VehicleResponsibilityEvidenceService $responsibilityService,
         private readonly VehicleLifecycleTransitionService $lifecycleService,
@@ -99,6 +103,16 @@ final class VehicleRegistryAdministrationController extends Controller
     public function reviseInsurance(ReviseVehicleInsuranceEvidenceRequest $request, OrganizationContext $context, string $vehicle, string $record): JsonResponse
     {
         return response()->json($this->insuranceService->revise($vehicle, $record, $request->validated(), $context->requireId(), $this->actor($request)), 201);
+    }
+
+    public function storeService(StoreVehicleServiceEvidenceRequest $request, OrganizationContext $context, string $vehicle): JsonResponse
+    {
+        return response()->json($this->serviceEvidenceService->store($vehicle, $request->validated(), $context->requireId(), $this->actor($request)), 201);
+    }
+
+    public function reviseService(ReviseVehicleServiceEvidenceRequest $request, OrganizationContext $context, string $vehicle, string $record): JsonResponse
+    {
+        return response()->json($this->serviceEvidenceService->revise($vehicle, $record, $request->validated(), $context->requireId(), $this->actor($request)), 201);
     }
 
     public function storeOwnership(StoreVehicleOwnershipRequest $request, OrganizationContext $context, string $vehicle): JsonResponse
