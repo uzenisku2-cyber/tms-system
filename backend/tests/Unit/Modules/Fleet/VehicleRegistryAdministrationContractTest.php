@@ -26,6 +26,7 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
         self::assertStringContainsString("subtab('compliance'", $view);
         self::assertStringContainsString("subtab('insurance'", $view);
         self::assertStringContainsString("subtab('service'", $view);
+        self::assertStringContainsString("subtab('incidents'", $view);
         self::assertStringContainsString("subtab('documents'", $view);
         self::assertStringContainsString("subtab('ownership'", $view);
         self::assertStringContainsString("subtab('responsibilities'", $view);
@@ -45,6 +46,9 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
             self::assertStringContainsString($marker, $view);
         }
         foreach (['service_records', 'record_uid', 'expected_service_revision', 'source_document_public_id', 'data-revise-service', "method:recordId?'PUT':'POST'", 'error.status===409'] as $marker) {
+            self::assertStringContainsString($marker, $view);
+        }
+        foreach (['incidents', 'record_uid', 'expected_incident_revision', 'source_document_public_id', 'data-revise-incident', "method:recordId?'PUT':'POST'", 'error.status===409'] as $marker) {
             self::assertStringContainsString($marker, $view);
         }
         self::assertStringContainsString('expected_document_revision', $view);
