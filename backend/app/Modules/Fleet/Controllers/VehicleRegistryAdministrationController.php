@@ -15,10 +15,12 @@ use App\Modules\Fleet\Requests\StoreProgressiveVehicleRecordRequest;
 use App\Modules\Fleet\Requests\StoreVehicleDocumentEvidenceRequest;
 use App\Modules\Fleet\Requests\StoreVehicleOwnershipRequest;
 use App\Modules\Fleet\Requests\StoreVehicleResponsibilityRequest;
+use App\Modules\Fleet\Requests\TransitionVehicleLifecycleRequest;
 use App\Modules\Fleet\Requests\UpdateProgressiveVehicleRecordRequest;
 use App\Modules\Fleet\Requests\UpdateVehicleRecordFieldStatusRequest;
 use App\Modules\Fleet\Services\ProgressiveVehicleRecordService;
 use App\Modules\Fleet\Services\VehicleDocumentEvidenceService;
+use App\Modules\Fleet\Services\VehicleLifecycleTransitionService;
 use App\Modules\Fleet\Services\VehicleOwnershipEvidenceService;
 use App\Modules\Fleet\Services\VehicleRegistryAdministrationReadService;
 use App\Modules\Fleet\Services\VehicleResponsibilityEvidenceService;
@@ -33,6 +35,7 @@ final class VehicleRegistryAdministrationController extends Controller
         private readonly VehicleDocumentEvidenceService $documentService,
         private readonly VehicleOwnershipEvidenceService $ownershipService,
         private readonly VehicleResponsibilityEvidenceService $responsibilityService,
+        private readonly VehicleLifecycleTransitionService $lifecycleService,
     ) {}
 
     public function index(IndexVehicleRegistryAdministrationRequest $request, OrganizationContext $context): JsonResponse
@@ -48,6 +51,11 @@ final class VehicleRegistryAdministrationController extends Controller
     public function update(UpdateProgressiveVehicleRecordRequest $request, OrganizationContext $context, string $vehicle): JsonResponse
     {
         return response()->json($this->writeService->update($vehicle, $request->validated(), $context->requireId(), $this->actor($request)));
+    }
+
+    public function transitionLifecycle(TransitionVehicleLifecycleRequest $request, OrganizationContext $context, string $vehicle): JsonResponse
+    {
+        return response()->json($this->lifecycleService->transition($vehicle, $request->validated(), $context->requireId(), $this->actor($request)));
     }
 
     public function updateFieldStatus(UpdateVehicleRecordFieldStatusRequest $request, OrganizationContext $context, string $vehicle, string $fieldKey): JsonResponse
