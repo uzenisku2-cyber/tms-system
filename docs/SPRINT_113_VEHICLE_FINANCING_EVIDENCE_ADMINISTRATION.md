@@ -1,0 +1,5 @@
+# Sprint 113 – Vehicle financing agreement evidence administration
+
+The registry records financing agreement evidence in the existing `vehicle_financing_agreements` table. Managers create an agreement and correct it by appending an immutable revision. Both writes require organization-scoped vehicle visibility, `vehicle.manage`, a current vehicle revision and a verified vehicle document. Correction additionally requires the latest agreement public ID and revision. Audit events retain the verified document public ID and revision because the agreement foundation has no document foreign key.
+
+The active organization is the supported organizational debtor or financier. An external financier can be named instead. A debtor driver must have active membership in the organization. Dates, amounts, currency, statuses and exclusive party fields are validated; every effective write increments the vehicle revision. This sprint does not create or change installment schedules, installments, invoices, payments, settlement entries or bank matches. No schema migration or physical deletion is introduced.
