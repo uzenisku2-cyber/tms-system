@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('vehicle-registry-administration', [VehicleRegistryAdministrationController::class, 'index'])->name('vehicle-registry-administration.index');
         Route::post('vehicle-registry-administration', [VehicleRegistryAdministrationController::class, 'store'])->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.store');
         Route::patch('vehicle-registry-administration/{vehicle}', [VehicleRegistryAdministrationController::class, 'update'])->whereUuid('vehicle')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.update');
+        Route::put('vehicle-registry-administration/{vehicle}/lifecycle', [VehicleRegistryAdministrationController::class, 'transitionLifecycle'])->whereUuid('vehicle')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.lifecycle.update');
         Route::put('vehicle-registry-administration/{vehicle}/field-statuses/{fieldKey}', [VehicleRegistryAdministrationController::class, 'updateFieldStatus'])->whereUuid('vehicle')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.field-statuses.update');
         Route::post('vehicle-registry-administration/{vehicle}/documents', [VehicleRegistryAdministrationController::class, 'storeDocument'])->whereUuid('vehicle')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.documents.store');
         Route::put('vehicle-registry-administration/{vehicle}/documents/{document}/verification', [VehicleRegistryAdministrationController::class, 'reviewDocument'])->whereUuid('vehicle')->whereUuid('document')->middleware('perm:vehicle.manage')->name('vehicle-registry-administration.documents.verification.update');
@@ -31,7 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('vehicle-registry-administration/{vehicle}/responsibilities/{responsibility}/status', [VehicleRegistryAdministrationController::class, 'reviewResponsibility'])->middleware(CheckPermission::class.':vehicle.manage')->name('vehicle-registry-administration.responsibilities.status.update');
         Route::get('vehicle-registry-administration/{vehicle}', [VehicleRegistryAdministrationController::class, 'show'])->whereUuid('vehicle')->name('vehicle-registry-administration.show');
     });
-    Route::apiResource('vehicles', VehicleController::class);
+    Route::apiResource('vehicles', VehicleController::class)->except(['destroy']);
     Route::post('vehicle-cost-allocations', [VehicleCostAllocationController::class, 'store'])->name('vehicle-cost-allocations.store');
     Route::get('vehicle-cost-allocations/{allocationUid}', [VehicleCostAllocationController::class, 'show'])->name('vehicle-cost-allocations.show');
     Route::post('vehicle-cost-allocations/{allocationUid}/approve', [VehicleCostAllocationController::class, 'approve'])->name('vehicle-cost-allocations.approve');

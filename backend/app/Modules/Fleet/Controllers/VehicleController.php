@@ -25,7 +25,6 @@ class VehicleController extends Controller
         );
     }
 
-
     public function store(Request $request, CommandBus $bus)
     {
         $validated = $request->validate([
@@ -51,13 +50,11 @@ class VehicleController extends Controller
             ],
         ]);
 
-
         Trace::log('http.store', [
             'endpoint' => 'vehicles.store',
             'user_id' => auth()->id(),
             'payload' => $validated,
         ]);
-
 
         $bus->dispatch(
             new CreateVehicleCommand(
@@ -71,33 +68,30 @@ class VehicleController extends Controller
             )
         );
 
-
         return response()->json([
             'status' => 'queued',
         ], 202);
     }
 
-
     public function show(Vehicle $vehicle)
     {
         $this->authorizeVehicle($vehicle);
 
-
         Trace::log('http.show', [
             'vehicle_id' => $vehicle->id,
         ]);
-
 
         return response()->json(
             $vehicle->load('user')
         );
     }
 
-
     public function update(Request $request, Vehicle $vehicle)
     {
         $this->authorizeVehicle($vehicle);
-
+        if ($request->exists('active')) {
+            abort(422, 'Use vehicle registry lifecycle API.');
+        }
 
         $validated = $request->validate([
             'manufacturer' => [
@@ -125,47 +119,21 @@ class VehicleController extends Controller
                 'integer',
             ],
 
-            'active' => [
-                'nullable',
-                'boolean',
-            ],
+            'active' => ['prohibited'],
         ]);
-
 
         Trace::log('http.update', [
             'vehicle_id' => $vehicle->id,
             'payload' => $validated,
         ]);
 
-
         $vehicle->update($validated);
-
 
         return response()->json([
             'status' => 'updated',
             'data' => $vehicle,
         ]);
     }
-
-
-    public function destroy(Vehicle $vehicle)
-    {
-        $this->authorizeVehicle($vehicle);
-
-
-        Trace::log('http.destroy', [
-            'vehicle_id' => $vehicle->id,
-        ]);
-
-
-        $vehicle->delete();
-
-
-        return response()->json([
-            'status' => 'deleted',
-        ]);
-    }
-
 
     private function authorizeVehicle(Vehicle $vehicle): void
     {
