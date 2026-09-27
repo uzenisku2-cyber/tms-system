@@ -15,6 +15,7 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
             ->assertSee('Registr vozidel')
             ->assertSee('Založit nové vozidlo')
             ->assertSee('Správa vozidel')
+            ->assertSee('Životní cyklus')
             ->assertSee('data-registry-folder="create"', false)
             ->assertSee('data-registry-folder="manage"', false);
     }

@@ -22,12 +22,16 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
         self::assertStringContainsString('data-testid="vehicle-registry-administration"', $view);
         self::assertStringContainsString('data-registry-folder="create"', $view);
         self::assertStringContainsString('data-registry-folder="manage"', $view);
+        self::assertStringContainsString("subtab('lifecycle'", $view);
         self::assertStringContainsString("subtab('documents'", $view);
         self::assertStringContainsString("subtab('ownership'", $view);
         self::assertStringContainsString("subtab('responsibilities'", $view);
         self::assertStringContainsString("subtab('completion'", $view);
         self::assertStringContainsString("subtab('statuses'", $view);
         self::assertStringContainsString("subtab('history'", $view);
+        foreach (['lifecycleTargets=', 'can_manage_vehicles', 'expected_revision:revision', "method:'PUT'", 'window.confirm', 'error.status===409'] as $marker) {
+            self::assertStringContainsString($marker, $view);
+        }
         self::assertStringContainsString('const fuelTypes=', $view);
         self::assertStringContainsString("['diesel','Nafta']", $view);
         self::assertStringContainsString('expected_revision:current.vehicle.revision', $view);
