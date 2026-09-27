@@ -23,6 +23,7 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
         self::assertStringContainsString('data-registry-folder="create"', $view);
         self::assertStringContainsString('data-registry-folder="manage"', $view);
         self::assertStringContainsString("subtab('lifecycle'", $view);
+        self::assertStringContainsString("subtab('compliance'", $view);
         self::assertStringContainsString("subtab('documents'", $view);
         self::assertStringContainsString("subtab('ownership'", $view);
         self::assertStringContainsString("subtab('responsibilities'", $view);
@@ -35,6 +36,9 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
         self::assertStringContainsString('const fuelTypes=', $view);
         self::assertStringContainsString("['diesel','Nafta']", $view);
         self::assertStringContainsString('expected_revision:current.vehicle.revision', $view);
+        foreach (['compliance_records', 'record_uid', 'expected_compliance_revision', 'source_document_public_id', 'data-revise-compliance', "method:recordId?'PUT':'POST'", 'error.status===409'] as $marker) {
+            self::assertStringContainsString($marker, $view);
+        }
         self::assertStringContainsString('expected_document_revision', $view);
         self::assertStringContainsString('expected_ownership_revision', $view);
         self::assertStringContainsString('expected_responsibility_revision', $view);
