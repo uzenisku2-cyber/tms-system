@@ -62,6 +62,11 @@
         <dt>DPH</dt><dd>{{ $invoice['vat_amount'] }} {{ $invoice['currency'] }}</dd>
         <dt>K úhradě</dt><dd>{{ $invoice['gross_amount'] }} {{ $invoice['currency'] }}</dd>
     </dl></div>
-    <p class="notice">Platební účet není v evidenci dokladu uložen. Pokyny k platbě sdělte odběrateli samostatně.</p>
+    @if ($invoice['payment_iban'])
+        <p><strong>Účet pro platbu (IBAN):</strong> {{ $invoice['payment_iban'] }}<br>
+            <strong>Majitel účtu:</strong> {{ $invoice['payment_account_holder'] }}</p>
+    @else
+        <p class="notice">Platební účet není v evidenci dokladu uložen. Pokyny k platbě sdělte odběrateli samostatně.</p>
+    @endif
 </body>
 </html>

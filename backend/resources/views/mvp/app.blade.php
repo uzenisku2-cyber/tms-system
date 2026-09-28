@@ -16239,6 +16239,21 @@ const bindFuelWorkspace = () => {
                                     <button type="submit">Použít filtry</button>
                                 </form>
 
+                                <details class="drayvia-finance-card" data-invoice-payment-account hidden style="margin-top: 18px;">
+                                    <summary>Účet pro úhradu faktur</summary>
+                                    <p data-invoice-payment-current>Načítám aktuální účet…</p>
+                                    <form data-invoice-payment-form>
+                                        <div class="drayvia-billing-toolbar">
+                                            <label>IBAN <input name="iban" required maxlength="42" autocomplete="off"></label>
+                                            <label>Majitel účtu <input name="account_holder" required maxlength="255"></label>
+                                            <label>Zdroj potvrzení <input name="source_reference" required minlength="3" maxlength="255"></label>
+                                        </div>
+                                        <label>Důvod změny <textarea name="reason" required minlength="10" maxlength="1000"></textarea></label>
+                                        <button type="submit">Potvrdit nový účet</button>
+                                    </form>
+                                    <p data-invoice-payment-message role="status" aria-live="polite"></p>
+                                </details>
+
                                 <details class="drayvia-finance-card" data-customer-invoice-workspace hidden style="margin-top: 18px;">
                                     <summary>Vystavení faktury odběrateli</summary>
                                     <p>Vyberte finální kalkulace stejného odběratele a období. Údaje návrhu zkontrolujte před vydáním.</p>
@@ -26112,6 +26127,8 @@ const loadFinanceCustomers = async () => {
                 : 'Vlastní pohled: zobrazena je pouze vaše konečná částka. Údaje o DPH, firemních nákladech a marži API neposkytuje.';
             const invoicePanel = invoiceWorkspace();
             if (invoicePanel) invoicePanel.hidden = data.visibility !== 'company';
+            const paymentPanel = document.querySelector('[data-invoice-payment-account]');
+            if (paymentPanel) paymentPanel.hidden = data.visibility !== 'company';
             renderBillingCompanySummary(summary, data);
             renderBillingItems(items, data);
             renderBillingPagination(data.pagination);
@@ -26286,6 +26303,45 @@ const loadFinanceCustomers = async () => {
                 form.elements.taxable_supply_on.value ||= invoice.period_until || '';
             }
         };
+        const bindInvoicePaymentAccount = () => {
+            const root = document.querySelector('[data-invoice-payment-account]');
+            if (!root || root.dataset.paymentBound === '1') return;
+            root.dataset.paymentBound = '1';
+            const form = root.querySelector('[data-invoice-payment-form]');
+            const message = root.querySelector('[data-invoice-payment-message]');
+            const current = root.querySelector('[data-invoice-payment-current]');
+            const load = async () => {
+                try {
+                    const account = getPayload(await api('/api/v1/invoice-payment-account'));
+                    current.textContent = account
+                        ? `Aktuální účet: ${account.iban} · ${account.account_holder} · revize ${account.revision}`
+                        : 'Účet není nastaven. Vydaný doklad bude bez platebního účtu.';
+                } catch (error) {
+                    current.textContent = `Účet nelze načíst: ${error.message}`;
+                }
+            };
+            root.addEventListener('toggle', () => { if (root.open && !root.hidden) load(); });
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const button = form.querySelector('button[type="submit"]');
+                button.disabled = true;
+                message.textContent = 'Ukládám účet…';
+                try {
+                    const body = await api('/api/v1/invoice-payment-account', {
+                        method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(form))),
+                    });
+                    const account = getPayload(body);
+                    current.textContent = `Aktuální účet: ${account.iban} · ${account.account_holder} · revize ${account.revision}`;
+                    message.textContent = 'Nový účet byl potvrzen pro následující vydané faktury.';
+                    form.reset();
+                } catch (error) {
+                    message.textContent = `Účet nelze uložit: ${error.message}`;
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        };
+
         const bindCustomerInvoiceWorkspace = () => {
             const root = invoiceWorkspace();
             if (!root || root.dataset.invoiceBound === '1') return;
@@ -26593,6 +26649,7 @@ if (page === 'finance') {
             loadFinanceExternalCarrierPriceLists();
             loadFinanceCustomers();
             bindBillingOverview();
+            bindInvoicePaymentAccount();
             bindCustomerInvoiceWorkspace();
             loadBillingOverview();
         }

@@ -6,6 +6,7 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceDocumentController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceIssuanceController;
+use App\Modules\Pricing\Controllers\InvoicePaymentAccountController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
@@ -143,6 +144,13 @@ Route::middleware([
     )
     ->whereUuid('supplierFuelInvoice')
     ->name('supplier-fuel-invoices.rebilling-coverages.store');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->get('invoice-payment-account', [InvoicePaymentAccountController::class, 'show'])
+    ->name('invoice-payment-account.show');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post('invoice-payment-account', [InvoicePaymentAccountController::class, 'store'])
+    ->name('invoice-payment-account.store');
 
 Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
     ->post('customer-invoices', [CustomerInvoiceController::class, 'store'])
