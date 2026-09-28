@@ -155,4 +155,24 @@ final class BillingVatVisibilityUiTest extends TestCase
             self::assertStringContainsString($marker, $source);
         }
     }
+
+    public function test_customer_invoice_workspace_is_company_scoped_and_has_separate_draft_and_issue_commands(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/app.blade.php'));
+
+        self::assertIsString($source);
+        foreach ([
+            'data-customer-invoice-workspace',
+            'data-customer-invoice-draft-form',
+            'data-customer-invoice-issue-form',
+            'data-customer-invoice-preview',
+            "invoicePanel.hidden = data.visibility !== 'company'",
+            "await api('/api/v1/customer-invoices'",
+            '}/issue`',
+            'renderInvoiceDetail(detail)',
+            'bindCustomerInvoiceWorkspace();',
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+    }
 }
