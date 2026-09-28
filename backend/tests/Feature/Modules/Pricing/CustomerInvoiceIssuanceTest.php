@@ -14,11 +14,13 @@ use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentityEvent;
 use App\Modules\Pricing\Models\BillingDocumentLine;
+use App\Modules\Pricing\Models\CustomerInvoicePdfArtifact;
 use App\Modules\Pricing\Models\FinancialCalculation;
 use App\Modules\Pricing\Models\OrganizationTaxProfile;
 use App\Modules\Pricing\Models\PriceList;
 use App\Modules\Pricing\Models\PriceListVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
@@ -186,6 +188,16 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         ])->assertCreated()->assertJsonPath('data.revision', 2);
         $this->get($url.'/'.$invoiceId.'/document')->assertOk()
             ->assertSee('CZ6508000000192000145399')->assertDontSee('CZ5508000000001234567899');
+        Storage::fake('local');
+        $firstPdf = $this->get($url.'/'.$invoiceId.'/pdf')->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+        $pdfBytes = $firstPdf->getContent();
+        self::assertIsString($pdfBytes);
+        self::assertStringStartsWith('%PDF', $pdfBytes);
+        $artifact = CustomerInvoicePdfArtifact::query()->sole();
+        self::assertSame(hash('sha256', $pdfBytes), $artifact->pdf_sha256);
+        self::assertSame($pdfBytes, Storage::disk('local')->get($artifact->storage_path));
+        self::assertSame($pdfBytes, $this->get($url.'/'.$invoiceId.'/pdf')->assertOk()->getContent());
         $customer->forceFill(['street' => 'Changed 99'])->save();
         $this->getJson($url.'/'.$invoiceId)->assertOk()
             ->assertJsonPath('data.customer.street', 'Side 2');
@@ -212,8 +224,12 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         $this->withHeader('X-Organization-ID', (string) $customer->id)
             ->get($url.'/'.$invoiceId.'/document')->assertOk()
             ->assertSee('FV-2026-001');
+        self::assertSame($pdfBytes, $this->withHeader('X-Organization-ID', (string) $customer->id)
+            ->get($url.'/'.$invoiceId.'/pdf')->assertOk()->getContent());
         Sanctum::actingAs($user);
         $this->withHeader('X-Organization-ID', (string) $issuer->id);
+        Storage::disk('local')->put($artifact->storage_path, 'tampered');
+        $this->get($url.'/'.$invoiceId.'/pdf')->assertStatus(409);
         $issuePayload['document_number'] = 'FV-2026-002';
         $this->postJson($issueUrl, $issuePayload)->assertUnprocessable()
             ->assertJsonValidationErrors('idempotency_key');
