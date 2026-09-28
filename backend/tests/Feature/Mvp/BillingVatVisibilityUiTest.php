@@ -206,6 +206,9 @@ final class BillingVatVisibilityUiTest extends TestCase
         self::assertStringContainsString('data-invoice-delivery-form', $source);
         self::assertStringContainsString('data-invoice-email-form', $source);
         self::assertStringContainsString('data-invoice-bank-form', $source);
+        self::assertStringContainsString('data-customer-receivables', $source);
+        self::assertStringContainsString('loadCustomerReceivables', $source);
+        self::assertStringContainsString('/api/v1/customer-receivables', $source);
         self::assertStringContainsString('loadInvoiceBankPayments(invoice.public_id)', $source);
         self::assertStringContainsString('}/bank-payments`', $source);
         self::assertStringContainsString('loadInvoiceEmailDispatch(invoice.public_id)', $source);
