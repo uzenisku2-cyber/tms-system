@@ -175,4 +175,24 @@ final class BillingVatVisibilityUiTest extends TestCase
             self::assertStringContainsString($marker, $source);
         }
     }
+
+    public function test_invoice_workspace_loads_customers_and_calculations_and_opens_invoice_detail(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/app.blade.php'));
+
+        self::assertIsString($source);
+        foreach ([
+            'data-invoice-customer-select',
+            'data-invoice-calculation-choices',
+            'data-invoice-load-more',
+            'data-invoice-open=',
+            'const loadInvoiceCustomers = async () => {',
+            'const loadInvoiceCalculations = async (reset = false) => {',
+            "['approved', 'closed'].includes(item.status)",
+            'invoiceState.selectedIds',
+            'renderInvoiceDetail(invoice)',
+        ] as $marker) {
+            self::assertStringContainsString($marker, $source);
+        }
+    }
 }

@@ -16244,13 +16244,18 @@ const bindFuelWorkspace = () => {
                                     <p>Vyberte finální kalkulace stejného odběratele a období. Údaje návrhu zkontrolujte před vydáním.</p>
                                     <form data-customer-invoice-draft-form>
                                         <div class="drayvia-billing-toolbar">
-                                            <label>Číselné ID organizace odběratele <input type="number" min="1" required name="customer_organization_id"></label>
+                                            <label>Odběratel <select name="customer_organization_id" data-invoice-customer-select><option value="">Načítám odběratele…</option></select></label>
+                                            <label>Číselné ID odběratele (pokud není v seznamu) <input type="number" min="1" name="customer_organization_id_manual"></label>
                                             <label>Období od <input type="date" required name="period_from"></label>
                                             <label>Období do <input type="date" required name="period_until"></label>
                                         </div>
-                                        <label>ID schválených nebo uzavřených kalkulací (UUID, jedno na řádek)
-                                            <textarea name="calculation_public_ids" rows="4" required style="width:100%"></textarea>
-                                        </label>
+                                        <div data-invoice-calculation-choices role="group" aria-label="Finální kalkulace"></div>
+                                        <button type="button" data-invoice-load-more>Načíst další kalkulace</button>
+                                        <details><summary>Zadat UUID kalkulací ručně</summary>
+                                            <label>UUID kalkulací (jedno na řádek)
+                                                <textarea name="calculation_public_ids" rows="3" style="width:100%"></textarea>
+                                            </label>
+                                        </details>
                                         <button type="submit">Vytvořit návrh faktury</button>
                                     </form>
                                     <div data-customer-invoice-message role="status" aria-live="polite"></div>
@@ -26045,7 +26050,8 @@ const loadFinanceCustomers = async () => {
                     : `<td>${billingMoney(item.amount, item.currency)}</td>`;
 
                 return `<tr>
-                    <td>${billingDocumentLabel(item.document_type)}</td>
+                    <td>${billingDocumentLabel(item.document_type)}${companyView && item.document_type === 'customer_invoice' && /^[0-9a-f-]{36}$/i.test(item.public_id || '')
+                        ? ` <button type="button" data-invoice-open="${item.public_id}">Otevřít</button>` : ''}</td>
                     <td>${party}</td>
                     <td>${billingPeriod(item)}</td>
                     <td>${billingStatusLabel(item.status)}</td>
@@ -26162,7 +26168,8 @@ const loadFinanceCustomers = async () => {
 
         // S123 CUSTOMER INVOICE DRAFT AND ISSUANCE WORKSPACE
         const invoiceWorkspace = () => document.querySelector('[data-customer-invoice-workspace]');
-        const invoiceState = { publicId: null, draftKey: null, draftFingerprint: null, issueKey: null, issueFingerprint: null };
+        const invoiceState = { publicId: null, draftKey: null, draftFingerprint: null, issueKey: null, issueFingerprint: null,
+            choicePage: 0, choiceLastPage: 1, selectedIds: new Set() };
         const invoiceMessage = (message) => {
             const host = invoiceWorkspace()?.querySelector('[data-customer-invoice-message]');
             if (host) host.textContent = message;
@@ -26173,6 +26180,62 @@ const loadFinanceCustomers = async () => {
             [party?.postal_code, party?.city].filter(Boolean).join(' '), party?.country_code,
             party?.registration_number ? `IČO ${party.registration_number}` : null,
             party?.vat_number ? `DIČ ${party.vat_number}` : null].filter(Boolean).join(', ');
+        const loadInvoiceCustomers = async () => {
+            const select = invoiceWorkspace()?.querySelector('[data-invoice-customer-select]');
+            const endpoint = document.querySelector('[data-customer-index-endpoint]')?.dataset.customerIndexEndpoint;
+            if (!select || !endpoint) return;
+            try {
+                const customers = getPayload(await api(endpoint));
+                select.replaceChildren();
+                const placeholder = new Option('Vyberte odběratele', '');
+                select.appendChild(placeholder);
+                (Array.isArray(customers) ? customers : []).forEach((item) => {
+                    const party = item.customer || {};
+                    const id = Number(party.id || party.organization_id);
+                    if (Number.isInteger(id) && id > 0) {
+                        select.appendChild(new Option(party.name || `Odběratel ${id}`, String(id)));
+                    }
+                });
+                if (select.options.length === 1) invoiceMessage('U odběratelů nejsou dostupná číselná ID organizací.');
+            } catch (error) {
+                invoiceMessage(`Odběratele nelze načíst: ${error.message}`);
+            }
+        };
+        const loadInvoiceCalculations = async (reset = false) => {
+            const root = invoiceWorkspace();
+            const host = root?.querySelector('[data-invoice-calculation-choices]');
+            if (!host) return;
+            if (reset) {
+                invoiceState.choicePage = 0;
+                host.replaceChildren();
+            }
+            if (invoiceState.choicePage >= invoiceState.choiceLastPage) return;
+            const page = invoiceState.choicePage + 1;
+            try {
+                const result = getPayload(await api(`/api/v1/financial-calculations?per_page=100&page=${page}&sort_by=calculated_at&sort_dir=desc`));
+                const items = Array.isArray(result.items) ? result.items : (result.items?.data || []);
+                items.filter((item) => ['approved', 'closed'].includes(item.status)).forEach((item) => {
+                    const label = document.createElement('label');
+                    label.style.display = 'block';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = item.public_id;
+                    checkbox.checked = invoiceState.selectedIds.has(item.public_id);
+                    checkbox.addEventListener('change', () => {
+                        if (checkbox.checked) invoiceState.selectedIds.add(item.public_id);
+                        else invoiceState.selectedIds.delete(item.public_id);
+                    });
+                    label.append(checkbox, document.createTextNode(` ${item.daily_report_public_id || item.public_id} · ${item.status} · ${billingMoney(item.total_amount, item.currency)} · ${item.calculated_at || ''}`));
+                    host.appendChild(label);
+                });
+                invoiceState.choicePage = page;
+                invoiceState.choiceLastPage = Number(result.pagination?.last_page || page);
+                root.querySelector('[data-invoice-load-more]').hidden = page >= invoiceState.choiceLastPage;
+                if (!host.childElementCount) host.textContent = 'Žádné schválené nebo uzavřené kalkulace na načtených stranách.';
+            } catch (error) {
+                invoiceMessage(`Kalkulace nelze načíst: ${error.message}`);
+            }
+        };
         const renderInvoiceDetail = (invoice) => {
             const root = invoiceWorkspace();
             if (!root) return;
@@ -26227,11 +26290,33 @@ const loadFinanceCustomers = async () => {
             root.dataset.invoiceBound = '1';
             const draftForm = root.querySelector('[data-customer-invoice-draft-form]');
             const issueForm = root.querySelector('[data-customer-invoice-issue-form]');
+            root.addEventListener('toggle', () => {
+                if (!root.open) return;
+                loadInvoiceCustomers();
+                loadInvoiceCalculations(true);
+            });
+            root.querySelector('[data-invoice-load-more]').addEventListener('click', () => loadInvoiceCalculations());
+            document.querySelector('[data-billing-overview-root]')?.addEventListener('click', async (event) => {
+                const button = event.target.closest('[data-invoice-open]');
+                if (!button || root.hidden) return;
+                root.open = true;
+                invoiceMessage('Načítám fakturu…');
+                try {
+                    const invoice = getPayload(await api(`/api/v1/customer-invoices/${encodeURIComponent(button.dataset.invoiceOpen)}`));
+                    invoiceState.publicId = invoice.public_id;
+                    renderInvoiceDetail(invoice);
+                    invoiceMessage('Detail faktury je načten.');
+                } catch (error) {
+                    invoiceMessage(`Fakturu nelze načíst: ${error.message}`);
+                }
+            });
             draftForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const ids = invoiceInput(draftForm, 'calculation_public_ids').split(/[\s,;]+/).filter(Boolean);
+                const ids = [...new Set([...invoiceState.selectedIds,
+                    ...invoiceInput(draftForm, 'calculation_public_ids').split(/[\s,;]+/).filter(Boolean)])];
+                if (!ids.length) { invoiceMessage('Vyberte alespoň jednu kalkulaci.'); return; }
                 const payload = {
-                    customer_organization_id: Number(invoiceInput(draftForm, 'customer_organization_id')),
+                    customer_organization_id: Number(invoiceInput(draftForm, 'customer_organization_id_manual') || invoiceInput(draftForm, 'customer_organization_id')),
                     period_from: invoiceInput(draftForm, 'period_from'),
                     period_until: invoiceInput(draftForm, 'period_until'),
                     calculation_public_ids: ids,
