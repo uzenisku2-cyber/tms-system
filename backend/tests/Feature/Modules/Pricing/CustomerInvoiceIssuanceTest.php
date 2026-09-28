@@ -10,17 +10,22 @@ use App\Modules\Drivers\Models\Driver;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\OrganizationRelationship;
+use App\Modules\Pricing\Jobs\SendCustomerInvoiceEmailJob;
+use App\Modules\Pricing\Mail\CustomerInvoiceEmail;
 use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentityEvent;
 use App\Modules\Pricing\Models\BillingDocumentLine;
 use App\Modules\Pricing\Models\CustomerInvoiceDeliveryEvent;
+use App\Modules\Pricing\Models\CustomerInvoiceEmailDispatch;
 use App\Modules\Pricing\Models\CustomerInvoicePdfArtifact;
 use App\Modules\Pricing\Models\FinancialCalculation;
 use App\Modules\Pricing\Models\OrganizationTaxProfile;
 use App\Modules\Pricing\Models\PriceList;
 use App\Modules\Pricing\Models\PriceListVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -227,6 +232,31 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         $this->getJson($deliveryUrl)->assertOk()->assertJsonPath('data.current_revision', 2)
             ->assertJsonPath('data.events.0.recipient', 'billing@example.test')
             ->assertJsonPath('data.events.1.recipient', 'corrected@example.test');
+        Queue::fake();
+        Mail::fake();
+        config()->set('mail.default', 'smtp');
+        config()->set('mail.from.address', 'invoices@issuer.test');
+        $emailUrl = $url.'/'.$invoiceId.'/email-dispatch';
+        $email = [
+            'idempotency_key' => (string) Str::uuid(), 'pdf_sha256' => $artifact->pdf_sha256,
+            'recipient_email' => 'customer@example.test',
+            'reason' => 'Send the approved invoice to the customer billing address.',
+        ];
+        $this->postJson($emailUrl, $email)->assertStatus(202)
+            ->assertJsonPath('data.status', 'queued');
+        $this->postJson($emailUrl, $email)->assertStatus(202)->assertJsonPath('data.status', 'queued');
+        Queue::assertPushed(SendCustomerInvoiceEmailJob::class, 1);
+        $this->postJson($emailUrl, array_replace($email, ['idempotency_key' => (string) Str::uuid()]))
+            ->assertStatus(409);
+        $dispatch = CustomerInvoiceEmailDispatch::query()->sole();
+        (new SendCustomerInvoiceEmailJob($dispatch->id))->handle();
+        Mail::assertSent(CustomerInvoiceEmail::class, 1);
+        $this->getJson($emailUrl)->assertOk()->assertJsonPath('data.status', 'accepted')
+            ->assertJsonPath('data.pdf_sha256', $artifact->pdf_sha256);
+        (new SendCustomerInvoiceEmailJob($dispatch->id))->handle();
+        Mail::assertSent(CustomerInvoiceEmail::class, 1);
+        $this->getJson($deliveryUrl)->assertOk()->assertJsonPath('data.current_revision', 3)
+            ->assertJsonPath('data.events.2.evidence_reference', 'email-dispatch:'.$dispatch->public_id);
         $customer->forceFill(['street' => 'Changed 99'])->save();
         $this->getJson($url.'/'.$invoiceId)->assertOk()
             ->assertJsonPath('data.customer.street', 'Side 2');
@@ -256,12 +286,13 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         self::assertSame($pdfBytes, $this->withHeader('X-Organization-ID', (string) $customer->id)
             ->get($url.'/'.$invoiceId.'/pdf')->assertOk()->getContent());
         $this->withHeader('X-Organization-ID', (string) $customer->id)
-            ->getJson($deliveryUrl)->assertOk()->assertJsonPath('data.current_revision', 2);
+            ->getJson($deliveryUrl)->assertOk()->assertJsonPath('data.current_revision', 3);
         $this->withHeader('X-Organization-ID', (string) $customer->id)
             ->postJson($deliveryUrl, array_replace($correction, ['idempotency_key' => (string) Str::uuid(), 'expected_revision' => 2]))
             ->assertForbidden();
         Sanctum::actingAs($user);
         $this->withHeader('X-Organization-ID', (string) $issuer->id);
+        $this->getJson($emailUrl)->assertOk()->assertJsonPath('data.status', 'accepted');
         Storage::disk('local')->put($artifact->storage_path, 'tampered');
         $this->get($url.'/'.$invoiceId.'/pdf')->assertStatus(409);
         $this->postJson($deliveryUrl, array_replace($correction, ['idempotency_key' => (string) Str::uuid(), 'expected_revision' => 2]))->assertStatus(409);
