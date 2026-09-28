@@ -56,6 +56,9 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
         foreach (['financing_agreements', 'financing_uid', 'expected_financing_revision', 'source_document_public_id', 'data-revise-financing', "method:recordId?'PUT':'POST'", 'error.status===409'] as $marker) {
             self::assertStringContainsString($marker, $view);
         }
+        foreach (['installments', 'installment_uid', 'expected_schedule_revision', 'expected_installment_revision', 'data-revise-installment', 'bindInstallments()', 'source_document_public_id'] as $marker) {
+            self::assertStringContainsString($marker, $view);
+        }
         foreach (['installment_schedules', 'schedule_uid', 'expected_financing_revision', 'expected_schedule_revision', 'source_document_public_id', 'data-revise-schedule', "method:recordId?'PUT':'POST'", 'error.status===409'] as $marker) {
             self::assertStringContainsString($marker, $view);
         }
