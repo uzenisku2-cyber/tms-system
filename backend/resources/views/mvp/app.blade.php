@@ -16279,6 +16279,22 @@ const bindFuelWorkspace = () => {
                                         <div data-customer-invoice-preview></div>
                                     <button type="button" data-invoice-print hidden>Tisk / uložit jako PDF</button>
                                     <button type="button" data-invoice-pdf hidden>Stáhnout uložené PDF</button>
+                                        <details data-invoice-delivery-panel hidden>
+                                            <summary>Evidence doručení faktury</summary>
+                                            <p>Ruční záznam o předání uloženého PDF. Záznam neodesílá e-mail ani sám nepotvrzuje převzetí.</p>
+                                            <p data-invoice-delivery-status role="status"></p>
+                                            <ol data-invoice-delivery-history></ol>
+                                            <form data-invoice-delivery-form>
+                                                <div class="drayvia-billing-toolbar">
+                                                    <label>Způsob <select name="method" required><option value="email">E-mail</option><option value="portal">Portál</option><option value="handover">Osobní předání</option><option value="post">Pošta</option><option value="other">Jiný</option></select></label>
+                                                    <label>Příjemce <input name="recipient" maxlength="255" required></label>
+                                                    <label>Čas předání <input type="datetime-local" name="delivered_at" required></label>
+                                                    <label>Reference dokladu o předání <input name="evidence_reference" maxlength="255" required></label>
+                                                </div>
+                                                <label>Důvod záznamu nebo opravy <textarea name="reason" minlength="10" maxlength="1000" required></textarea></label>
+                                                <button type="submit">Uložit záznam doručení</button>
+                                            </form>
+                                        </details>
                                         <form data-customer-invoice-issue-form hidden>
                                             <div class="drayvia-billing-toolbar">
                                                 <label>Číslo faktury <input name="document_number" maxlength="64" required></label>
@@ -26265,6 +26281,8 @@ const loadFinanceCustomers = async () => {
             form.hidden = invoice.status !== 'draft';
             root.querySelector('[data-invoice-print]').hidden = invoice.status === 'draft';
             root.querySelector('[data-invoice-pdf]').hidden = invoice.status === 'draft';
+            root.querySelector('[data-invoice-delivery-panel]').hidden = invoice.status === 'draft';
+            if (invoice.status !== 'draft') loadInvoiceDeliveries(invoice.public_id);
             preview.replaceChildren();
             const rows = [
                 ['Stav', billingStatusLabel(invoice.status)],
@@ -26344,12 +26362,74 @@ const loadFinanceCustomers = async () => {
             });
         };
 
+        const loadInvoiceDeliveries = async (publicId) => {
+            const root = invoiceWorkspace();
+            const panel = root?.querySelector('[data-invoice-delivery-panel]');
+            if (!panel || !publicId) return;
+            const status = panel.querySelector('[data-invoice-delivery-status]');
+            const history = panel.querySelector('[data-invoice-delivery-history]');
+            panel.dataset.revision = '0';
+            panel.dataset.pdfSha256 = '';
+            history.replaceChildren();
+            try {
+                const result = getPayload(await api(`/api/v1/customer-invoices/${encodeURIComponent(publicId)}/deliveries`));
+                if (invoiceState.publicId !== publicId) return;
+                panel.dataset.revision = String(result.current_revision);
+                panel.dataset.pdfSha256 = result.pdf_sha256 || '';
+                status.textContent = result.pdf_sha256
+                    ? `Uložené PDF: SHA-256 ${result.pdf_sha256}. Aktuální revize ${result.current_revision}.`
+                    : 'Nejdříve stáhněte uložené PDF a před záznamem je skutečně předejte.';
+                (result.events || []).forEach((entry) => {
+                    const item = document.createElement('li');
+                    item.textContent = `Revize ${entry.revision}: ${entry.method}, ${entry.recipient}, ${entry.delivered_at}; reference ${entry.evidence_reference}; důvod ${entry.reason}; zapsáno ${entry.recorded_at}.`;
+                    history.appendChild(item);
+                });
+            } catch (error) {
+                status.textContent = `Historii doručení nelze načíst: ${error.message}`;
+            }
+        };
         const bindCustomerInvoiceWorkspace = () => {
             const root = invoiceWorkspace();
             if (!root || root.dataset.invoiceBound === '1') return;
             root.dataset.invoiceBound = '1';
             const draftForm = root.querySelector('[data-customer-invoice-draft-form]');
             const issueForm = root.querySelector('[data-customer-invoice-issue-form]');
+            const deliveryForm = root.querySelector('[data-invoice-delivery-form]');
+            deliveryForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!invoiceState.publicId) return;
+                const panel = root.querySelector('[data-invoice-delivery-panel]');
+                const status = panel.querySelector('[data-invoice-delivery-status]');
+                const button = deliveryForm.querySelector('button[type="submit"]');
+                const localTime = invoiceInput(deliveryForm, 'delivered_at');
+                const timestamp = new Date(localTime);
+                if (!Number.isFinite(timestamp.getTime())) { status.textContent = 'Zadejte platný čas předání.'; return; }
+                const payload = {
+                    expected_revision: Number(panel.dataset.revision), pdf_sha256: panel.dataset.pdfSha256,
+                    method: invoiceInput(deliveryForm, 'method'), recipient: invoiceInput(deliveryForm, 'recipient'),
+                    delivered_at: timestamp.toISOString(), evidence_reference: invoiceInput(deliveryForm, 'evidence_reference'),
+                    reason: invoiceInput(deliveryForm, 'reason'),
+                };
+                const fingerprint = JSON.stringify([invoiceState.publicId, payload]);
+                if (fingerprint !== invoiceState.deliveryFingerprint) {
+                    invoiceState.deliveryKey = invoiceUuid();
+                    invoiceState.deliveryFingerprint = fingerprint;
+                }
+                button.disabled = true;
+                try {
+                    await api(`/api/v1/customer-invoices/${encodeURIComponent(invoiceState.publicId)}/deliveries`, {
+                        method: 'POST', body: JSON.stringify({ ...payload, idempotency_key: invoiceState.deliveryKey }),
+                    });
+                    invoiceState.deliveryFingerprint = null;
+                    deliveryForm.reset();
+                    await loadInvoiceDeliveries(invoiceState.publicId);
+                    status.textContent += ' Záznam byl uložen; historii lze dohledat výše.';
+                } catch (error) {
+                    status.textContent = `Záznam nelze uložit: ${error.message}. Po konfliktu znovu otevřete detail a ověřte revizi.`;
+                } finally {
+                    button.disabled = false;
+                }
+            });
             root.addEventListener('toggle', () => {
                 if (!root.open) return;
                 loadInvoiceCustomers();
