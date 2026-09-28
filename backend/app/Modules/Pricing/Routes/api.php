@@ -20,6 +20,7 @@ use App\Modules\Pricing\Controllers\FinancialSettlementAdministrationReadControl
 use App\Modules\Pricing\Controllers\FinancialSettlementBankMatchCandidateController;
 use App\Modules\Pricing\Controllers\FinancialSettlementBankPaymentReconciliationController;
 use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
+use App\Modules\Pricing\Controllers\InvoicePaymentAccountController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankMatchCandidateController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankPaymentController;
@@ -143,6 +144,13 @@ Route::middleware([
     )
     ->whereUuid('supplierFuelInvoice')
     ->name('supplier-fuel-invoices.rebilling-coverages.store');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->get('invoice-payment-account', [InvoicePaymentAccountController::class, 'show'])
+    ->name('invoice-payment-account.show');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post('invoice-payment-account', [InvoicePaymentAccountController::class, 'store'])
+    ->name('invoice-payment-account.store');
 
 Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
     ->post('customer-invoices', [CustomerInvoiceController::class, 'store'])

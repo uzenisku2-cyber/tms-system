@@ -1,0 +1,3 @@
+# Sprint 125: Invoice payment instructions
+
+Master organization finance managers can confirm an IBAN and account holder with a source reference and change reason. Each change appends an organization-scoped revision; basic IBAN syntax and check digits are validated, but bank ownership is not independently verified. The latest confirmed account is copied into the commercial identity snapshot when a customer invoice is issued. Older issued invoices retain their original payment instructions after a profile change. The printable document shows that snapshot; historical invoices without a payment account still show an explicit separate-instructions notice. No bank transaction, payment matching, delivery or accounting posting is created.

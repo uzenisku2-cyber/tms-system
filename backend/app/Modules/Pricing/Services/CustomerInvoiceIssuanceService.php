@@ -10,6 +10,7 @@ use App\Modules\Organizations\Models\Organization;
 use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentityEvent;
+use App\Modules\Pricing\Models\OrganizationInvoicePaymentAccount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -94,7 +95,12 @@ final class CustomerInvoiceIssuanceService
                 || $grossCents !== $this->cents((string) $document->gross_amount)) {
                 $this->invalid('customer_invoice', 'Invoice lines do not match document totals.');
             }
+            $paymentAccount = OrganizationInvoicePaymentAccount::query()
+                ->where('organization_id', $ownerId)->orderByDesc('revision')->first();
             $issuedSnapshot = [
+                'payment_iban' => $paymentAccount?->iban,
+                'payment_account_holder' => $paymentAccount?->account_holder,
+                'payment_account_revision' => $paymentAccount?->revision,
                 'issuer' => $issuer, 'customer' => $customer,
                 'document_number' => $data['document_number'],
                 'issued_on' => $data['issued_on'], 'taxable_supply_on' => $data['taxable_supply_on'] ?? null,

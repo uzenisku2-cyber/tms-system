@@ -185,6 +185,8 @@ final class CustomerInvoiceDraftService
             'issuer' => $snapshot['issuer'] ?? null, 'customer' => $snapshot['customer'] ?? null,
             'document_number' => $identity?->document_number,
             'variable_symbol' => $identity?->variable_symbol,
+            'payment_iban' => $snapshot['payment_iban'] ?? null,
+            'payment_account_holder' => $snapshot['payment_account_holder'] ?? null,
             'issued_on' => $identity ? (string) $identity->getRawOriginal('issued_on') : null,
             'taxable_supply_on' => $identity && $identity->getRawOriginal('taxable_supply_on') !== null
                 ? (string) $identity->getRawOriginal('taxable_supply_on') : null,

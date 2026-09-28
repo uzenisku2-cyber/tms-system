@@ -146,11 +146,20 @@ final class CustomerInvoiceIssuanceTest extends TestCase
             'issued_on' => '2026-09-28', 'taxable_supply_on' => '2026-09-10',
             'due_on' => '2026-10-14', 'reason' => 'Approved for customer billing.',
         ];
+        $this->postJson('/api/v1/invoice-payment-account', [
+            'iban' => 'CZ0008000000192000145399', 'account_holder' => 'Issuer',
+            'source_reference' => 'Invalid account', 'reason' => 'Reject invalid check digits.',
+        ])->assertUnprocessable()->assertJsonValidationErrors('iban');
+        $this->postJson('/api/v1/invoice-payment-account', [
+            'iban' => 'CZ6508000000192000145399', 'account_holder' => 'Issuer',
+            'source_reference' => 'Bank contract 2026', 'reason' => 'Confirmed new invoice account.',
+        ])->assertCreated()->assertJsonPath('data.revision', 1);
         $issueUrl = $url.'/'.$invoiceId.'/issue';
         $this->postJson($issueUrl, $issuePayload)->assertOk()
             ->assertJsonPath('data.status', 'approved')
             ->assertJsonPath('data.document_number', 'FV-2026-001')
             ->assertJsonPath('data.content.gross_amount', '121.00')
+            ->assertJsonPath('data.content.payment_iban', 'CZ6508000000192000145399')
             ->assertJsonPath('data.content.lines.0.gross_amount', '121.00');
         $this->postJson($issueUrl, $issuePayload)->assertOk()
             ->assertJsonPath('data.document_number', 'FV-2026-001');
@@ -167,6 +176,16 @@ final class CustomerInvoiceIssuanceTest extends TestCase
             ->assertSee('Side 2')
             ->assertSee('121.00')
             ->assertSee('2026001');
+        $this->postJson('/api/v1/invoice-payment-account', [
+            'iban' => 'CZ0008000000192000145399', 'account_holder' => 'Issuer',
+            'source_reference' => 'Invalid account', 'reason' => 'Reject invalid check digits.',
+        ])->assertUnprocessable()->assertJsonValidationErrors('iban');
+        $this->postJson('/api/v1/invoice-payment-account', [
+            'iban' => 'CZ5508000000001234567899', 'account_holder' => 'Issuer',
+            'source_reference' => 'Bank contract 2026 revision', 'reason' => 'Confirmed a later bank account.',
+        ])->assertCreated()->assertJsonPath('data.revision', 2);
+        $this->get($url.'/'.$invoiceId.'/document')->assertOk()
+            ->assertSee('CZ6508000000192000145399')->assertDontSee('CZ5508000000001234567899');
         $customer->forceFill(['street' => 'Changed 99'])->save();
         $this->getJson($url.'/'.$invoiceId)->assertOk()
             ->assertJsonPath('data.customer.street', 'Side 2');
