@@ -8340,330 +8340,147 @@ summaryParts.push(
 
         </div>
     `;
-const calendarJuly2026 = {
-        workingDays: 22,
-
-        drivers: [
-            {
-                key: 'vit',
-                name: 'Hrůza Vít',
-                shortName: 'HRŮZA VÍT',
-                working: [1, 2, 7, 8, 9, 13, 14, 15, 16, 17, 28, 29, 30, 31]
-            },
-            {
-                key: 'vojtech',
-                name: 'Hrůza Vojtěch',
-                shortName: 'HRŮZA VOJTĚCH',
-                working: [1, 2, 3, 8, 9, 14, 15, 17, 20, 21, 22, 24, 28, 29, 30, 31]
-            },
-            {
-                key: 'dominik',
-                name: 'Kökörčený Dominik',
-                shortName: 'KÖKÖRČENÝ DOMINIK',
-                working: [1, 2, 3, 7, 8, 10, 15, 20, 21, 22, 23, 24, 27, 28, 29, 31]
-            },
-            {
-                key: 'milos',
-                name: 'Kökörčený Miloš',
-                shortName: 'KÖKÖRČENÝ MILOŠ',
-                working: [1, 2, 3, 7, 8, 9, 10, 13, 15, 16, 17, 20, 21, 22, 23, 24, 27, 30, 31]
-            }
-        ]
+    const calendarState = {
+        month: null,
+        drivers: [],
+        days: [],
+        canConfirm: false,
+        loading: false,
+        error: ''
     };
 
-    const calendarDayNames = [
-        'NE',
-        'PO',
-        'ÚT',
-        'ST',
-        'ČT',
-        'PÁ',
-        'SO'
-    ];
-
+    const calendarDayNames = ['NE', 'PO', 'ÚT', 'ST', 'ČT', 'PÁ', 'SO'];
+    const calendarDate = (day) => `${selectedMonth}-${String(day).padStart(2, '0')}`;
     const calendarDaysInMonth = () => {
-        const [year, month] = selectedMonth
-            .split('-')
-            .map(Number);
-
-        return new Date(
-            year,
-            month,
-            0
-        ).getDate();
+        const [year, month] = selectedMonth.split('-').map(Number);
+        return new Date(year, month, 0).getDate();
     };
-
     const calendarDayMeta = (day) => {
-        const [year, month] = selectedMonth
-            .split('-')
-            .map(Number);
-
-        const date = new Date(
-            year,
-            month - 1,
-            day,
-            12,
-            0,
-            0
-        );
-
-        const weekDay = date.getDay();
-        const isWeekend =
-            weekDay === 0 ||
-            weekDay === 6;
-
-        const isJuly2026Holiday =
-            selectedMonth === '2026-07' &&
-            day === 6;
-
-        let type = 'Pracovní den';
-        let css = 'workday';
-
-        if (isWeekend) {
-            type = 'Volný den';
-            css = 'weekend';
-        }
-        else if (isJuly2026Holiday) {
-            type = 'Státní svátek';
-            css = 'holiday';
-        }
-
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const weekDay = new Date(year, month - 1, day, 12).getDay();
         return {
             weekDay: calendarDayNames[weekDay],
-            type,
-            css
+            css: [0, 6].includes(weekDay) ? 'weekend' : 'workday',
+            type: [0, 6].includes(weekDay) ? 'Víkend' : 'Pracovní den'
         };
     };
-
-    const calendarStatus = (
-        driver,
-        day
-    ) => {
-        if (selectedMonth !== '2026-07') {
-            return null;
-        }
-
-        return driver.working.includes(day)
-            ? 'Pracuji'
-            : 'Volno';
+    const calendarEntry = (driverId, date) => calendarState.days.find(
+        (item) => Number(item.driver_id) === Number(driverId) && item.date === date
+    );
+    const calendarStatus = (item) => {
+        if (!item) return ['—', 'unset'];
+        if (item.decision === 'rejected') return ['ZAMÍTNUTO', 'off'];
+        const label = item.availability === 'available' ? 'DOSTUPNÝ' : 'NEDOSTUPNÝ';
+        return [item.decision === 'pending' ? `${label} · ČEKÁ` : label,
+            item.decision === 'pending' ? 'unset' : (item.availability === 'available' ? 'working' : 'off')];
     };
-
     const calendarRows = () => {
         const rows = [];
-        const days = calendarDaysInMonth();
-
-        for (let day = 1; day <= days; day++) {
+        for (let day = 1; day <= calendarDaysInMonth(); day++) {
+            const date = calendarDate(day);
             const meta = calendarDayMeta(day);
-
-            const driverCells = calendarJuly2026.drivers
-                .map((driver) => {
-                    const status = calendarStatus(
-                        driver,
-                        day
-                    );
-
-                    if (!status) {
-                        return `
-                            <td class="drayvia-calendar-status-cell">
-                                <span class="drayvia-calendar-status unset">
-                                    —
-                                </span>
-                            </td>
-                        `;
-                    }
-
-                    const statusClass =
-                        status === 'Pracuji'
-                            ? 'working'
-                            : 'off';
-
-                    return `
-                        <td class="drayvia-calendar-status-cell">
-                            <span class="drayvia-calendar-status ${statusClass}">
-                                ${status.toUpperCase()}
-                            </span>
-                        </td>
-                    `;
-                })
-                .join('');
-
-            rows.push(`
-                <tr class="drayvia-month-calendar-row ${meta.css}">
-                    <td class="drayvia-calendar-date">
-                        ${String(day).padStart(2, '0')}.${selectedMonth.slice(5, 7)}.${selectedMonth.slice(0, 4)}
-                    </td>
-
-                    <td class="drayvia-calendar-weekday">
-                        ${meta.weekDay}
-                    </td>
-
-                    <td>
-                        <span class="drayvia-calendar-day-type ${meta.css}">
-                            ${meta.type}
-                        </span>
-                    </td>
-
-                    ${driverCells}
-                </tr>
-            `);
+            const cells = calendarState.drivers.map((driver) => {
+                const item = calendarEntry(driver.id, date);
+                const [label, css] = calendarStatus(item);
+                return `<td class="drayvia-calendar-status-cell" title="${driverText(item?.reason || '')}">
+                    <span class="drayvia-calendar-status ${css}">${label}</span>
+                    ${item?.decision === 'pending' && calendarState.canConfirm ? `<div>
+                        <button type="button" data-availability-decision="confirmed" data-availability-id="${item.id}" data-revision="${item.revision}">Potvrdit</button>
+                        <button type="button" data-availability-decision="rejected" data-availability-id="${item.id}" data-revision="${item.revision}">Zamítnout</button>
+                    </div>` : ''}
+                </td>`;
+            }).join('');
+            rows.push(`<tr class="drayvia-month-calendar-row ${meta.css}">
+                <td class="drayvia-calendar-date">${date.slice(8)}.${date.slice(5, 7)}.${date.slice(0, 4)}</td>
+                <td class="drayvia-calendar-weekday">${meta.weekDay}</td>
+                <td><span class="drayvia-calendar-day-type ${meta.css}">${meta.type}</span></td>${cells}</tr>`);
         }
-
         return rows.join('');
     };
-
-    const calendarSummary = () => {
-        if (selectedMonth !== '2026-07') {
-            return `
-                <div class="drayvia-calendar-summary-grid">
-                    <div class="drayvia-preview-card">
-                        <div class="drayvia-preview-card-label">
-                            Pracovní dny
-                        </div>
-                        <div class="drayvia-preview-card-value">
-                            —
-                        </div>
-                    </div>
-
-                    ${calendarJuly2026.drivers.map((driver) => `
-                        <div class="drayvia-preview-card">
-                            <div class="drayvia-preview-card-label">
-                                ${driver.name}
-                            </div>
-                            <div class="drayvia-preview-card-value">
-                                —
-                            </div>
-                            <div class="drayvia-preview-card-note">
-                                Pracovní dny řidiče
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        return `
-            <div class="drayvia-calendar-summary-grid">
-
-                <div class="drayvia-preview-card">
-                    <div class="drayvia-preview-card-label">
-                        Pracovní dny
-                    </div>
-                    <div class="drayvia-preview-card-value">
-                        ${calendarJuly2026.workingDays}
-                    </div>
-                    <div class="drayvia-preview-card-note">
-                        Celkem v měsíci
-                    </div>
-                </div>
-
-                ${calendarJuly2026.drivers.map((driver) => `
-                    <div class="drayvia-preview-card">
-                        <div class="drayvia-preview-card-label">
-                            ${driver.name}
-                        </div>
-                        <div class="drayvia-preview-card-value">
-                            ${driver.working.length}
-                        </div>
-                        <div class="drayvia-preview-card-note">
-                            dnů PRACUJI
-                        </div>
-                    </div>
-                `).join('')}
-
-            </div>
-        `;
-    };
-
-    const calendarLegend = () => `
-        <div class="drayvia-calendar-legend">
-
-            <div class="drayvia-calendar-legend-item">
-                <span class="drayvia-calendar-status working">
-                    PRACUJI
-                </span>
-                <span>Řidič je plánován do práce.</span>
-            </div>
-
-            <div class="drayvia-calendar-legend-item">
-                <span class="drayvia-calendar-status off">
-                    VOLNO
-                </span>
-                <span>Plánované volno.</span>
-            </div>
-
-            <div class="drayvia-calendar-legend-item">
-                <span class="drayvia-calendar-status vacation">
-                    DOVOLENÁ
-                </span>
-                <span>Řidič čerpá dovolenou.</span>
-            </div>
-
-            <div class="drayvia-calendar-legend-item">
-                <span class="drayvia-calendar-status sick">
-                    NEMOC
-                </span>
-                <span>Řidič je nemocný.</span>
-            </div>
-
-            <div class="drayvia-calendar-legend-item automatic">
-                <span class="drayvia-calendar-status unused">
-                    NEVYUŽIT
-                </span>
-                <span>
-                    Automaticky po 2 dnech, pokud byl plán PRACUJI,
-                    ale řidič nemá žádnou zapsanou trasu.
-                </span>
-            </div>
-
-        </div>
-    `;
+    const calendarSummary = () => `<div class="drayvia-calendar-summary-grid">
+        <div class="drayvia-preview-card"><div class="drayvia-preview-card-label">Období</div>
+            <div class="drayvia-preview-card-value">${monthLabelFromValue(selectedMonth)}</div>
+            <div class="drayvia-preview-card-note">Nezadaný den neznamená dostupnost.</div></div>
+        <div class="drayvia-preview-card"><div class="drayvia-preview-card-label">Čeká na potvrzení</div>
+            <div class="drayvia-preview-card-value">${calendarState.days.filter((day) => day.decision === 'pending').length}</div></div>
+        <div class="drayvia-preview-card"><div class="drayvia-preview-card-label">Potvrzené dny</div>
+            <div class="drayvia-preview-card-value">${calendarState.days.filter((day) => day.decision === 'confirmed').length}</div></div>
+    </div>`;
     const calendar = () => `
-        ${header(
-            'Kalendář',
-            'Měsíční dostupnost řidičů. Přehled pracovních dnů, volna, víkendů a státních svátků.'
-        )}
-
+        ${header('Kalendář', 'Dostupnost řidičů a potvrzení dispečerem pro ${monthLabelFromValue(selectedMonth)}.')}
         ${calendarSummary()}
-
-        ${calendarLegend()}
-
         <div class="drayvia-preview-panel drayvia-calendar-panel">
-
-            <div class="drayvia-preview-panel-head">
-                <h2 class="drayvia-preview-panel-title">
-                    DOSTUPNOST ŘIDIČŮ – ${monthLabel()}
-                </h2>
-
-                <div class="drayvia-preview-panel-subtitle">
-                    Po spuštění bude možné stav PRACUJI / VOLNO měnit přímo v kalendáři.
-                </div>
-            </div>
-
-            <div class="drayvia-month-calendar-wrap">
-                <table class="drayvia-month-calendar">
-
-                    <thead>
-                        <tr>
-                            <th>DATUM</th>
-                            <th>DEN</th>
-                            <th>TYP DNE</th>
-
-                            ${calendarJuly2026.drivers.map((driver) => `
-                                <th>
-                                    ${driver.shortName}
-                                </th>
-                            `).join('')}
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        ${calendarRows()}
-                    </tbody>
-
-                </table>
-            </div>
-        </div>
-    `;
+            <div class="drayvia-preview-panel-head"><h2 class="drayvia-preview-panel-title">DOSTUPNOST ŘIDIČŮ – ${monthLabelFromValue(selectedMonth)}</h2>
+                <div class="drayvia-preview-panel-subtitle">Záznam dostupnosti nenahrazuje přiřazení jízdy.</div></div>
+            <p id="drayviaCalendarMessage" role="status">${driverText(calendarState.error || (calendarState.loading ? 'Načítám kalendář…' : ''))}</p>
+            <form id="drayviaCalendarForm" style="display:flex; flex-wrap:wrap; gap:12px; padding:16px; align-items:end">
+                <label>Řidič <select name="driver_id" required>${calendarState.drivers.map((driver) => `<option value="${driver.id}">${driverText(driver.name)}</option>`).join('')}</select></label>
+                <label>Den <input type="date" name="date" value="${selectedMonth}-01" required></label>
+                <label>Stav <select name="availability"><option value="available">Dostupný</option><option value="unavailable">Nedostupný</option></select></label>
+                <label>Důvod <input name="reason" maxlength="1000" placeholder="Povinný pro nedostupnost"></label>
+                <button type="submit" ${calendarState.drivers.length ? '' : 'disabled'}>Odeslat k potvrzení</button>
+            </form>
+            <div class="drayvia-month-calendar-wrap"><table class="drayvia-month-calendar">
+                <thead><tr><th>DATUM</th><th>DEN</th><th>TYP DNE</th>
+                    ${calendarState.drivers.map((driver) => `<th>${driverText(driver.name)}</th>`).join('')}</tr></thead>
+                <tbody>${calendarRows()}</tbody>
+            </table></div>
+        </div>`;
+    const loadAvailabilityCalendar = async () => {
+        if (calendarState.loading || calendarState.month === selectedMonth) return;
+        const month = selectedMonth;
+        calendarState.loading = true;
+        try {
+            const body = await realDriverApi(`/api/v1/driver-availability-calendar?month=${encodeURIComponent(month)}`);
+            if (selectedMonth !== month) return;
+            calendarState.drivers = body.data?.drivers || [];
+            calendarState.days = body.data?.days || [];
+            calendarState.canConfirm = Boolean(body.data?.can_confirm);
+            calendarState.month = month;
+            calendarState.error = '';
+        } catch (error) {
+            calendarState.error = error.message || 'Kalendář nelze načíst.';
+            calendarState.month = month;
+        } finally {
+            calendarState.loading = false;
+            if (currentPage === 'calendar' && selectedMonth === month) render('calendar');
+        }
+    };
+    const bindAvailabilityCalendar = () => {
+        loadAvailabilityCalendar();
+        document.getElementById('drayviaCalendarForm')?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = Object.fromEntries(new FormData(form));
+            const current = calendarEntry(data.driver_id, data.date);
+            try {
+                await realDriverApi('/api/v1/driver-availability-calendar', {
+                    method: 'POST', body: JSON.stringify({...data, driver_id: Number(data.driver_id), expected_revision: current?.revision || 0})
+                });
+                calendarState.month = null;
+                loadAvailabilityCalendar();
+            } catch (error) {
+                document.getElementById('drayviaCalendarMessage').textContent = error.message || 'Uložení selhalo.';
+                if (error.status === 409) { calendarState.month = null; loadAvailabilityCalendar(); }
+            }
+        });
+        document.querySelectorAll('[data-availability-decision]').forEach((button) => button.addEventListener('click', async () => {
+            const decision = button.dataset.availabilityDecision;
+            const reason = window.prompt(decision === 'confirmed' ? 'Důvod potvrzení:' : 'Důvod zamítnutí:');
+            if (!reason || reason.trim().length < 5) return;
+            try {
+                await realDriverApi(`/api/v1/driver-availability-calendar/${button.dataset.availabilityId}/decision`, {
+                    method: 'POST', body: JSON.stringify({decision, reason: reason.trim(), expected_revision: Number(button.dataset.revision)})
+                });
+                calendarState.month = null;
+                loadAvailabilityCalendar();
+            } catch (error) {
+                document.getElementById('drayviaCalendarMessage').textContent = error.message || 'Rozhodnutí selhalo.';
+                calendarState.month = null;
+                loadAvailabilityCalendar();
+            }
+        }));
+    };
     const realDriverState = {
         items: []
     };
@@ -25985,6 +25802,10 @@ const loadFinanceCustomers = async () => {
         syncPreviewPosition();
         setActiveMenu(page);
         bindPeriodControls();
+
+        if (page === 'calendar') {
+            bindAvailabilityCalendar();
+        }
 
         if (page === 'drivers') {
             loadRealDriverData();
