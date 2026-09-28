@@ -20,6 +20,7 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
             ->assertSee('Pojištění')
             ->assertSee('Servis')
             ->assertSee('Incidenty')
+            ->assertSee('Poskytnutí vozidla')
             ->assertSee('Financování')
             ->assertSee('Splátkové kalendáře')
             ->assertSee('Jednotlivé splátky')
