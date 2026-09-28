@@ -30,7 +30,7 @@ class VehicleInstallmentSchedule extends Model
     /** @return BelongsTo<VehicleFinancingAgreement, $this> */
     public function financingAgreement(): BelongsTo
     {
-        return $this->belongsTo(VehicleFinancingAgreement::class);
+        return $this->belongsTo(VehicleFinancingAgreement::class, 'vehicle_financing_agreement_id');
     }
 
     /** @return BelongsTo<User, $this> */

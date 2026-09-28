@@ -1,0 +1,5 @@
+# Sprint 115 – Vehicle installment schedule administration
+
+This sprint administers schedule headers in the existing `vehicle_installment_schedules` table. Managers register a schedule against the latest organization-scoped financing agreement revision and correct a schedule by appending an immutable revision. Each write requires `vehicle.manage`, active organization vehicle visibility, optimistic vehicle and financing revisions, and a verified vehicle document. Corrections additionally require the latest schedule public ID and revision. The audit event retains the financing and source document identifiers and revisions; the schedule itself has no document foreign key.
+
+The schedule currency matches its financing agreement and provided dates stay within the agreement's stated term. A schedule with recorded installment rows cannot be corrected. If the financing agreement has advanced, a new schedule must be registered against its current revision. The vehicle detail read API includes scoped schedule history. No installment rows, calculation, invoices, payments, settlement entries, bank matches, schema migration, or physical deletion are introduced.
