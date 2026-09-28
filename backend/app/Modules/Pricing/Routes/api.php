@@ -6,6 +6,7 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceDocumentController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceIssuanceController;
+use App\Modules\Pricing\Controllers\CustomerInvoicePdfController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
@@ -168,6 +169,10 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->get('customer-invoices/{customerInvoice}/document', [CustomerInvoiceDocumentController::class, 'show'])
     ->whereUuid('customerInvoice')
     ->name('customer-invoices.document.show');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
+    ->get('customer-invoices/{customerInvoice}/pdf', [CustomerInvoicePdfController::class, 'show'])
+    ->whereUuid('customerInvoice')
+    ->name('customer-invoices.pdf.show');
 
 Route::middleware([
     'auth:sanctum',

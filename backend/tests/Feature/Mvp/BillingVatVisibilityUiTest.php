@@ -202,6 +202,8 @@ final class BillingVatVisibilityUiTest extends TestCase
 
         self::assertIsString($source);
         self::assertStringContainsString('data-invoice-print', $source);
+        self::assertStringContainsString('data-invoice-pdf', $source);
+        self::assertStringContainsString('}/pdf`', $source);
         self::assertStringContainsString("invoice.status === 'draft'", $source);
         self::assertStringContainsString('}/document`', $source);
     }

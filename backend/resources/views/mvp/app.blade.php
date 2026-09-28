@@ -16278,6 +16278,7 @@ const bindFuelWorkspace = () => {
                                         <h4>Návrh faktury</h4>
                                         <div data-customer-invoice-preview></div>
                                     <button type="button" data-invoice-print hidden>Tisk / uložit jako PDF</button>
+                                    <button type="button" data-invoice-pdf hidden>Stáhnout uložené PDF</button>
                                         <form data-customer-invoice-issue-form hidden>
                                             <div class="drayvia-billing-toolbar">
                                                 <label>Číslo faktury <input name="document_number" maxlength="64" required></label>
@@ -26263,6 +26264,7 @@ const loadFinanceCustomers = async () => {
             section.hidden = false;
             form.hidden = invoice.status !== 'draft';
             root.querySelector('[data-invoice-print]').hidden = invoice.status === 'draft';
+            root.querySelector('[data-invoice-pdf]').hidden = invoice.status === 'draft';
             preview.replaceChildren();
             const rows = [
                 ['Stav', billingStatusLabel(invoice.status)],
@@ -26354,6 +26356,31 @@ const loadFinanceCustomers = async () => {
                 loadInvoiceCalculations(true);
             });
             root.querySelector('[data-invoice-load-more]').addEventListener('click', () => loadInvoiceCalculations());
+            root.querySelector('[data-invoice-pdf]').addEventListener('click', async () => {
+                if (!invoiceState.publicId) return;
+                invoiceMessage('Připravuji PDF faktury…');
+                try {
+                    const response = await fetch(`/api/v1/customer-invoices/${encodeURIComponent(invoiceState.publicId)}/pdf`, {
+                        headers: {
+                            Accept: 'application/pdf',
+                            Authorization: `Bearer ${sessionStorage.getItem('tms_mvp_token') || ''}`,
+                            'X-Organization-ID': sessionStorage.getItem('tms_mvp_organization_id') || '',
+                        },
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const url = URL.createObjectURL(await response.blob());
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `faktura-${invoiceState.publicId}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+                    invoiceMessage('PDF faktury bylo staženo.');
+                } catch (error) {
+                    invoiceMessage(`PDF faktury nelze stáhnout: ${error.message}`);
+                }
+            });
             root.querySelector('[data-invoice-print]').addEventListener('click', async () => {
                 if (!invoiceState.publicId) return;
                 const printWindow = window.open('', '_blank');
