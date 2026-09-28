@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceController;
+use App\Modules\Pricing\Controllers\CustomerInvoiceDocumentController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceIssuanceController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
@@ -155,6 +156,10 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->get('customer-invoices/{customerInvoice}', [CustomerInvoiceController::class, 'show'])
     ->whereUuid('customerInvoice')
     ->name('customer-invoices.show');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
+    ->get('customer-invoices/{customerInvoice}/document', [CustomerInvoiceDocumentController::class, 'show'])
+    ->whereUuid('customerInvoice')
+    ->name('customer-invoices.document.show');
 
 Route::middleware([
     'auth:sanctum',

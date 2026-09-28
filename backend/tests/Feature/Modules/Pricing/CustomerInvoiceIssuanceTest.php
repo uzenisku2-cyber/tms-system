@@ -162,9 +162,16 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         $this->getJson($url.'/'.$invoiceId)->assertOk()
             ->assertJsonPath('data.customer.street', 'Side 2')
             ->assertJsonPath('data.status', 'approved');
+        $this->get($url.'/'.$invoiceId.'/document')->assertOk()
+            ->assertSee('FV-2026-001')
+            ->assertSee('Side 2')
+            ->assertSee('121.00')
+            ->assertSee('2026001');
         $customer->forceFill(['street' => 'Changed 99'])->save();
         $this->getJson($url.'/'.$invoiceId)->assertOk()
             ->assertJsonPath('data.customer.street', 'Side 2');
+        $this->get($url.'/'.$invoiceId.'/document')->assertOk()
+            ->assertSee('Side 2')->assertDontSee('Changed 99');
         $customerUser = User::factory()->create();
         OrganizationMembership::query()->create([
             'organization_id' => $customer->id, 'user_id' => $customerUser->id,
@@ -183,6 +190,9 @@ final class CustomerInvoiceIssuanceTest extends TestCase
             ->getJson($url.'/'.$invoiceId)->assertOk()
             ->assertJsonPath('data.document_number', 'FV-2026-001')
             ->assertJsonPath('data.customer.street', 'Side 2');
+        $this->withHeader('X-Organization-ID', (string) $customer->id)
+            ->get($url.'/'.$invoiceId.'/document')->assertOk()
+            ->assertSee('FV-2026-001');
         Sanctum::actingAs($user);
         $this->withHeader('X-Organization-ID', (string) $issuer->id);
         $issuePayload['document_number'] = 'FV-2026-002';
