@@ -6,7 +6,6 @@ use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceDocumentController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceIssuanceController;
-use App\Modules\Pricing\Controllers\InvoicePaymentAccountController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
@@ -21,6 +20,7 @@ use App\Modules\Pricing\Controllers\FinancialSettlementAdministrationReadControl
 use App\Modules\Pricing\Controllers\FinancialSettlementBankMatchCandidateController;
 use App\Modules\Pricing\Controllers\FinancialSettlementBankPaymentReconciliationController;
 use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
+use App\Modules\Pricing\Controllers\InvoicePaymentAccountController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankMatchCandidateController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankPaymentController;
