@@ -195,4 +195,14 @@ final class BillingVatVisibilityUiTest extends TestCase
             self::assertStringContainsString($marker, $source);
         }
     }
+
+    public function test_invoice_workspace_opens_printable_issued_document(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/app.blade.php'));
+
+        self::assertIsString($source);
+        self::assertStringContainsString('data-invoice-print', $source);
+        self::assertStringContainsString("invoice.status === 'draft'", $source);
+        self::assertStringContainsString('}/document`', $source);
+    }
 }

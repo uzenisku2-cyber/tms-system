@@ -16262,6 +16262,7 @@ const bindFuelWorkspace = () => {
                                     <section data-customer-invoice-detail hidden>
                                         <h4>Návrh faktury</h4>
                                         <div data-customer-invoice-preview></div>
+                                    <button type="button" data-invoice-print hidden>Tisk / uložit jako PDF</button>
                                         <form data-customer-invoice-issue-form hidden>
                                             <div class="drayvia-billing-toolbar">
                                                 <label>Číslo faktury <input name="document_number" maxlength="64" required></label>
@@ -26244,6 +26245,7 @@ const loadFinanceCustomers = async () => {
             const form = root.querySelector('[data-customer-invoice-issue-form]');
             section.hidden = false;
             form.hidden = invoice.status !== 'draft';
+            root.querySelector('[data-invoice-print]').hidden = invoice.status === 'draft';
             preview.replaceChildren();
             const rows = [
                 ['Stav', billingStatusLabel(invoice.status)],
@@ -26296,6 +26298,28 @@ const loadFinanceCustomers = async () => {
                 loadInvoiceCalculations(true);
             });
             root.querySelector('[data-invoice-load-more]').addEventListener('click', () => loadInvoiceCalculations());
+            root.querySelector('[data-invoice-print]').addEventListener('click', async () => {
+                if (!invoiceState.publicId) return;
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) { invoiceMessage('Prohlížeč zablokoval nové okno pro tisk.'); return; }
+                invoiceMessage('Načítám tiskový doklad…');
+                try {
+                    const response = await fetch(`/api/v1/customer-invoices/${encodeURIComponent(invoiceState.publicId)}/document`, {
+                        headers: {
+                            Accept: 'text/html',
+                            Authorization: `Bearer ${sessionStorage.getItem('tms_mvp_token') || ''}`,
+                            'X-Organization-ID': sessionStorage.getItem('tms_mvp_organization_id') || '',
+                        },
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const blob = await response.blob();
+                    printWindow.location.href = URL.createObjectURL(blob);
+                    invoiceMessage('Doklad otevřen. Použijte Tisk / uložit jako PDF.');
+                } catch (error) {
+                    printWindow.close();
+                    invoiceMessage(`Tiskový doklad nelze otevřít: ${error.message}`);
+                }
+            });
             document.querySelector('[data-billing-overview-root]')?.addEventListener('click', async (event) => {
                 const button = event.target.closest('[data-invoice-open]');
                 if (!button || root.hidden) return;
