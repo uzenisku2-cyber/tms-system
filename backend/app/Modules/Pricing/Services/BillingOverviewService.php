@@ -58,6 +58,7 @@ final class BillingOverviewService
         $periodFrom = $filters['period_from'] ?? null;
         $periodUntil = $filters['period_until'] ?? null;
         $documentType = $filters['document_type'] ?? null;
+        $status = $filters['status'] ?? null;
 
         if (is_string($periodFrom) && $periodFrom !== '') {
             $base->whereDate('period_until', '>=', $periodFrom);
@@ -69,6 +70,10 @@ final class BillingOverviewService
 
         if (is_string($documentType) && $documentType !== '') {
             $base->where('document_type', $documentType);
+        }
+
+        if (is_string($status) && $status !== '') {
+            $base->where('status', $status);
         }
 
         $summaryDocuments = (clone $base)->get([

@@ -22,13 +22,24 @@ final class BillingVatVisibilityUiTest extends TestCase
             'data-billing-period-from',
             'data-billing-period-until',
             'data-billing-document-type',
-            'const loadBillingOverview = async () => {',
+            'const loadBillingOverview = async (page = 1) => {',
             'const renderBillingOverview = (data) => {',
             'bindBillingOverview();',
             'loadBillingOverview();',
         ] as $marker) {
             self::assertStringContainsString($marker, $source);
         }
+    }
+
+    public function test_billing_overview_exposes_status_and_page_controls(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/app.blade.php'));
+
+        self::assertIsString($source);
+        self::assertStringContainsString('data-billing-document-status', $source);
+        self::assertStringContainsString('data-billing-pagination', $source);
+        self::assertStringContainsString('data-billing-page', $source);
+        self::assertStringContainsString("params.set('page', String(page))", $source);
     }
 
     public function test_company_view_distinguishes_net_vat_gross_costs_and_margin(): void

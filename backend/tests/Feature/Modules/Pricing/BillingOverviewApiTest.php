@@ -206,6 +206,41 @@ final class BillingOverviewApiTest extends TestCase
             ->assertJsonMissingPath('data.items.0.gross_amount');
     }
 
+    public function test_company_overview_pages_documents_and_summarizes_all_filtered_rows(): void
+    {
+        $admin = User::factory()->create();
+        $master = $this->organization('DRAYVIA', Organization::TYPE_MASTER, 'payer');
+        $customer = $this->organization('Customer', Organization::TYPE_CARRIER, 'payer');
+        $this->membership($admin, $master);
+        $this->permission($admin, $master, 'compensation.view');
+        $this->permission($admin, $master, 'compensation.manage');
+
+        $this->document($admin, $master, BillingDocument::TYPE_CUSTOMER_INVOICE, '100.00', '21.00', '121.00', $customer);
+        $latest = $this->document($admin, $master, BillingDocument::TYPE_CUSTOMER_INVOICE, '200.00', '42.00', '242.00', $customer);
+        $latest->forceFill(['status' => 'approved'])->save();
+
+        Sanctum::actingAs($admin);
+
+        $this->withOrganization($master)
+            ->getJson(self::URL.'?document_type=customer_invoice&per_page=1&page=2')
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 2)
+            ->assertJsonPath('data.pagination.current_page', 2)
+            ->assertJsonPath('data.summary.customer_billing.net', '300.00')
+            ->assertJsonCount(1, 'data.items');
+
+        $this->withOrganization($master)
+            ->getJson(self::URL.'?status=approved')
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 1)
+            ->assertJsonPath('data.items.0.public_id', $latest->getRouteKey())
+            ->assertJsonPath('data.summary.customer_billing.net', '200.00');
+
+        $this->withOrganization($master)
+            ->getJson(self::URL.'?status=invalid')
+            ->assertUnprocessable();
+    }
+
     private function organization(string $name, string $type, string $vatStatus): Organization
     {
         return Organization::query()->create([

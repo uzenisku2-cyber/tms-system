@@ -16225,11 +16225,23 @@ const bindFuelWorkspace = () => {
                                             <option value="driver_remuneration">Odměny řidičů</option>
                                         </select>
                                     </div>
+                                    <div class="drayvia-finance-field">
+                                        <label for="billing-document-status">Stav dokladu</label>
+                                        <select id="billing-document-status" data-billing-document-status>
+                                            <option value="">Všechny stavy</option>
+                                            <option value="draft">Koncept</option>
+                                            <option value="under_review">Ke kontrole</option>
+                                            <option value="approved">Schváleno</option>
+                                            <option value="closed">Uzavřeno</option>
+                                            <option value="cancelled">Zrušeno</option>
+                                        </select>
+                                    </div>
                                     <button type="submit">Použít filtry</button>
                                 </form>
 
                                 <div class="drayvia-billing-summary" data-billing-summary></div>
                                 <div class="drayvia-billing-table-wrap" data-billing-items></div>
+                                <nav class="drayvia-billing-pagination" data-billing-pagination aria-label="Stránky fakturačního přehledu"></nav>
                             </div>
                         </section>
 
@@ -25902,6 +25914,7 @@ const loadFinanceCustomers = async () => {
 
         // S033-02A ROLE-SCOPED BILLING, VAT AND MARGIN OVERVIEW
         const billingOverviewState = {
+            page: 1,
             data: null,
             loaded: false,
             navigationYear: selectedYear,
@@ -25937,7 +25950,9 @@ const loadFinanceCustomers = async () => {
 
         const billingStatusLabel = (status) => ({
             draft: 'Koncept',
+            under_review: 'Ke kontrole',
             approved: 'Schváleno',
+            closed: 'Uzavřeno',
             cancelled: 'Zrušeno',
         })[status] || status;
 
@@ -26058,11 +26073,23 @@ const loadFinanceCustomers = async () => {
                 : 'Vlastní pohled: zobrazena je pouze vaše konečná částka. Údaje o DPH, firemních nákladech a marži API neposkytuje.';
             renderBillingCompanySummary(summary, data);
             renderBillingItems(items, data);
+            renderBillingPagination(data.pagination);
             renderBillingRestrictedPanels(data);
             renderBillingPeriodNavigation(data);
         };
 
-        const loadBillingOverview = async () => {
+        const renderBillingPagination = (pagination) => {
+            const host = document.querySelector('[data-billing-pagination]');
+            if (!host) return;
+            const current = Number(pagination?.current_page || 1);
+            const last = Number(pagination?.last_page || 1);
+            const total = Number(pagination?.total || 0);
+            host.innerHTML = `<button type="button" data-billing-page="${current - 1}" ${current <= 1 ? 'disabled' : ''}>Předchozí</button>
+                <span>Strana ${current} z ${last} · ${total} dokladů</span>
+                <button type="button" data-billing-page="${current + 1}" ${current >= last ? 'disabled' : ''}>Další</button>`;
+        };
+
+        const loadBillingOverview = async (page = 1) => {
             const root = document.querySelector('[data-billing-overview-root]');
 
             if (!root) {
@@ -26073,16 +26100,20 @@ const loadFinanceCustomers = async () => {
             const periodFrom = root.querySelector('[data-billing-period-from]')?.value;
             const periodUntil = root.querySelector('[data-billing-period-until]')?.value;
             const documentType = root.querySelector('[data-billing-document-type]')?.value;
+            const status = root.querySelector('[data-billing-document-status]')?.value;
 
             if (periodFrom) params.set('period_from', periodFrom);
             if (periodUntil) params.set('period_until', periodUntil);
             if (documentType) params.set('document_type', documentType);
-            params.set('per_page', '100');
+            if (status) params.set('status', status);
+            params.set('per_page', '25');
+            params.set('page', String(page));
 
             try {
                 const body = await api(`${root.dataset.billingOverviewEndpoint}?${params}`);
                 const data = getPayload(body);
                 billingOverviewState.data = data;
+                billingOverviewState.page = Number(data.pagination?.current_page || page);
                 billingOverviewState.loaded = true;
                 renderBillingOverview(data);
             } catch (error) {
@@ -26268,7 +26299,13 @@ const loadFinanceCustomers = async () => {
             });
             form.addEventListener('submit', (event) => {
                 event.preventDefault();
-                loadBillingOverview();
+                loadBillingOverview(1);
+            });
+            form.closest('[data-billing-overview-root]')?.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-billing-page]');
+                if (!button || button.disabled) return;
+                const page = Number(button.dataset.billingPage);
+                if (Number.isInteger(page) && page >= 1) loadBillingOverview(page);
             });
         };
 
