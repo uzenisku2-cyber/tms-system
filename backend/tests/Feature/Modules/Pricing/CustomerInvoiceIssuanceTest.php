@@ -14,6 +14,7 @@ use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentityEvent;
 use App\Modules\Pricing\Models\BillingDocumentLine;
+use App\Modules\Pricing\Models\CustomerInvoiceDeliveryEvent;
 use App\Modules\Pricing\Models\CustomerInvoicePdfArtifact;
 use App\Modules\Pricing\Models\FinancialCalculation;
 use App\Modules\Pricing\Models\OrganizationTaxProfile;
@@ -198,6 +199,34 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         self::assertSame(hash('sha256', $pdfBytes), $artifact->pdf_sha256);
         self::assertSame($pdfBytes, Storage::disk('local')->get($artifact->storage_path));
         self::assertSame($pdfBytes, $this->get($url.'/'.$invoiceId.'/pdf')->assertOk()->getContent());
+        $deliveryUrl = $url.'/'.$invoiceId.'/deliveries';
+        $delivery = [
+            'idempotency_key' => (string) Str::uuid(), 'expected_revision' => 0,
+            'pdf_sha256' => $artifact->pdf_sha256, 'method' => 'email',
+            'recipient' => 'billing@example.test', 'delivered_at' => now()->subMinute()->toIso8601String(),
+            'evidence_reference' => 'Outbound message INV-2026-001',
+            'reason' => 'Recorded the dispatch evidence after sending the PDF.',
+        ];
+        $this->postJson($deliveryUrl, $delivery)->assertCreated()
+            ->assertJsonPath('data.revision', 1)
+            ->assertJsonPath('data.pdf_sha256', $artifact->pdf_sha256);
+        $this->postJson($deliveryUrl, $delivery)->assertCreated()->assertJsonPath('data.revision', 1);
+        $this->getJson($deliveryUrl)->assertOk()->assertJsonPath('data.current_revision', 1)
+            ->assertJsonPath('data.events.0.evidence_reference', $delivery['evidence_reference']);
+        $this->postJson($deliveryUrl, array_replace($delivery, ['recipient' => 'different@example.test']))
+            ->assertUnprocessable()->assertJsonValidationErrors('idempotency_key');
+        $stale = array_replace($delivery, ['idempotency_key' => (string) Str::uuid()]);
+        $this->postJson($deliveryUrl, $stale)->assertStatus(409);
+        $correction = array_replace($stale, [
+            'idempotency_key' => (string) Str::uuid(), 'expected_revision' => 1,
+            'recipient' => 'corrected@example.test',
+            'reason' => 'Corrected the recipient after checking the dispatch record.',
+        ]);
+        $this->postJson($deliveryUrl, $correction)->assertCreated()->assertJsonPath('data.revision', 2);
+        self::assertSame(2, CustomerInvoiceDeliveryEvent::query()->count());
+        $this->getJson($deliveryUrl)->assertOk()->assertJsonPath('data.current_revision', 2)
+            ->assertJsonPath('data.events.0.recipient', 'billing@example.test')
+            ->assertJsonPath('data.events.1.recipient', 'corrected@example.test');
         $customer->forceFill(['street' => 'Changed 99'])->save();
         $this->getJson($url.'/'.$invoiceId)->assertOk()
             ->assertJsonPath('data.customer.street', 'Side 2');
@@ -226,10 +255,16 @@ final class CustomerInvoiceIssuanceTest extends TestCase
             ->assertSee('FV-2026-001');
         self::assertSame($pdfBytes, $this->withHeader('X-Organization-ID', (string) $customer->id)
             ->get($url.'/'.$invoiceId.'/pdf')->assertOk()->getContent());
+        $this->withHeader('X-Organization-ID', (string) $customer->id)
+            ->getJson($deliveryUrl)->assertOk()->assertJsonPath('data.current_revision', 2);
+        $this->withHeader('X-Organization-ID', (string) $customer->id)
+            ->postJson($deliveryUrl, array_replace($correction, ['idempotency_key' => (string) Str::uuid(), 'expected_revision' => 2]))
+            ->assertForbidden();
         Sanctum::actingAs($user);
         $this->withHeader('X-Organization-ID', (string) $issuer->id);
         Storage::disk('local')->put($artifact->storage_path, 'tampered');
         $this->get($url.'/'.$invoiceId.'/pdf')->assertStatus(409);
+        $this->postJson($deliveryUrl, array_replace($correction, ['idempotency_key' => (string) Str::uuid(), 'expected_revision' => 2]))->assertStatus(409);
         $issuePayload['document_number'] = 'FV-2026-002';
         $this->postJson($issueUrl, $issuePayload)->assertUnprocessable()
             ->assertJsonValidationErrors('idempotency_key');

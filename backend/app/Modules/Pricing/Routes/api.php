@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Pricing\Controllers\BillingOverviewController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceController;
+use App\Modules\Pricing\Controllers\CustomerInvoiceDeliveryController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceDocumentController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceIssuanceController;
 use App\Modules\Pricing\Controllers\CustomerInvoicePdfController;
@@ -169,6 +170,14 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->get('customer-invoices/{customerInvoice}/document', [CustomerInvoiceDocumentController::class, 'show'])
     ->whereUuid('customerInvoice')
     ->name('customer-invoices.document.show');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
+    ->get('customer-invoices/{customerInvoice}/deliveries', [CustomerInvoiceDeliveryController::class, 'index'])
+    ->whereUuid('customerInvoice')
+    ->name('customer-invoices.deliveries.index');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post('customer-invoices/{customerInvoice}/deliveries', [CustomerInvoiceDeliveryController::class, 'store'])
+    ->whereUuid('customerInvoice')
+    ->name('customer-invoices.deliveries.store');
 Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->get('customer-invoices/{customerInvoice}/pdf', [CustomerInvoicePdfController::class, 'show'])
     ->whereUuid('customerInvoice')
