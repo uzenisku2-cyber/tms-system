@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Modules\Pricing\Controllers\BillingOverviewController;
+use App\Modules\Pricing\Controllers\CustomerInvoiceController;
+use App\Modules\Pricing\Controllers\CustomerInvoiceIssuanceController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
@@ -140,6 +142,19 @@ Route::middleware([
     )
     ->whereUuid('supplierFuelInvoice')
     ->name('supplier-fuel-invoices.rebilling-coverages.store');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post('customer-invoices', [CustomerInvoiceController::class, 'store'])
+    ->name('customer-invoices.store');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post('customer-invoices/{customerInvoice}/issue', [CustomerInvoiceIssuanceController::class, 'issue'])
+    ->whereUuid('customerInvoice')
+    ->name('customer-invoices.issue');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
+    ->get('customer-invoices/{customerInvoice}', [CustomerInvoiceController::class, 'show'])
+    ->whereUuid('customerInvoice')
+    ->name('customer-invoices.show');
 
 Route::middleware([
     'auth:sanctum',

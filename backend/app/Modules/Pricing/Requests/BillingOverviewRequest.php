@@ -38,7 +38,9 @@ final class BillingOverviewRequest extends FormRequest
                     BillingDocument::TYPE_DRIVER_REMUNERATION,
                 ]),
             ],
+            'status' => ['nullable', Rule::in(['draft', 'under_review', 'approved', 'closed', 'cancelled'])],
             'per_page' => ['nullable', 'integer', 'between:1,100'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }
