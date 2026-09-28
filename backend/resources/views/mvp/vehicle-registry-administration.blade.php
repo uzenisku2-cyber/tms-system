@@ -643,8 +643,9 @@ function schedulePanel(d){
         const previous=versions.get(item.schedule_uid).filter(x=>x.public_id!==item.public_id).sort((a,b)=>Number(b.revision)-Number(a.revision));
         const older=previous.length?`<details><summary>Starší verze (${previous.length})</summary>${previous.map(x=>record(fields(x))).join('')}</details>`:'';
         const agreement=byId.get(Number(item.vehicle_financing_agreement_id));
-        const canRevise=agreement&&currentFinancing.get(agreement.financing_uid)?.public_id===agreement.public_id;
-        const action=d.capabilities?.can_manage_vehicles?(canRevise?`<div class="actions"><button type="button" class="secondary" data-revise-schedule="${esc(item.public_id)}">Opravit kalendář</button></div>`:'<p class="hint">Smlouva má novější revizi. Zapište nový kalendář k aktuální smlouvě.</p>'):'';
+        const hasInstallments=(d.installments||[]).some(x=>versions.get(item.schedule_uid).some(v=>Number(v.id)===Number(x.vehicle_installment_schedule_id)));
+        const canRevise=agreement&&!hasInstallments&&currentFinancing.get(agreement.financing_uid)?.public_id===agreement.public_id;
+        const action=d.capabilities?.can_manage_vehicles?(canRevise?`<div class="actions"><button type="button" class="secondary" data-revise-schedule="${esc(item.public_id)}">Opravit kalendář</button></div>`:(hasInstallments?'<p class="hint">Kalendář se zapsanými splátkami nelze opravit.</p>':'<p class="hint">Smlouva má novější revizi. Zapište nový kalendář k aktuální smlouvě.</p>')):'';
         return `<article class="record"><dl class="record-grid">${fields(item).join('')}</dl>${action}${older}</article>`;
     }).join('')||'<p class="hint">Žádné splátkové kalendáře.</p>';
     if(!d.capabilities?.can_manage_vehicles)return cards;
@@ -725,15 +726,139 @@ function bindSchedules(){
         }
     };
 }
+function installmentPanel(d){
+    const schedules=d.installment_schedules||[],agreements=d.financing_agreements||[],items=d.installments||[];
+    const schedulesById=new Map(schedules.map(x=>[Number(x.id),x]));
+    const agreementById=new Map(agreements.map(x=>[Number(x.id),x]));
+    const latestFinancing=new Map(),latestSchedule=new Map(),latest=new Map(),versions=new Map();
+    agreements.forEach(x=>{if(!latestFinancing.has(x.financing_uid)||Number(x.revision)>Number(latestFinancing.get(x.financing_uid).revision))latestFinancing.set(x.financing_uid,x)});
+    schedules.forEach(x=>{if(!latestSchedule.has(x.schedule_uid)||Number(x.revision)>Number(latestSchedule.get(x.schedule_uid).revision))latestSchedule.set(x.schedule_uid,x)});
+    items.forEach(x=>{
+        if(!versions.has(x.installment_uid))versions.set(x.installment_uid,[]);
+        versions.get(x.installment_uid).push(x);
+        if(!latest.has(x.installment_uid)||Number(x.revision)>Number(latest.get(x.installment_uid).revision))latest.set(x.installment_uid,x);
+    });
+    const eligible=[...latestSchedule.values()].filter(x=>{
+        const financing=agreementById.get(Number(x.vehicle_financing_agreement_id));
+        return ['draft','active'].includes(x.status)&&financing&&latestFinancing.get(financing.financing_uid)?.public_id===financing.public_id;
+    });
+    const eligibleIds=new Set(eligible.map(x=>x.public_id));
+    const statusLabel={planned:'Plánovaná',cancelled:'Zrušená',replaced:'Nahrazená',waived:'Prominutá'};
+    const fields=x=>{
+        const schedule=schedulesById.get(Number(x.vehicle_installment_schedule_id));
+        return [field('Kalendář',schedule?.schedule_uid||'—'),field('Pořadí',x.sequence_number),field('Splatnost',date(x.due_on)),
+            field('Jistina',amount(x.principal_amount,x.currency)),field('Finanční náklad',amount(x.finance_charge_amount,x.currency)),
+            field('Další částka',amount(x.other_amount,x.currency)),field('Celkem',amount(x.total_amount,x.currency)),
+            field('Stav',statusLabel[x.status]||x.status),field('Revize splátky',x.revision),field('Poznámky',x.notes)];
+    };
+    const cards=[...latest.values()].sort((a,b)=>Number(a.sequence_number)-Number(b.sequence_number)).map(x=>{
+        const schedule=schedulesById.get(Number(x.vehicle_installment_schedule_id));
+        const previous=versions.get(x.installment_uid).filter(v=>v.public_id!==x.public_id).sort((a,b)=>Number(b.revision)-Number(a.revision));
+        const older=previous.length?`<details><summary>Starší verze (${previous.length})</summary>${previous.map(v=>record(fields(v))).join('')}</details>`:'';
+        const action=d.capabilities?.can_manage_vehicles&&schedule&&eligibleIds.has(schedule.public_id)
+            ?`<div class="actions"><button type="button" class="secondary" data-revise-installment="${esc(x.public_id)}">Opravit splátku</button></div>`:'';
+        return `<article class="record"><dl class="record-grid">${fields(x).join('')}</dl>${action}${older}</article>`;
+    }).join('')||'<p class="hint">Žádné jednotlivé splátky.</p>';
+    if(!d.capabilities?.can_manage_vehicles)return cards;
+    const choices=eligible.map(x=>`<option value="${esc(x.public_id)}">${esc(x.schedule_uid)} · revize ${esc(x.revision)} · ${esc(x.installment_count)} splátek · ${esc(x.currency)}</option>`).join('');
+    if(!choices)return '<p class="hint">Nejprve zapište aktuální splátkový kalendář ke stávající finanční smlouvě.</p>'+cards;
+    const form=`<form id="installmentForm" class="grid">
+        <h3 class="wide" id="installmentFormTitle">Zapsat jednotlivou splátku</h3>
+        <label class="wide">Aktuální kalendář<select name="schedule_public_id" required><option value="">Vyberte kalendář</option>${choices}</select></label>
+        <label>Pořadí<input name="sequence_number" type="number" min="1" step="1" required></label>
+        <label>Splatnost<input name="due_on" type="date" required></label>
+        <label>Jistina<input name="principal_amount" type="number" min="0" step="0.01" required></label>
+        <label>Finanční náklad<input name="finance_charge_amount" type="number" min="0" step="0.01" value="0.00" required></label>
+        <label>Další částka<input name="other_amount" type="number" min="0" step="0.01" value="0.00" required></label>
+        <label>Celkem<input name="total_amount" type="number" min="0" step="0.01" readonly required></label>
+        <label>Měna<input name="currency" maxlength="3" pattern="[A-Z]{3}" readonly required></label>
+        <label>Stav<select name="status" required><option value="planned">Plánovaná</option><option value="cancelled">Zrušená</option><option value="replaced">Nahrazená</option><option value="waived">Prominutá</option></select></label>
+        <label class="wide">Ověřený zdrojový doklad<select name="source_document_public_id" required><option value="">Vyberte doklad</option>${verifiedOptions(d)}</select></label>
+        <label class="wide">Poznámky<textarea name="notes" rows="2" maxlength="10000"></textarea></label>
+        <label class="wide">Důvod zápisu nebo opravy<textarea name="reason" rows="2" minlength="3" maxlength="1000" required></textarea></label>
+        <div class="actions wide"><button type="submit">Zapsat splátku</button><button type="button" class="secondary" id="installmentCancel" hidden>Zrušit opravu</button></div>
+    </form><p class="hint">Splátka je evidenční plán. Zápis nepotvrzuje úhradu a nevytváří platbu.</p>`;
+    return form+cards;
+}
+function resetInstallmentForm(){
+    const form=document.querySelector('#installmentForm');if(!form)return;
+    form.reset();delete form.dataset.recordPublicId;delete form.dataset.recordRevision;
+    form.elements.currency.value='';form.elements.total_amount.value='';form.elements.sequence_number.readOnly=false;
+    document.querySelector('#installmentFormTitle').textContent='Zapsat jednotlivou splátku';
+    form.querySelector('button[type=submit]').textContent='Zapsat splátku';
+    document.querySelector('#installmentCancel').hidden=true;
+}
+function bindInstallments(){
+    const form=document.querySelector('#installmentForm');if(!form)return;
+    const scheduleByPublicId=new Map((current.installment_schedules||[]).map(x=>[x.public_id,x]));
+    const syncSchedule=()=>{
+        const schedule=scheduleByPublicId.get(form.elements.schedule_public_id.value);
+        form.elements.currency.value=schedule?.currency||'';
+        form.elements.sequence_number.max=schedule?.installment_count||'';
+        form.elements.due_on.min=schedule?dayInput(schedule.starts_on):'';
+        form.elements.due_on.max=schedule?.ends_on?dayInput(schedule.ends_on):'';
+    };
+    const syncTotal=()=>{
+        const cents=['principal_amount','finance_charge_amount','other_amount'].reduce((sum,key)=>sum+Math.round(Number(form.elements[key].value||0)*100),0);
+        form.elements.total_amount.value=(cents/100).toFixed(2);
+    };
+    form.elements.schedule_public_id.onchange=syncSchedule;
+    for(const key of ['principal_amount','finance_charge_amount','other_amount'])form.elements[key].oninput=syncTotal;
+    document.querySelector('#installmentCancel').onclick=resetInstallmentForm;
+    document.querySelectorAll('[data-revise-installment]').forEach(button=>button.onclick=()=>{
+        const item=(current.installments||[]).find(x=>x.public_id===button.dataset.reviseInstallment);
+        if(!item)return;
+        const schedule=(current.installment_schedules||[]).find(x=>Number(x.id)===Number(item.vehicle_installment_schedule_id));
+        if(!schedule)return;
+        resetInstallmentForm();
+        form.dataset.recordPublicId=item.public_id;form.dataset.recordRevision=String(item.revision);
+        form.elements.schedule_public_id.value=schedule.public_id;
+        for(const key of ['sequence_number','due_on','principal_amount','finance_charge_amount','other_amount','status','notes']){
+            const control=form.elements.namedItem(key);
+            if(control)control.value=key==='due_on'?dayInput(item[key]):(item[key]??'');
+        }
+        syncSchedule();syncTotal();form.elements.sequence_number.readOnly=true;
+        form.elements.source_document_public_id.value='';
+        document.querySelector('#installmentFormTitle').textContent='Opravit splátku · revize '+item.revision;
+        form.querySelector('button[type=submit]').textContent='Uložit novou verzi';
+        document.querySelector('#installmentCancel').hidden=false;
+        form.scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
+    form.onsubmit=async event=>{
+        event.preventDefault();syncTotal();if(!form.reportValidity())return;
+        const id=current.vehicle.public_id,recordId=form.dataset.recordPublicId;
+        const schedule=scheduleByPublicId.get(form.elements.schedule_public_id.value);
+        if(!schedule){vehicleMessage.className='status-error';vehicleMessage.textContent='Vyberte aktuální kalendář.';return}
+        const body={...values(form),expected_revision:current.vehicle.revision,expected_schedule_revision:Number(schedule.revision)};
+        if(recordId)body.expected_installment_revision=Number(form.dataset.recordRevision);
+        const url=`/api/v1/vehicle-registry-administration/${id}/installments`+(recordId?`/${recordId}/revisions`:'');
+        const submit=form.querySelector('button[type=submit]');submit.disabled=true;
+        try{
+            await api(url,{method:recordId?'PUT':'POST',body:JSON.stringify(body)});
+            await loadVehicles();await showVehicle(id);
+            const panel=document.querySelector('[data-detail-subtab="installments"]');
+            folder(panel.querySelector('.subtab-head'),panel.querySelector('.subtab-body'),true);
+            vehicleMessage.className='status-ok';vehicleMessage.textContent=recordId?'Oprava splátky byla uložena jako nová verze.':'Splátka byla zapsána.';
+        }catch(error){
+            if(error.status===409){
+                await showVehicle(id);
+                const panel=document.querySelector('[data-detail-subtab="installments"]');
+                folder(panel.querySelector('.subtab-head'),panel.querySelector('.subtab-body'),true);
+                vehicleMessage.textContent=`${error.message} Aktuální údaje byly znovu načteny.`;
+            }else vehicleMessage.textContent=error.message;
+            vehicleMessage.className='status-error';submit.disabled=false;
+        }
+    };
+}
 function detailHtml(d){const v=d.vehicle,verified=verifiedOptions(d),docs=(d.documents||[]).map(x=>record([field('Název',x.title),field('Typ',x.document_type),field('Ověření',x.verification_status),field('Revize',x.revision),field('Platnost do',date(x.valid_until)),`<div class="actions"><button data-review-document="${esc(x.public_id)}" data-revision="${esc(x.revision)}" data-state="verified">Ověřit</button><button data-review-document="${esc(x.public_id)}" data-revision="${esc(x.revision)}" data-state="rejected" class="secondary">Zamítnout</button></div>`])).join('');
 const ownership=(d.ownerships||[]).map(x=>record([field('Vlastník',x.owner_type==='organization'?`Organizace #${x.owner_organization_id}`:x.external_owner_name||x.owner_type),field('Podíl',`${Number(x.ownership_share_basis_points)/100} %`),field('Ověření',x.verification_status),field('Revize',x.revision),`<div class="actions"><button data-review-ownership="${esc(x.public_id)}" data-revision="${esc(x.revision)}" data-document="${esc(x.source_document_public_id)}" data-state="verified">Ověřit</button><button data-review-ownership="${esc(x.public_id)}" data-revision="${esc(x.revision)}" data-document="${esc(x.source_document_public_id)}" data-state="rejected" class="secondary">Zamítnout</button></div>`])).join('');
 const responsibilities=(d.responsibilities||[]).map(x=>record([field('Typ',x.responsibility_type),field('Strana',x.party_type==='organization'?`Organizace #${x.party_organization_id}`:x.external_party_name||x.party_type),field('Stav',x.status),field('Revize',x.revision),`<div class="actions"><button data-review-responsibility="${esc(x.public_id)}" data-revision="${esc(x.revision)}" data-document="${esc(x.source_document_public_id)}" data-state="ended">Ukončit</button><button data-review-responsibility="${esc(x.public_id)}" data-revision="${esc(x.revision)}" data-document="${esc(x.source_document_public_id)}" data-state="cancelled" class="secondary">Zrušit</button></div>`])).join('');
 const completionFields=[['registration_number','Registrační značka','text'],['vin','VIN','text'],['manufacturer','Výrobce','text'],['model','Model','text'],['year','Rok','number'],['fuel_type','Palivo','fuel'],['mileage','Tachometr','number']];
 const completion=completionFields.map(([key,label,type])=>`<label class="check-field"><input type="checkbox" name="selected" value="${key}"><span>${label}${type==='fuel'?`<select name="${key}" data-completion-fuel>${fuelTypes.map(([a,b])=>`<option value="${a}" ${a===(v[key]||'')?'selected':''}>${b}</option>`).join('')}</select>`:`<input name="${key}" type="${type}" value="${esc(v[key]||'')}">`}</span></label>`).join('');
-return subtab('lifecycle','Životní cyklus',loc(v.lifecycle_status),lifecyclePanel(d))+subtab('compliance','Technické kontroly',`${new Set((d.compliance_records||[]).map(x=>x.record_uid)).size} záznamů`,compliancePanel(d))+subtab('insurance','Pojištění',`${new Set((d.insurance_policies||[]).map(x=>x.record_uid)).size} záznamů`,insurancePanel(d))+subtab('service','Servis',`${new Set((d.service_records||[]).map(x=>x.record_uid)).size} záznamů`,servicePanel(d))+subtab('incidents','Incidenty',`${new Set((d.incidents||[]).map(x=>x.record_uid)).size} záznamů`,incidentPanel(d))+subtab('financing','Financování',`${new Set((d.financing_agreements||[]).map(x=>x.financing_uid)).size} smluv`,financingPanel(d))+subtab('schedules','Splátkové kalendáře',`${new Set((d.installment_schedules||[]).map(x=>x.schedule_uid)).size} kalendářů`,schedulePanel(d))+subtab('documents','Dokumenty',`${(d.documents||[]).length} dokladů`,`<form id="documentForm" class="grid"><input name="document_type" value="registration_certificate" placeholder="Typ dokladu" required><input name="title" placeholder="Název" required><input name="storage_reference" placeholder="Odkaz na uložení" required><input name="valid_from" type="date"><input name="valid_until" type="date"><select name="access_classification"><option value="operational">Provozní</option><option value="restricted">Omezený</option></select><input class="wide" name="reason" value="Doplnění dostupného dokladu k vozidlu." required><button>Registrovat doklad</button></form>${docs||'<p class="hint">Žádné doklady.</p>'}`)+subtab('ownership','Vlastnictví',`${(d.ownerships||[]).length} záznamů`,`<form id="ownershipForm" class="grid"><select name="owner_type"><option value="organization">Organizace</option><option value="external_party">Externí vlastník</option></select><input name="owner_organization_id" value="${esc(organization)}" placeholder="ID organizace"><input name="external_owner_name" placeholder="Externí vlastník"><input name="ownership_share_basis_points" type="number" value="10000"><input name="valid_from" type="date" required><input name="acquisition_basis" value="purchase"><select name="source_document_public_id" required><option value="">Ověřený zdrojový doklad</option>${verified}</select><input class="wide" name="reason" value="Evidence vlastnictví podle ověřeného dokladu." required><button>Registrovat vlastnictví</button></form>${ownership||'<p class="hint">Žádné vlastnické záznamy.</p>'}`)+subtab('responsibilities','Odpovědnosti',`${(d.responsibilities||[]).filter(x=>x.status==='active').length} aktivní`,`<form id="responsibilityForm" class="grid"><select name="responsibility_type"><option value="registered_operator">Provozovatel</option><option value="operational_organization">Provozní organizace</option><option value="custodian">Správce</option><option value="authorized_user">Oprávněný uživatel</option><option value="default_driver">Výchozí řidič</option></select><select name="party_type"><option value="organization">Organizace</option><option value="external_party">Externí strana</option></select><input name="party_organization_id" value="${esc(organization)}"><input name="external_party_name" placeholder="Externí strana"><input name="valid_from" type="date" required><select name="source_document_public_id" required><option value="">Ověřený zdrojový doklad</option>${verified}</select><input class="wide" name="reason" value="Evidence odpovědnosti podle ověřeného dokladu." required><button>Registrovat odpovědnost</button></form>${responsibilities||'<p class="hint">Žádné odpovědnosti.</p>'}`)+subtab('completion','Doplnění údajů',`${(d.completeness?.pending_count||0)} oblastí čeká`,`<form id="completionForm" class="grid">${completion}<input class="wide" name="reason" value="Doplnění nebo oprava údajů vozidla." required><button>Uložit vybrané údaje</button></form>`)+subtab('statuses','Stav doplnění',`${(d.completeness?.pending_count||0)} čeká`,(d.field_statuses||[]).map(x=>record([field('Oblast',x.field_key),field('Stav',x.status),field('Revize',x.revision),field('Důvod',x.reason)])).join(''))+subtab('history','Historie a auditní stopa',`${(d.events||[]).length} událostí`,history(d))}
+return subtab('lifecycle','Životní cyklus',loc(v.lifecycle_status),lifecyclePanel(d))+subtab('compliance','Technické kontroly',`${new Set((d.compliance_records||[]).map(x=>x.record_uid)).size} záznamů`,compliancePanel(d))+subtab('insurance','Pojištění',`${new Set((d.insurance_policies||[]).map(x=>x.record_uid)).size} záznamů`,insurancePanel(d))+subtab('service','Servis',`${new Set((d.service_records||[]).map(x=>x.record_uid)).size} záznamů`,servicePanel(d))+subtab('incidents','Incidenty',`${new Set((d.incidents||[]).map(x=>x.record_uid)).size} záznamů`,incidentPanel(d))+subtab('financing','Financování',`${new Set((d.financing_agreements||[]).map(x=>x.financing_uid)).size} smluv`,financingPanel(d))+subtab('schedules','Splátkové kalendáře',`${new Set((d.installment_schedules||[]).map(x=>x.schedule_uid)).size} kalendářů`,schedulePanel(d))+subtab('installments','Jednotlivé splátky',`${new Set((d.installments||[]).map(x=>x.installment_uid)).size} splátek`,installmentPanel(d))+subtab('documents','Dokumenty',`${(d.documents||[]).length} dokladů`,`<form id="documentForm" class="grid"><input name="document_type" value="registration_certificate" placeholder="Typ dokladu" required><input name="title" placeholder="Název" required><input name="storage_reference" placeholder="Odkaz na uložení" required><input name="valid_from" type="date"><input name="valid_until" type="date"><select name="access_classification"><option value="operational">Provozní</option><option value="restricted">Omezený</option></select><input class="wide" name="reason" value="Doplnění dostupného dokladu k vozidlu." required><button>Registrovat doklad</button></form>${docs||'<p class="hint">Žádné doklady.</p>'}`)+subtab('ownership','Vlastnictví',`${(d.ownerships||[]).length} záznamů`,`<form id="ownershipForm" class="grid"><select name="owner_type"><option value="organization">Organizace</option><option value="external_party">Externí vlastník</option></select><input name="owner_organization_id" value="${esc(organization)}" placeholder="ID organizace"><input name="external_owner_name" placeholder="Externí vlastník"><input name="ownership_share_basis_points" type="number" value="10000"><input name="valid_from" type="date" required><input name="acquisition_basis" value="purchase"><select name="source_document_public_id" required><option value="">Ověřený zdrojový doklad</option>${verified}</select><input class="wide" name="reason" value="Evidence vlastnictví podle ověřeného dokladu." required><button>Registrovat vlastnictví</button></form>${ownership||'<p class="hint">Žádné vlastnické záznamy.</p>'}`)+subtab('responsibilities','Odpovědnosti',`${(d.responsibilities||[]).filter(x=>x.status==='active').length} aktivní`,`<form id="responsibilityForm" class="grid"><select name="responsibility_type"><option value="registered_operator">Provozovatel</option><option value="operational_organization">Provozní organizace</option><option value="custodian">Správce</option><option value="authorized_user">Oprávněný uživatel</option><option value="default_driver">Výchozí řidič</option></select><select name="party_type"><option value="organization">Organizace</option><option value="external_party">Externí strana</option></select><input name="party_organization_id" value="${esc(organization)}"><input name="external_party_name" placeholder="Externí strana"><input name="valid_from" type="date" required><select name="source_document_public_id" required><option value="">Ověřený zdrojový doklad</option>${verified}</select><input class="wide" name="reason" value="Evidence odpovědnosti podle ověřeného dokladu." required><button>Registrovat odpovědnost</button></form>${responsibilities||'<p class="hint">Žádné odpovědnosti.</p>'}`)+subtab('completion','Doplnění údajů',`${(d.completeness?.pending_count||0)} oblastí čeká`,`<form id="completionForm" class="grid">${completion}<input class="wide" name="reason" value="Doplnění nebo oprava údajů vozidla." required><button>Uložit vybrané údaje</button></form>`)+subtab('statuses','Stav doplnění',`${(d.completeness?.pending_count||0)} čeká`,(d.field_statuses||[]).map(x=>record([field('Oblast',x.field_key),field('Stav',x.status),field('Revize',x.revision),field('Důvod',x.reason)])).join(''))+subtab('history','Historie a auditní stopa',`${(d.events||[]).length} událostí`,history(d))}
 async function showVehicle(id){try{const d=await api(`/api/v1/vehicle-registry-administration/${id}`);current=d;const v=d.vehicle;vehicleCard.hidden=false;vehicleCardTitle.textContent=`${text(v.registration_number)} · ${text(v.manufacturer)} ${text(v.model)}`;vehicleSummary.innerHTML=`<div class="vehicle-overview">${field('VIN',v.vin)}${field('Stav',v.lifecycle_status)}${field('Rok',v.year)}${field('Tachometr',v.mileage)}${field('Revize',v.revision)}</div>`;vehicleSubtabs.innerHTML=detailHtml(d);bindSubtabs();bindForms();vehicleCard.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){vehicleMessage.textContent=e.message}}
 async function mutate(path,method,payload){try{await api(path,{method,body:JSON.stringify(payload)});await loadVehicles();await showVehicle(current.vehicle.public_id)}catch(e){vehicleMessage.textContent=e.message;vehicleMessage.className='status-error'}}
-function bindForms(){const lifecycleForm=document.querySelector('#lifecycleForm');if(lifecycleForm)lifecycleForm.onsubmit=submitLifecycle;bindCompliance();bindInsurance();bindService();bindIncident();bindFinancing();bindSchedules();documentForm.onsubmit=e=>{e.preventDefault();mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/documents`,'POST',{...values(e.target),expected_revision:current.vehicle.revision})};ownershipForm.onsubmit=e=>{e.preventDefault();mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/ownerships`,'POST',{...values(e.target),expected_revision:current.vehicle.revision})};responsibilityForm.onsubmit=e=>{e.preventDefault();mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/responsibilities`,'POST',{...values(e.target),expected_revision:current.vehicle.revision})};completionForm.onsubmit=e=>{e.preventDefault();const selected=[...e.target.querySelectorAll('[name=selected]:checked')].map(x=>x.value),all=values(e.target),fields=Object.fromEntries(selected.map(k=>[k,all[k]??null]));if(!selected.length){vehicleMessage.textContent='Vyberte alespoň jedno pole.';return}mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}`,'PATCH',{expected_revision:current.vehicle.revision,fields,reason:all.reason})};document.querySelectorAll('[data-review-document]').forEach(b=>b.onclick=()=>mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/documents/${b.dataset.reviewDocument}/verification`,'PUT',{expected_revision:current.vehicle.revision,expected_document_revision:Number(b.dataset.revision),verification_status:b.dataset.state,reason:`${b.dataset.state==='verified'?'Ověření':'Zamítnutí'} dokumentu.`}));document.querySelectorAll('[data-review-ownership]').forEach(b=>b.onclick=()=>mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/ownerships/${b.dataset.reviewOwnership}/verification`,'PUT',{expected_revision:current.vehicle.revision,expected_ownership_revision:Number(b.dataset.revision),source_document_public_id:b.dataset.document,verification_status:b.dataset.state,reason:`${b.dataset.state==='verified'?'Ověření':'Zamítnutí'} vlastnictví.`}));document.querySelectorAll('[data-review-responsibility]').forEach(b=>b.onclick=()=>mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/responsibilities/${b.dataset.reviewResponsibility}/status`,'PUT',{expected_revision:current.vehicle.revision,expected_responsibility_revision:Number(b.dataset.revision),source_document_public_id:b.dataset.document,status:b.dataset.state,reason:`${b.dataset.state==='ended'?'Ukončení':'Zrušení'} odpovědnosti.`}))}
+function bindForms(){const lifecycleForm=document.querySelector('#lifecycleForm');if(lifecycleForm)lifecycleForm.onsubmit=submitLifecycle;bindCompliance();bindInsurance();bindService();bindIncident();bindFinancing();bindSchedules();bindInstallments();documentForm.onsubmit=e=>{e.preventDefault();mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/documents`,'POST',{...values(e.target),expected_revision:current.vehicle.revision})};ownershipForm.onsubmit=e=>{e.preventDefault();mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/ownerships`,'POST',{...values(e.target),expected_revision:current.vehicle.revision})};responsibilityForm.onsubmit=e=>{e.preventDefault();mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/responsibilities`,'POST',{...values(e.target),expected_revision:current.vehicle.revision})};completionForm.onsubmit=e=>{e.preventDefault();const selected=[...e.target.querySelectorAll('[name=selected]:checked')].map(x=>x.value),all=values(e.target),fields=Object.fromEntries(selected.map(k=>[k,all[k]??null]));if(!selected.length){vehicleMessage.textContent='Vyberte alespoň jedno pole.';return}mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}`,'PATCH',{expected_revision:current.vehicle.revision,fields,reason:all.reason})};document.querySelectorAll('[data-review-document]').forEach(b=>b.onclick=()=>mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/documents/${b.dataset.reviewDocument}/verification`,'PUT',{expected_revision:current.vehicle.revision,expected_document_revision:Number(b.dataset.revision),verification_status:b.dataset.state,reason:`${b.dataset.state==='verified'?'Ověření':'Zamítnutí'} dokumentu.`}));document.querySelectorAll('[data-review-ownership]').forEach(b=>b.onclick=()=>mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/ownerships/${b.dataset.reviewOwnership}/verification`,'PUT',{expected_revision:current.vehicle.revision,expected_ownership_revision:Number(b.dataset.revision),source_document_public_id:b.dataset.document,verification_status:b.dataset.state,reason:`${b.dataset.state==='verified'?'Ověření':'Zamítnutí'} vlastnictví.`}));document.querySelectorAll('[data-review-responsibility]').forEach(b=>b.onclick=()=>mutate(`/api/v1/vehicle-registry-administration/${current.vehicle.public_id}/responsibilities/${b.dataset.reviewResponsibility}/status`,'PUT',{expected_revision:current.vehicle.revision,expected_responsibility_revision:Number(b.dataset.revision),source_document_public_id:b.dataset.document,status:b.dataset.state,reason:`${b.dataset.state==='ended'?'Ukončení':'Zrušení'} odpovědnosti.`}))}
 createForm.onsubmit=async e=>{e.preventDefault();try{const d=await api('/api/v1/vehicle-registry-administration',{method:'POST',body:JSON.stringify(values(e.target))});createMessage.textContent='Vozidlo bylo založeno.';e.target.reset();await loadVehicles();folder(document.querySelector('[data-registry-folder=create] .folder-head'),document.querySelector('[data-registry-folder=create] .folder-body'),false);folder(document.querySelector('[data-registry-folder=manage] .folder-head'),document.querySelector('[data-registry-folder=manage] .folder-body'),true);await showVehicle(d.vehicle.public_id)}catch(err){createMessage.textContent=err.message}};
 vehicleFilter.onclick=loadVehicles;vehicleCardClose.onclick=()=>vehicleCard.hidden=true;loadVehicles();
 </script></body></html>
