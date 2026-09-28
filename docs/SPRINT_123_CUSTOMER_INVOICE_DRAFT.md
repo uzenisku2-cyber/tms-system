@@ -1,0 +1,5 @@
+# Sprint 123: Customer invoice draft
+
+The new organization-scoped API creates a customer invoice draft from one to one hundred distinct current approved or closed financial calculations. All calculations must belong to the master issuer, its selected customer and the requested period, use one currency, and be absent from all existing billing document lines. A verified issuer tax profile must cover the full period. Amounts use integer cents and VAT is allocated by rounded cumulative bases so the nonnegative line taxes sum exactly to document VAT. The draft stores party and source snapshots and a repeatable idempotency key; it has no commercial identity or document number until an explicit issuance transition.
+
+`POST /api/v1/customer-invoices` requires `compensation.manage`. `GET /api/v1/customer-invoices/{uuid}` requires `compensation.view` and allows the issuer to read drafts and the customer to read approved or closed invoices and their lines. This unit does not issue, post, send or mark payment.
