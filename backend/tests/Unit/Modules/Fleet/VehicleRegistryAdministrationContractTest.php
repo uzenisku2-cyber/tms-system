@@ -28,6 +28,7 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
         self::assertStringContainsString("subtab('service'", $view);
         self::assertStringContainsString("subtab('incidents'", $view);
         self::assertStringContainsString("subtab('provision'", $view);
+        self::assertStringContainsString("subtab('provision-prices'", $view);
         self::assertStringContainsString("subtab('financing'", $view);
         self::assertStringContainsString("subtab('schedules'", $view);
         self::assertStringContainsString("subtab('documents'", $view);
@@ -55,6 +56,9 @@ final class VehicleRegistryAdministrationContractTest extends TestCase
             self::assertStringContainsString($marker, $view);
         }
         foreach (['provision_agreements', 'agreement_uid', 'expected_provision_revision', 'source_document_public_id', 'data-revise-provision', 'bindProvision()', "method:recordId?'PUT':'POST'", 'error.status===409'] as $marker) {
+            self::assertStringContainsString($marker, $view);
+        }
+        foreach (['provision_prices', 'price_uid', 'expected_provision_revision', 'expected_price_revision', 'source_document_public_id', 'data-revise-provision-price', 'bindProvisionPrices()', "method:recordId?'PUT':'POST'", 'error.status===409'] as $marker) {
             self::assertStringContainsString($marker, $view);
         }
         foreach (['financing_agreements', 'financing_uid', 'expected_financing_revision', 'source_document_public_id', 'data-revise-financing', "method:recordId?'PUT':'POST'", 'error.status===409'] as $marker) {
