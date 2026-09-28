@@ -6,6 +6,7 @@ namespace App\Modules\Fleet\Services;
 
 use App\Models\User;
 use App\Modules\Fleet\Models\Vehicle;
+use App\Modules\Fleet\Models\VehicleInstallmentSchedule;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,7 +55,11 @@ final class VehicleRegistryAdministrationReadService
         }
         $vehicle->load(['ownerships' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('valid_from'), 'responsibilities' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('valid_from'), 'documents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'complianceRecords' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'insurancePolicies' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'serviceRecords' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'incidents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'financingAgreements' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderByDesc('id'), 'registryEvents' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderBy('vehicle_revision'), 'recordFieldStatuses' => fn ($q) => $q->where('organization_context_id', $organizationId)->orderBy('field_key')]);
 
-        return ['vehicle' => $this->summary($vehicle), 'ownerships' => $vehicle->ownerships->toArray(), 'responsibilities' => $vehicle->responsibilities->toArray(), 'documents' => $vehicle->documents->toArray(), 'compliance_records' => $vehicle->complianceRecords->toArray(), 'insurance_policies' => $vehicle->insurancePolicies->toArray(), 'service_records' => $vehicle->serviceRecords->toArray(), 'incidents' => $vehicle->incidents->toArray(), 'financing_agreements' => $vehicle->financingAgreements->toArray(), 'events' => $vehicle->registryEvents->toArray(), 'field_statuses' => $vehicle->recordFieldStatuses->toArray(), 'completeness' => $this->completeness($vehicle), 'capabilities' => ['can_manage_vehicles' => $actor->can('vehicle.manage')]];
+        $financingIds = $vehicle->financingAgreements->pluck('id')->all();
+        $schedules = $financingIds === [] ? [] : VehicleInstallmentSchedule::query()
+            ->whereIn('vehicle_financing_agreement_id', $financingIds)->orderByDesc('id')->get()->toArray();
+
+        return ['vehicle' => $this->summary($vehicle), 'ownerships' => $vehicle->ownerships->toArray(), 'responsibilities' => $vehicle->responsibilities->toArray(), 'documents' => $vehicle->documents->toArray(), 'compliance_records' => $vehicle->complianceRecords->toArray(), 'insurance_policies' => $vehicle->insurancePolicies->toArray(), 'service_records' => $vehicle->serviceRecords->toArray(), 'incidents' => $vehicle->incidents->toArray(), 'financing_agreements' => $vehicle->financingAgreements->toArray(), 'installment_schedules' => $schedules, 'events' => $vehicle->registryEvents->toArray(), 'field_statuses' => $vehicle->recordFieldStatuses->toArray(), 'completeness' => $this->completeness($vehicle), 'capabilities' => ['can_manage_vehicles' => $actor->can('vehicle.manage')]];
     }
 
     private function visibleQuery(int $organizationId): Builder
