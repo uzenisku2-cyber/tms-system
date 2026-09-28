@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Pricing\Controllers\BillingOverviewController;
+use App\Modules\Pricing\Controllers\CustomerInvoiceBankPaymentController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceDeliveryController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceDocumentController;
@@ -167,6 +168,16 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->get('customer-invoices/{customerInvoice}', [CustomerInvoiceController::class, 'show'])
     ->whereUuid('customerInvoice')
     ->name('customer-invoices.show');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
+    ->get('customer-invoices/{customerInvoice}/bank-payments', [CustomerInvoiceBankPaymentController::class, 'index'])
+    ->whereUuid('customerInvoice')->name('customer-invoices.bank-payments.index');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post('customer-invoices/{customerInvoice}/bank-payments', [CustomerInvoiceBankPaymentController::class, 'store'])
+    ->whereUuid('customerInvoice')->name('customer-invoices.bank-payments.store');
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->post('customer-invoices/{customerInvoice}/bank-payments/{payment}/reverse', [CustomerInvoiceBankPaymentController::class, 'reverse'])
+    ->whereUuid('customerInvoice')->whereUuid('payment')->name('customer-invoices.bank-payments.reverse');
 Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->get('customer-invoices/{customerInvoice}/document', [CustomerInvoiceDocumentController::class, 'show'])
     ->whereUuid('customerInvoice')

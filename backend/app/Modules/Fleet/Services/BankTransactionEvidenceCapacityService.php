@@ -6,6 +6,7 @@ namespace App\Modules\Fleet\Services;
 
 use App\Modules\Fleet\Models\BankTransactionEvidence;
 use App\Modules\Fleet\Models\VehicleCostAllocationBankMatchingExecution;
+use App\Modules\Pricing\Models\CustomerInvoiceBankPayment;
 use App\Modules\Pricing\Models\FinancialSettlementBankPayment;
 use App\Modules\Pricing\Models\SupplierFuelInvoiceBankPayment;
 
@@ -21,6 +22,9 @@ final class BankTransactionEvidenceCapacityService
             ->where('bank_transaction_evidence_id', $evidence->id)
             ->where('status', FinancialSettlementBankPayment::STATUS_ACTIVE)
             ->sum('allocated_amount_minor');
+        $customerInvoiceMinor = (int) CustomerInvoiceBankPayment::query()
+            ->where('bank_transaction_evidence_id', $evidence->id)
+            ->where('status', 'active')->sum('allocated_amount_minor');
         $vehicleCostMinor = 0;
         foreach (VehicleCostAllocationBankMatchingExecution::query()
             ->where('bank_transaction_evidence_id', $evidence->id)
@@ -29,7 +33,7 @@ final class BankTransactionEvidenceCapacityService
             $vehicleCostMinor += $this->minor((string) $amount);
         }
 
-        return $supplierFuelMinor + $settlementMinor + $vehicleCostMinor;
+        return $supplierFuelMinor + $settlementMinor + $customerInvoiceMinor + $vehicleCostMinor;
     }
 
     public function remainingMinor(BankTransactionEvidence $evidence): int

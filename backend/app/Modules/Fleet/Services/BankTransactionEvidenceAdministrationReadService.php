@@ -7,6 +7,7 @@ namespace App\Modules\Fleet\Services;
 use App\Models\User;
 use App\Modules\Fleet\Models\BankTransactionEvidence;
 use App\Modules\Fleet\Models\VehicleCostAllocationBankMatchingExecution;
+use App\Modules\Pricing\Models\CustomerInvoiceBankPayment;
 use App\Modules\Pricing\Models\FinancialSettlementBankMatchCandidate;
 use App\Modules\Pricing\Models\FinancialSettlementBankPayment;
 use App\Modules\Pricing\Models\FinancialSettlementBankPaymentReconciliation;
@@ -147,6 +148,11 @@ final class BankTransactionEvidenceAdministrationReadService
                 ->where('bank_transaction_evidence_id', $evidenceId)->orderBy('id')->get()
                 ->map(static fn (SupplierFuelInvoiceBankPayment $payment): array => $payment->only([
                     'public_id', 'supplier_fuel_invoice_id', 'allocated_amount_minor', 'currency', 'status', 'revision',
+                ]))->values()->all(),
+            'customer_invoice_payments' => CustomerInvoiceBankPayment::query()
+                ->where('bank_transaction_evidence_id', $evidenceId)->orderBy('id')->get()
+                ->map(static fn (CustomerInvoiceBankPayment $payment): array => $payment->only([
+                    'public_id', 'billing_document_id', 'allocated_amount_minor', 'currency', 'status', 'revision',
                 ]))->values()->all(),
             'vehicle_cost_matches' => VehicleCostAllocationBankMatchingExecution::query()
                 ->where('bank_transaction_evidence_id', $evidenceId)->orderBy('id')->get()
