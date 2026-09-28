@@ -238,11 +238,28 @@ final class CustomerInvoiceIssuanceTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('idempotency_key');
         $this->getJson($paymentUrl)->assertOk()->assertJsonPath('data.paid_amount_minor', 5000)
             ->assertJsonPath('data.unpaid_amount_minor', 7100)->assertJsonPath('data.payment_state', 'partially_paid');
+        $receivablesUrl = '/api/v1/customer-receivables';
+        $this->getJson($receivablesUrl.'?state=invalid')->assertUnprocessable()
+            ->assertJsonValidationErrors('state');
+        $this->getJson($receivablesUrl.'?as_of=2026-10-15&state=overdue')->assertOk()
+            ->assertJsonPath('data.balance_basis', 'current_active_allocations')
+            ->assertJsonPath('data.pagination.total', 1)
+            ->assertJsonPath('data.items.0.public_id', $invoiceId)
+            ->assertJsonPath('data.items.0.unpaid_amount_minor', 7100)
+            ->assertJsonPath('data.items.0.overdue_days', 1)
+            ->assertJsonPath('data.customer_totals.0.overdue_amount_minor', 7100);
+        $this->getJson($receivablesUrl.'?as_of=2026-10-14&state=overdue')->assertOk()
+            ->assertJsonPath('data.pagination.total', 0);
+        $this->getJson($receivablesUrl.'?customer_organization_id='.$issuer->id)->assertOk()
+            ->assertJsonPath('data.pagination.total', 0);
         self::assertSame(7100, app(BankTransactionEvidenceCapacityService::class)->remainingMinor($bank));
         $second = array_replace($allocation, ['idempotency_key' => (string) Str::uuid(), 'allocated_amount_minor' => 7100]);
         $this->postJson($paymentUrl, $second)->assertCreated();
         $this->getJson($paymentUrl)->assertOk()->assertJsonPath('data.payment_state', 'paid')
             ->assertJsonPath('data.unpaid_amount_minor', 0);
+        $this->getJson($receivablesUrl.'?as_of=2026-10-15&state=paid')->assertOk()
+            ->assertJsonPath('data.items.0.paid_amount_minor', 12100)
+            ->assertJsonPath('data.items.0.overdue_days', 0);
         $this->postJson($paymentUrl, array_replace($second, ['idempotency_key' => (string) Str::uuid()]))
             ->assertUnprocessable()->assertJsonValidationErrors('allocated_amount_minor');
         $reverseUrl = $paymentUrl.'/'.$firstPayment['public_id'].'/reverse';
@@ -252,6 +269,8 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         $this->postJson($reverseUrl, $reverse)->assertOk()->assertJsonPath('data.revision', 2);
         $this->getJson($paymentUrl)->assertOk()->assertJsonPath('data.payment_state', 'partially_paid')
             ->assertJsonPath('data.unpaid_amount_minor', 5000);
+        $this->getJson($receivablesUrl.'?as_of=2026-10-15&state=overdue')->assertOk()
+            ->assertJsonPath('data.items.0.unpaid_amount_minor', 5000);
         self::assertSame(5000, app(BankTransactionEvidenceCapacityService::class)->remainingMinor($bank));
         self::assertSame(2, CustomerInvoiceBankPayment::query()->count());
         self::assertSame(3, CustomerInvoiceBankPaymentEvent::query()->count());
@@ -338,6 +357,8 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         $registrar->forgetCachedPermissions();
         $customerUser->unsetRelation('permissions');
         Sanctum::actingAs($customerUser);
+        $this->withHeader('X-Organization-ID', (string) $customer->id)
+            ->getJson($receivablesUrl)->assertForbidden();
         $this->withHeader('X-Organization-ID', (string) $customer->id)
             ->getJson($paymentUrl)->assertForbidden();
         $this->withHeader('X-Organization-ID', (string) $customer->id)

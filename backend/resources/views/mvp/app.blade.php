@@ -16239,6 +16239,22 @@ const bindFuelWorkspace = () => {
                                     <button type="submit">Použít filtry</button>
                                 </form>
 
+                                <details class="drayvia-finance-card" data-customer-receivables hidden style="margin-top: 18px;">
+                                    <summary>Pohledávky odběratelů</summary>
+                                    <p>Úhrady vycházejí z aktuálně aktivních přiřazení. Datum slouží k posouzení splatnosti.</p>
+                                    <form class="drayvia-billing-toolbar" data-receivables-filter>
+                                        <label>Odběratel <select name="customer_organization_id"><option value="">Všichni</option></select></label>
+                                        <label>Stav <select name="state"><option value="">Všechny</option><option value="open">Otevřené</option><option value="unpaid">Neuhrazené</option><option value="partially_paid">Částečně uhrazené</option><option value="paid">Uhrazené</option><option value="overdue">Po splatnosti</option></select></label>
+                                        <label>Splatnost vůči datu <input type="date" name="as_of"></label>
+                                        <button type="submit">Použít filtry</button>
+                                        <button type="button" data-receivables-refresh>Obnovit</button>
+                                    </form>
+                                    <p data-receivables-status role="status" aria-live="polite"></p>
+                                    <div class="drayvia-billing-table-wrap" data-receivables-totals></div>
+                                    <div class="drayvia-billing-table-wrap" data-receivables-items></div>
+                                    <nav data-receivables-pagination aria-label="Stránky pohledávek"></nav>
+                                </details>
+
                                 <details class="drayvia-finance-card" data-invoice-payment-account hidden style="margin-top: 18px;">
                                     <summary>Účet pro úhradu faktur</summary>
                                     <p data-invoice-payment-current>Načítám aktuální účet…</p>
@@ -26153,6 +26169,74 @@ const loadFinanceCustomers = async () => {
                 </div>`;
         };
 
+        const receivablesTable = (host, captionText, headers, rows) => {
+            const table = document.createElement('table');
+            table.className = 'drayvia-billing-table';
+            const caption = document.createElement('caption');
+            caption.textContent = captionText;
+            table.appendChild(caption);
+            const head = table.createTHead().insertRow();
+            headers.forEach((label) => { const cell = document.createElement('th'); cell.textContent = label; head.appendChild(cell); });
+            const body = table.createTBody();
+            rows.forEach((values) => {
+                const row = body.insertRow();
+                values.forEach((value) => { row.insertCell().textContent = String(value ?? '—'); });
+            });
+            host.replaceChildren(table);
+        };
+        const loadCustomerReceivables = async (page = 1) => {
+            const panel = document.querySelector('[data-customer-receivables]');
+            if (!panel || panel.hidden) return;
+            const form = panel.querySelector('[data-receivables-filter]');
+            const status = panel.querySelector('[data-receivables-status]');
+            const params = new URLSearchParams();
+            ['customer_organization_id', 'state', 'as_of'].forEach((name) => {
+                const value = form.elements[name].value;
+                if (value) params.set(name, value);
+            });
+            params.set('page', String(page));
+            params.set('per_page', '25');
+            try {
+                const result = getPayload(await api(`/api/v1/customer-receivables?${params}`));
+                panel.dataset.loaded = '1';
+                const customerSelect = form.elements.customer_organization_id;
+                const selected = customerSelect.value;
+                customerSelect.replaceChildren(new Option('Všichni', ''));
+                (result.customer_options || []).forEach((customer) => customerSelect.add(new Option(customer.name, String(customer.id))));
+                customerSelect.value = selected;
+                status.textContent = `${result.pagination.total} faktur; úhrady dle aktuálních přiřazení, splatnost vůči ${result.as_of}.`;
+                const money = (minor, currency) => billingMoney((minor / 100).toFixed(2), currency);
+                receivablesTable(panel.querySelector('[data-receivables-totals]'), 'Souhrn podle odběratele a měny',
+                    ['Odběratel', 'Měna', 'Faktur', 'Celkem', 'Uhrazeno', 'Zbývá', 'Po splatnosti'],
+                    (result.customer_totals || []).map((row) => [row.customer_name, row.currency, row.invoice_count,
+                        money(row.invoice_amount_minor, row.currency), money(row.paid_amount_minor, row.currency),
+                        money(row.unpaid_amount_minor, row.currency), money(row.overdue_amount_minor, row.currency)]));
+                receivablesTable(panel.querySelector('[data-receivables-items]'), 'Vydané faktury',
+                    ['Doklad', 'Odběratel', 'Splatnost', 'Celkem', 'Uhrazeno', 'Zbývá', 'Stav'],
+                    (result.items || []).map((row) => [row.document_number, row.customer_name, row.due_on,
+                        money(row.invoice_amount_minor, row.currency), money(row.paid_amount_minor, row.currency),
+                        money(row.unpaid_amount_minor, row.currency), row.overdue_days > 0
+                            ? `${row.overdue_days} dní po splatnosti` : ({ paid: 'Uhrazeno', partially_paid: 'Částečně', unpaid: 'Neuhrazeno' }[row.payment_state])]));
+                const navigation = panel.querySelector('[data-receivables-pagination]');
+                navigation.replaceChildren();
+                const previous = document.createElement('button'); previous.type = 'button'; previous.textContent = 'Předchozí';
+                previous.disabled = result.pagination.current_page <= 1;
+                previous.addEventListener('click', () => loadCustomerReceivables(result.pagination.current_page - 1));
+                const next = document.createElement('button'); next.type = 'button'; next.textContent = 'Další';
+                next.disabled = result.pagination.current_page >= result.pagination.last_page;
+                next.addEventListener('click', () => loadCustomerReceivables(result.pagination.current_page + 1));
+                navigation.append(previous, document.createTextNode(` Strana ${result.pagination.current_page} z ${result.pagination.last_page} `), next);
+            } catch (error) { status.textContent = `Pohledávky nelze načíst: ${error.message}`; }
+        };
+        const bindCustomerReceivables = () => {
+            const panel = document.querySelector('[data-customer-receivables]');
+            if (!panel || panel.dataset.bound) return;
+            panel.dataset.bound = '1';
+            panel.querySelector('[data-receivables-filter]').addEventListener('submit', (event) => {
+                event.preventDefault(); loadCustomerReceivables(1);
+            });
+            panel.querySelector('[data-receivables-refresh]').addEventListener('click', () => loadCustomerReceivables(1));
+        };
         const renderBillingOverview = (data) => {
             const note = document.querySelector('[data-billing-visibility-note]');
             const summary = document.querySelector('[data-billing-summary]');
@@ -26170,6 +26254,11 @@ const loadFinanceCustomers = async () => {
             if (invoicePanel) invoicePanel.hidden = data.visibility !== 'company';
             const paymentPanel = document.querySelector('[data-invoice-payment-account]');
             if (paymentPanel) paymentPanel.hidden = data.visibility !== 'company';
+            const receivablesPanel = document.querySelector('[data-customer-receivables]');
+            if (receivablesPanel) {
+                receivablesPanel.hidden = data.visibility !== 'company';
+                if (!receivablesPanel.hidden && !receivablesPanel.dataset.loaded) loadCustomerReceivables();
+            }
             renderBillingCompanySummary(summary, data);
             renderBillingItems(items, data);
             renderBillingPagination(data.pagination);
@@ -26914,6 +27003,7 @@ if (page === 'finance') {
             loadFinanceExternalCarrierPriceLists();
             loadFinanceCustomers();
             bindBillingOverview();
+            bindCustomerReceivables();
             bindInvoicePaymentAccount();
             bindCustomerInvoiceWorkspace();
             loadBillingOverview();

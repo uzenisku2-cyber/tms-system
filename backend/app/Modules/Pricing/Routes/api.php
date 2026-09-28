@@ -10,6 +10,7 @@ use App\Modules\Pricing\Controllers\CustomerInvoiceDocumentController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceEmailController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceIssuanceController;
 use App\Modules\Pricing\Controllers\CustomerInvoicePdfController;
+use App\Modules\Pricing\Controllers\CustomerReceivablesOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
@@ -168,6 +169,10 @@ Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->get('customer-invoices/{customerInvoice}', [CustomerInvoiceController::class, 'show'])
     ->whereUuid('customerInvoice')
     ->name('customer-invoices.show');
+
+Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.manage'])
+    ->get('customer-receivables', [CustomerReceivablesOverviewController::class, 'index'])
+    ->name('customer-receivables.index');
 
 Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->get('customer-invoices/{customerInvoice}/bank-payments', [CustomerInvoiceBankPaymentController::class, 'index'])
