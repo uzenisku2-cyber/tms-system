@@ -16279,6 +16279,16 @@ const bindFuelWorkspace = () => {
                                         <div data-customer-invoice-preview></div>
                                     <button type="button" data-invoice-print hidden>Tisk / uložit jako PDF</button>
                                     <button type="button" data-invoice-pdf hidden>Stáhnout uložené PDF</button>
+                                        <details data-invoice-email-panel hidden>
+                                            <summary>Odeslat uložené PDF e-mailem</summary>
+                                            <p>Odeslání vyžaduje nastavené SMTP a spuštěného pracovníka fronty. Stav „přijato SMTP“ neprokazuje převzetí adresátem.</p>
+                                            <p data-invoice-email-status role="status"></p>
+                                            <form data-invoice-email-form>
+                                                <label>E-mail příjemce <input type="email" name="recipient_email" maxlength="254" required></label>
+                                                <label>Důvod odeslání <textarea name="reason" minlength="10" maxlength="1000" required></textarea></label>
+                                                <button type="submit">Potvrdit a odeslat fakturu e-mailem</button>
+                                            </form>
+                                        </details>
                                         <details data-invoice-delivery-panel hidden>
                                             <summary>Evidence doručení faktury</summary>
                                             <p>Ruční záznam o předání uloženého PDF. Záznam neodesílá e-mail ani sám nepotvrzuje převzetí.</p>
@@ -26282,6 +26292,8 @@ const loadFinanceCustomers = async () => {
             root.querySelector('[data-invoice-print]').hidden = invoice.status === 'draft';
             root.querySelector('[data-invoice-pdf]').hidden = invoice.status === 'draft';
             root.querySelector('[data-invoice-delivery-panel]').hidden = invoice.status === 'draft';
+            root.querySelector('[data-invoice-email-panel]').hidden = invoice.status === 'draft';
+            if (invoice.status !== 'draft') loadInvoiceEmailDispatch(invoice.public_id);
             if (invoice.status !== 'draft') loadInvoiceDeliveries(invoice.public_id);
             preview.replaceChildren();
             const rows = [
@@ -26388,6 +26400,33 @@ const loadFinanceCustomers = async () => {
                 status.textContent = `Historii doručení nelze načíst: ${error.message}`;
             }
         };
+        const loadInvoiceEmailDispatch = async (publicId) => {
+            const panel = invoiceWorkspace()?.querySelector('[data-invoice-email-panel]');
+            if (!panel || !publicId) return;
+            const status = panel.querySelector('[data-invoice-email-status]');
+            panel.dataset.pdfSha256 = '';
+            panel.querySelector('button[type="submit"]').disabled = true;
+            try {
+                const [dispatch, delivery] = await Promise.all([
+                    api(`/api/v1/customer-invoices/${encodeURIComponent(publicId)}/email-dispatch`),
+                    api(`/api/v1/customer-invoices/${encodeURIComponent(publicId)}/deliveries`),
+                ]);
+                if (invoiceState.publicId !== publicId) return;
+                const attempt = getPayload(dispatch);
+                const evidence = getPayload(delivery);
+                panel.dataset.pdfSha256 = evidence?.pdf_sha256 || '';
+                if (attempt) {
+                    status.textContent = `E-mail ${attempt.recipient_email}: ${attempt.status}. Přijato SMTP: ${attempt.accepted_at || 'nepotvrzeno'}. ${attempt.failure_summary || ''}`;
+                } else {
+                    status.textContent = evidence?.pdf_sha256
+                        ? `PDF SHA-256: ${evidence.pdf_sha256}. Zkontrolujte adresu; odeslání nelze vzít zpět.`
+                        : 'Nejdříve stáhněte a ověřte uložené PDF faktury.';
+                    panel.querySelector('button[type="submit"]').disabled = !evidence?.pdf_sha256;
+                }
+            } catch (error) {
+                status.textContent = `Stav e-mailu nelze načíst: ${error.message}`;
+            }
+        };
         const bindCustomerInvoiceWorkspace = () => {
             const root = invoiceWorkspace();
             if (!root || root.dataset.invoiceBound === '1') return;
@@ -26395,6 +26434,36 @@ const loadFinanceCustomers = async () => {
             const draftForm = root.querySelector('[data-customer-invoice-draft-form]');
             const issueForm = root.querySelector('[data-customer-invoice-issue-form]');
             const deliveryForm = root.querySelector('[data-invoice-delivery-form]');
+            const emailForm = root.querySelector('[data-invoice-email-form]');
+            emailForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!invoiceState.publicId) return;
+                const panel = root.querySelector('[data-invoice-email-panel]');
+                const status = panel.querySelector('[data-invoice-email-status]');
+                const button = emailForm.querySelector('button[type="submit"]');
+                const payload = {
+                    pdf_sha256: panel.dataset.pdfSha256,
+                    recipient_email: invoiceInput(emailForm, 'recipient_email'),
+                    reason: invoiceInput(emailForm, 'reason'),
+                };
+                const fingerprint = JSON.stringify([invoiceState.publicId, payload]);
+                if (fingerprint !== invoiceState.emailFingerprint) {
+                    invoiceState.emailKey = invoiceUuid();
+                    invoiceState.emailFingerprint = fingerprint;
+                }
+                button.disabled = true;
+                status.textContent = 'Předávám požadavek do fronty…';
+                try {
+                    await api(`/api/v1/customer-invoices/${encodeURIComponent(invoiceState.publicId)}/email-dispatch`, {
+                        method: 'POST', body: JSON.stringify({ ...payload, idempotency_key: invoiceState.emailKey }),
+                    });
+                    await loadInvoiceEmailDispatch(invoiceState.publicId);
+                    invoiceMessage('Požadavek je ve frontě. Stav přijetí SMTP se zobrazí po opětovném otevření faktury.');
+                } catch (error) {
+                    status.textContent = `Odeslání nebylo potvrzeno: ${error.message}. Před opakováním zkontrolujte stav požadavku.`;
+                    await loadInvoiceEmailDispatch(invoiceState.publicId);
+                }
+            });
             deliveryForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 if (!invoiceState.publicId) return;
