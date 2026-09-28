@@ -170,7 +170,10 @@ final class CustomerInvoiceDraftService
     private function present(BillingDocument $document): array
     {
         $document->load(['lines.financialCalculation:id,public_id', 'commercialIdentity']);
-        $snapshot = $document->source_snapshot;
+        $snapshot = $document->commercialIdentity?->getAttribute('counterparty_snapshot') ?? $document->getAttribute('source_snapshot');
+        if (! is_array($snapshot)) {
+            $snapshot = [];
+        }
         $identity = $document->commercialIdentity;
 
         return [
@@ -185,10 +188,10 @@ final class CustomerInvoiceDraftService
             'taxable_supply_on' => $identity && $identity->getRawOriginal('taxable_supply_on') !== null
                 ? (string) $identity->getRawOriginal('taxable_supply_on') : null,
             'due_on' => $identity ? (string) $identity->getRawOriginal('due_on') : null,
-            'net_amount' => $document->net_amount, 'vat_amount' => $document->vat_amount,
-            'gross_amount' => $document->gross_amount,
-            'vat_rate' => $document->vat_rate,
-            'lines' => $document->lines->map(static fn (BillingDocumentLine $line): array => [
+            'net_amount' => $snapshot['net_amount'] ?? $document->net_amount, 'vat_amount' => $snapshot['vat_amount'] ?? $document->vat_amount,
+            'gross_amount' => $snapshot['gross_amount'] ?? $document->gross_amount,
+            'vat_rate' => $snapshot['vat_rate'] ?? $document->vat_rate,
+            'lines' => $identity !== null ? ($snapshot['lines'] ?? []) : $document->lines->map(static fn (BillingDocumentLine $line): array => [
                 'position' => $line->position, 'description' => $line->description,
                 'quantity' => $line->quantity, 'unit_rate' => $line->unit_rate,
                 'net_amount' => $line->net_amount, 'vat_amount' => $line->vat_amount,
