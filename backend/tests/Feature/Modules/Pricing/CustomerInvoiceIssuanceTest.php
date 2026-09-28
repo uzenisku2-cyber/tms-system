@@ -7,6 +7,8 @@ namespace Tests\Feature\Modules\Pricing;
 use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\Drivers\Models\Driver;
+use App\Modules\Fleet\Models\BankTransactionEvidence;
+use App\Modules\Fleet\Services\BankTransactionEvidenceCapacityService;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\OrganizationRelationship;
@@ -16,6 +18,8 @@ use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentity;
 use App\Modules\Pricing\Models\BillingDocumentCommercialIdentityEvent;
 use App\Modules\Pricing\Models\BillingDocumentLine;
+use App\Modules\Pricing\Models\CustomerInvoiceBankPayment;
+use App\Modules\Pricing\Models\CustomerInvoiceBankPaymentEvent;
 use App\Modules\Pricing\Models\CustomerInvoiceDeliveryEvent;
 use App\Modules\Pricing\Models\CustomerInvoiceEmailDispatch;
 use App\Modules\Pricing\Models\CustomerInvoicePdfArtifact;
@@ -194,6 +198,64 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         ])->assertCreated()->assertJsonPath('data.revision', 2);
         $this->get($url.'/'.$invoiceId.'/document')->assertOk()
             ->assertSee('CZ6508000000192000145399')->assertDontSee('CZ5508000000001234567899');
+        $bank = BankTransactionEvidence::query()->create([
+            'public_id' => (string) Str::uuid(), 'organization_context_id' => $issuer->id,
+            'idempotency_key' => (string) Str::uuid(), 'source_type' => 'manual_evidence',
+            'source_reference' => 'BANK-INVOICE-001', 'bank_statement_reference' => 'SEP-2026',
+            'direction' => 'credit', 'booked_at' => '2026-09-28', 'value_date' => '2026-09-28',
+            'amount' => '121.00', 'currency' => 'CZK', 'account_identifier' => 'CZ6508000000192000145399',
+            'counterparty_name' => 'Customer', 'counterparty_account_identifier' => 'CZ6508000000000000000001',
+            'variable_symbol' => '2026001', 'message' => 'Invoice payment', 'evidence_note' => 'Bank statement reference.',
+            'status' => 'recorded', 'recorded_by_user_id' => $user->id, 'recorded_at' => now(), 'revision' => 1,
+        ]);
+        $paymentUrl = $url.'/'.$invoiceId.'/bank-payments';
+        $this->getJson($paymentUrl)->assertOk()->assertJsonPath('data.payment_state', 'unpaid');
+        $allocation = [
+            'idempotency_key' => (string) Str::uuid(), 'bank_transaction_evidence_public_id' => $bank->public_id,
+            'expected_bank_revision' => 1, 'allocated_amount_minor' => 5000,
+            'reason' => 'Checked bank credit against issued invoice identity.',
+        ];
+        foreach (['direction' => 'debit', 'currency' => 'EUR', 'variable_symbol' => '999999',
+            'account_identifier' => 'CZ5508000000001234567899'] as $field => $wrong) {
+            $invalidBank = $bank->replicate();
+            $invalidBank->forceFill([
+                'public_id' => (string) Str::uuid(), 'idempotency_key' => (string) Str::uuid(),
+                'source_reference' => 'BANK-INVOICE-INVALID-'.Str::uuid(), $field => $wrong,
+            ])->save();
+            $this->postJson($paymentUrl, array_replace($allocation, [
+                'idempotency_key' => (string) Str::uuid(),
+                'bank_transaction_evidence_public_id' => $invalidBank->public_id,
+            ]))
+                ->assertUnprocessable()->assertJsonValidationErrors('bank_transaction_evidence_public_id');
+        }
+        $this->postJson($paymentUrl, array_replace($allocation, ['expected_bank_revision' => 2]))
+            ->assertUnprocessable()->assertJsonValidationErrors('expected_bank_revision');
+        $this->postJson($paymentUrl, array_replace($allocation, ['idempotency_key' => (string) Str::uuid(), 'allocated_amount_minor' => 12200]))
+            ->assertUnprocessable()->assertJsonValidationErrors('allocated_amount_minor');
+        $firstPayment = $this->postJson($paymentUrl, $allocation)->assertCreated()->json('data');
+        $this->postJson($paymentUrl, $allocation)->assertCreated()->assertJsonPath('data.public_id', $firstPayment['public_id']);
+        $this->postJson($paymentUrl, array_replace($allocation, ['allocated_amount_minor' => 5100]))
+            ->assertUnprocessable()->assertJsonValidationErrors('idempotency_key');
+        $this->getJson($paymentUrl)->assertOk()->assertJsonPath('data.paid_amount_minor', 5000)
+            ->assertJsonPath('data.unpaid_amount_minor', 7100)->assertJsonPath('data.payment_state', 'partially_paid');
+        self::assertSame(7100, app(BankTransactionEvidenceCapacityService::class)->remainingMinor($bank));
+        $second = array_replace($allocation, ['idempotency_key' => (string) Str::uuid(), 'allocated_amount_minor' => 7100]);
+        $this->postJson($paymentUrl, $second)->assertCreated();
+        $this->getJson($paymentUrl)->assertOk()->assertJsonPath('data.payment_state', 'paid')
+            ->assertJsonPath('data.unpaid_amount_minor', 0);
+        $this->postJson($paymentUrl, array_replace($second, ['idempotency_key' => (string) Str::uuid()]))
+            ->assertUnprocessable()->assertJsonValidationErrors('allocated_amount_minor');
+        $reverseUrl = $paymentUrl.'/'.$firstPayment['public_id'].'/reverse';
+        $reverse = ['idempotency_key' => (string) Str::uuid(), 'expected_revision' => 1,
+            'reason' => 'Reversed erroneous first allocation after checking statement.'];
+        $this->postJson($reverseUrl, $reverse)->assertOk()->assertJsonPath('data.status', 'reversed');
+        $this->postJson($reverseUrl, $reverse)->assertOk()->assertJsonPath('data.revision', 2);
+        $this->getJson($paymentUrl)->assertOk()->assertJsonPath('data.payment_state', 'partially_paid')
+            ->assertJsonPath('data.unpaid_amount_minor', 5000);
+        self::assertSame(5000, app(BankTransactionEvidenceCapacityService::class)->remainingMinor($bank));
+        self::assertSame(2, CustomerInvoiceBankPayment::query()->count());
+        self::assertSame(3, CustomerInvoiceBankPaymentEvent::query()->count());
+        self::assertSame('121.00', (string) BillingDocument::query()->firstOrFail()->gross_amount);
         Storage::fake('local');
         $firstPdf = $this->get($url.'/'.$invoiceId.'/pdf')->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
@@ -276,6 +338,10 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         $registrar->forgetCachedPermissions();
         $customerUser->unsetRelation('permissions');
         Sanctum::actingAs($customerUser);
+        $this->withHeader('X-Organization-ID', (string) $customer->id)
+            ->getJson($paymentUrl)->assertForbidden();
+        $this->withHeader('X-Organization-ID', (string) $customer->id)
+            ->postJson($paymentUrl, array_replace($allocation, ['idempotency_key' => (string) Str::uuid()]))->assertForbidden();
         $this->withHeader('X-Organization-ID', (string) $customer->id)
             ->getJson($url.'/'.$invoiceId)->assertOk()
             ->assertJsonPath('data.document_number', 'FV-2026-001')

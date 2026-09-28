@@ -16279,6 +16279,20 @@ const bindFuelWorkspace = () => {
                                         <div data-customer-invoice-preview></div>
                                     <button type="button" data-invoice-print hidden>Tisk / uložit jako PDF</button>
                                     <button type="button" data-invoice-pdf hidden>Stáhnout uložené PDF</button>
+                                        <details data-invoice-bank-panel hidden>
+                                            <summary>Úhrady faktury</summary>
+                                            <p data-invoice-bank-status role="status"></p>
+                                            <ol data-invoice-bank-history></ol>
+                                            <form data-invoice-bank-form>
+                                                <div class="drayvia-billing-toolbar">
+                                                    <label>UUID bankovní položky <input name="bank_transaction_evidence_public_id" required></label>
+                                                    <label>Revize bankovní položky <input name="expected_bank_revision" type="number" min="1" value="1" required></label>
+                                                    <label>Částka <input name="amount" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" required></label>
+                                                </div>
+                                                <label>Důvod párování <textarea name="reason" minlength="10" maxlength="1000" required></textarea></label>
+                                                <button type="submit">Přiřadit bankovní úhradu</button>
+                                            </form>
+                                        </details>
                                         <details data-invoice-email-panel hidden>
                                             <summary>Odeslat uložené PDF e-mailem</summary>
                                             <p>Odeslání vyžaduje nastavené SMTP a spuštěného pracovníka fronty. Stav „přijato SMTP“ neprokazuje převzetí adresátem.</p>
@@ -26293,6 +26307,8 @@ const loadFinanceCustomers = async () => {
             root.querySelector('[data-invoice-pdf]').hidden = invoice.status === 'draft';
             root.querySelector('[data-invoice-delivery-panel]').hidden = invoice.status === 'draft';
             root.querySelector('[data-invoice-email-panel]').hidden = invoice.status === 'draft';
+            root.querySelector('[data-invoice-bank-panel]').hidden = invoice.status === 'draft';
+            if (invoice.status !== 'draft') loadInvoiceBankPayments(invoice.public_id);
             if (invoice.status !== 'draft') loadInvoiceEmailDispatch(invoice.public_id);
             if (invoice.status !== 'draft') loadInvoiceDeliveries(invoice.public_id);
             preview.replaceChildren();
@@ -26374,6 +26390,47 @@ const loadFinanceCustomers = async () => {
             });
         };
 
+        const loadInvoiceBankPayments = async (publicId) => {
+            const panel = invoiceWorkspace()?.querySelector('[data-invoice-bank-panel]');
+            if (!panel || !publicId) return;
+            const status = panel.querySelector('[data-invoice-bank-status]');
+            const history = panel.querySelector('[data-invoice-bank-history]');
+            history.replaceChildren();
+            try {
+                const result = getPayload(await api(`/api/v1/customer-invoices/${encodeURIComponent(publicId)}/bank-payments`));
+                if (invoiceState.publicId !== publicId) return;
+                const label = { unpaid: 'Neuhrazeno', partially_paid: 'Částečně uhrazeno', paid: 'Uhrazeno' };
+                status.textContent = `${label[result.payment_state] || result.payment_state}: přiřazeno ${(result.paid_amount_minor / 100).toFixed(2)} ${result.currency}, zbývá ${(result.unpaid_amount_minor / 100).toFixed(2)} ${result.currency}.`;
+                (result.payments || []).forEach((payment) => {
+                    const item = document.createElement('li');
+                    item.textContent = `${payment.status === 'active' ? 'Aktivní' : 'Stornováno'}: ${(payment.allocated_amount_minor / 100).toFixed(2)} ${payment.currency}, banka ${payment.bank_transaction_evidence_public_id}; ${payment.reason}. `;
+                    if (payment.status === 'active') {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.textContent = 'Stornovat přiřazení';
+                        button.addEventListener('click', async () => {
+                            const reason = window.prompt('Důvod storna (alespoň 10 znaků)');
+                            if (!reason || reason.trim().length < 10) return;
+                            button.disabled = true;
+                            try {
+                                await api(`/api/v1/customer-invoices/${encodeURIComponent(publicId)}/bank-payments/${encodeURIComponent(payment.public_id)}/reverse`, {
+                                    method: 'POST', body: JSON.stringify({ expected_revision: payment.revision, reason: reason.trim(), idempotency_key: invoiceUuid() }),
+                                });
+                            } catch (error) {
+                                status.textContent = `Storno se nezdařilo: ${error.message}`;
+                            } finally {
+                                button.disabled = false;
+                                await loadInvoiceBankPayments(publicId);
+                            }
+                        });
+                        item.appendChild(button);
+                    }
+                    history.appendChild(item);
+                });
+            } catch (error) {
+                status.textContent = `Úhrady nelze načíst: ${error.message}`;
+            }
+        };
         const loadInvoiceDeliveries = async (publicId) => {
             const root = invoiceWorkspace();
             const panel = root?.querySelector('[data-invoice-delivery-panel]');
@@ -26435,6 +26492,38 @@ const loadFinanceCustomers = async () => {
             const issueForm = root.querySelector('[data-customer-invoice-issue-form]');
             const deliveryForm = root.querySelector('[data-invoice-delivery-form]');
             const emailForm = root.querySelector('[data-invoice-email-form]');
+            const bankForm = root.querySelector('[data-invoice-bank-form]');
+            bankForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!invoiceState.publicId) return;
+                const status = root.querySelector('[data-invoice-bank-status]');
+                const button = bankForm.querySelector('button[type="submit"]');
+                const match = /^([0-9]+)(?:[.,]([0-9]{1,2}))?$/.exec(invoiceInput(bankForm, 'amount'));
+                if (!match) { status.textContent = 'Zadejte částku nejvýše na dvě desetinná místa.'; return; }
+                const amount = Number(match[1]) * 100 + Number((match[2] || '').padEnd(2, '0'));
+                if (!Number.isSafeInteger(amount) || amount <= 0) { status.textContent = 'Neplatná částka.'; return; }
+                const payload = {
+                    bank_transaction_evidence_public_id: invoiceInput(bankForm, 'bank_transaction_evidence_public_id'),
+                    expected_bank_revision: Number(invoiceInput(bankForm, 'expected_bank_revision')),
+                    allocated_amount_minor: amount, reason: invoiceInput(bankForm, 'reason'),
+                };
+                const fingerprint = JSON.stringify([invoiceState.publicId, payload]);
+                if (fingerprint !== invoiceState.bankFingerprint) {
+                    invoiceState.bankKey = invoiceUuid(); invoiceState.bankFingerprint = fingerprint;
+                }
+                button.disabled = true;
+                try {
+                    await api(`/api/v1/customer-invoices/${encodeURIComponent(invoiceState.publicId)}/bank-payments`, {
+                        method: 'POST', body: JSON.stringify({ ...payload, idempotency_key: invoiceState.bankKey }),
+                    });
+                    invoiceState.bankFingerprint = null;
+                    bankForm.reset();
+                    await loadInvoiceBankPayments(invoiceState.publicId);
+                } catch (error) {
+                    await loadInvoiceBankPayments(invoiceState.publicId);
+                    status.textContent = `Úhradu nelze přiřadit: ${error.message}`;
+                } finally { button.disabled = false; }
+            });
             emailForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 if (!invoiceState.publicId) return;
