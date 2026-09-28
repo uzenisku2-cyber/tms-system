@@ -29,7 +29,7 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
     public function test_vehicle_registry_administration_routes_are_installed_without_delete_action(): void
     {
         $routes = collect(Route::getRoutes()->getRoutes())->filter(fn ($route): bool => str_contains($route->uri(), 'vehicle-registry-administration'));
-        self::assertCount(24, $routes);
+        self::assertCount(26, $routes);
         foreach ([
             ['GET', 'api/v1/vehicle-registry-administration'],
             ['GET', 'api/v1/vehicle-registry-administration/{vehicle}'],
@@ -49,6 +49,8 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/incidents/{record}/revisions'],
             ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/financing-agreements'],
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/financing-agreements/{record}/revisions'],
+            ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/installments'],
+            ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/installments/{record}/revisions'],
             ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/installment-schedules'],
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/installment-schedules/{record}/revisions'],
             ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/ownerships'],

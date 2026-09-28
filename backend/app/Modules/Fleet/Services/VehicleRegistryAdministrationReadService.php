@@ -6,6 +6,7 @@ namespace App\Modules\Fleet\Services;
 
 use App\Models\User;
 use App\Modules\Fleet\Models\Vehicle;
+use App\Modules\Fleet\Models\VehicleInstallment;
 use App\Modules\Fleet\Models\VehicleInstallmentSchedule;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
@@ -59,7 +60,10 @@ final class VehicleRegistryAdministrationReadService
         $schedules = $financingIds === [] ? [] : VehicleInstallmentSchedule::query()
             ->whereIn('vehicle_financing_agreement_id', $financingIds)->orderByDesc('id')->get()->toArray();
 
-        return ['vehicle' => $this->summary($vehicle), 'ownerships' => $vehicle->ownerships->toArray(), 'responsibilities' => $vehicle->responsibilities->toArray(), 'documents' => $vehicle->documents->toArray(), 'compliance_records' => $vehicle->complianceRecords->toArray(), 'insurance_policies' => $vehicle->insurancePolicies->toArray(), 'service_records' => $vehicle->serviceRecords->toArray(), 'incidents' => $vehicle->incidents->toArray(), 'financing_agreements' => $vehicle->financingAgreements->toArray(), 'installment_schedules' => $schedules, 'events' => $vehicle->registryEvents->toArray(), 'field_statuses' => $vehicle->recordFieldStatuses->toArray(), 'completeness' => $this->completeness($vehicle), 'capabilities' => ['can_manage_vehicles' => $actor->can('vehicle.manage')]];
+        $scheduleIds = collect($schedules)->pluck('id')->all();
+        $installments = $scheduleIds === [] ? [] : VehicleInstallment::query()->whereIn('vehicle_installment_schedule_id', $scheduleIds)->orderByDesc('id')->get()->toArray();
+
+        return ['vehicle' => $this->summary($vehicle), 'ownerships' => $vehicle->ownerships->toArray(), 'responsibilities' => $vehicle->responsibilities->toArray(), 'documents' => $vehicle->documents->toArray(), 'compliance_records' => $vehicle->complianceRecords->toArray(), 'insurance_policies' => $vehicle->insurancePolicies->toArray(), 'service_records' => $vehicle->serviceRecords->toArray(), 'incidents' => $vehicle->incidents->toArray(), 'financing_agreements' => $vehicle->financingAgreements->toArray(), 'installment_schedules' => $schedules, 'installments' => $installments, 'events' => $vehicle->registryEvents->toArray(), 'field_statuses' => $vehicle->recordFieldStatuses->toArray(), 'completeness' => $this->completeness($vehicle), 'capabilities' => ['can_manage_vehicles' => $actor->can('vehicle.manage')]];
     }
 
     private function visibleQuery(int $organizationId): Builder
