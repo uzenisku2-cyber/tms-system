@@ -4,7 +4,6 @@ namespace App\Modules\Trips\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Drivers\Models\Driver;
-use App\Modules\Drivers\Services\DriverAvailabilityConflictService;
 use App\Modules\Fleet\Models\Vehicle;
 use App\Modules\Trips\Models\Trip;
 use App\Modules\Trips\Models\TripAssignment;
@@ -66,9 +65,6 @@ class TripAssignmentController extends Controller
             ], 422);
 
         }
-
-        app(DriverAvailabilityConflictService::class)
-            ->assertTripStartAllowed($trip, (int) $driver->id);
 
         TripAssignment::create([
 
