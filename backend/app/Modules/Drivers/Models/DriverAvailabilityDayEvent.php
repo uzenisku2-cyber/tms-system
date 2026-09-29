@@ -10,11 +10,6 @@ final class DriverAvailabilityDayEvent extends Model
 {
     public $timestamps = false;
 
-    protected function casts(): array
-    {
-        return ['windows' => 'array'];
-    }
-
     protected static function booted(): void
     {
         self::updating(static function (): void {
@@ -27,6 +22,6 @@ final class DriverAvailabilityDayEvent extends Model
 
     protected $fillable = [
         'availability_day_id', 'revision', 'action', 'availability',
-        'decision', 'windows', 'reason', 'actor_user_id', 'created_at',
+        'decision', 'reason', 'actor_user_id', 'created_at',
     ];
 }

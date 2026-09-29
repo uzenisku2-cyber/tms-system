@@ -19,7 +19,6 @@ final class DriverAvailabilityCalendarService
 {
     public function __construct(
         private readonly DriverSupervisoryAuthorizationService $supervisory,
-        private readonly DriverAvailabilityConflictService $conflicts,
     ) {}
 
     public function month(User $actor, int $organizationId, string $month): array
@@ -77,7 +76,6 @@ final class DriverAvailabilityCalendarService
         if (! $driver->canOperate()) {
             abort(409, 'Driver is not active.');
         }
-        $windows = $this->conflicts->normalize($input['windows'] ?? null);
         $date = (string) $input['date'];
         $reason = trim((string) ($input['reason'] ?? ''));
         if ($input['availability'] === 'unavailable' && $reason === '') {
@@ -85,7 +83,7 @@ final class DriverAvailabilityCalendarService
         }
 
         try {
-            return DB::transaction(function () use ($actor, $organizationId, $driver, $date, $input, $reason, $windows): array {
+            return DB::transaction(function () use ($actor, $organizationId, $driver, $date, $input, $reason): array {
                 $day = DriverAvailabilityDay::query()->where('organization_id', $organizationId)
                     ->where('driver_id', $driver->getKey())->whereDate('date', $date)
                     ->lockForUpdate()->first();
@@ -101,7 +99,6 @@ final class DriverAvailabilityCalendarService
                     $day->timezone = 'Europe/Prague';
                 }
                 $day->availability = (string) $input['availability'];
-                $day->windows = $windows;
                 $day->decision = 'pending';
                 $day->reason = $reason !== '' ? $reason : null;
                 $day->revision = $revision + 1;
@@ -135,9 +132,6 @@ final class DriverAvailabilityCalendarService
             }
             if ((int) $day->submitted_by_user_id === (int) $actor->getKey()) {
                 abort(403, 'A submission requires a different confirming user.');
-            }
-            if ($input['decision'] === 'confirmed' && $day->availability === 'unavailable') {
-                $this->conflicts->assertNoExistingTripStart($day);
             }
             $day->decision = (string) $input['decision'];
             $day->revision = (int) $day->revision + 1;
@@ -202,7 +196,6 @@ final class DriverAvailabilityCalendarService
             'revision' => (int) $day->revision,
             'action' => $action,
             'availability' => (string) $day->availability,
-            'windows' => $day->windows,
             'decision' => (string) $day->decision,
             'reason' => $reason !== '' ? $reason : null,
             'actor_user_id' => (int) $actor->getKey(),
@@ -217,7 +210,6 @@ final class DriverAvailabilityCalendarService
             'driver_id' => (int) $day->driver_id,
             'date' => CarbonImmutable::parse($day->date)->toDateString(),
             'availability' => (string) $day->availability,
-            'windows' => $this->conflicts->normalize($day->windows),
             'decision' => (string) $day->decision,
             'reason' => $day->reason,
             'revision' => (int) $day->revision,
