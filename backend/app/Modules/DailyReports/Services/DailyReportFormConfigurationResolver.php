@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\DailyReports\Services;
 
 use App\Modules\DailyReports\Models\DailyReportFormConfiguration;
+use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationRelationship;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,6 +27,15 @@ final class DailyReportFormConfigurationResolver
             }
 
             $visited[$current] = true;
+
+            // A master carrier owns its form even when it delivers
+            // services to a customer linked by subcontracting.
+            if (
+                Organization::query()->whereKey($current)->value('type')
+                === Organization::TYPE_MASTER
+            ) {
+                return $current;
+            }
 
             $parentIds = OrganizationRelationship::query()
                 ->where(

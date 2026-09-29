@@ -1,0 +1,5 @@
+# Sprint 135 – Ownership of the daily report form
+
+The transport company's master organization owns its daily report form. A relationship in which a customer receives its services does not transfer control of that form to the customer. Ordinary subcontractor organizations continue to inherit the form from their highest effective transport organization.
+
+The isolated PostgreSQL preview exposed the conflict: organization 1 had a form valid from 2025-06-01, while an active subcontracting link pointed from customer organization 6 to organization 1. The resolver previously looked for the form at organization 6 and returned no configuration for a July 2026 report. The master boundary now keeps ownership at organization 1. The regression test covers this relationship and the existing child-organization test preserves inheritance.
