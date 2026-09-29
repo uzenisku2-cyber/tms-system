@@ -8407,7 +8407,7 @@ summaryParts.push(
             <div class="drayvia-preview-card-value">${calendarState.days.filter((day) => day.decision === 'confirmed').length}</div></div>
     </div>`;
     const calendar = () => `
-        ${header('Kalendář', 'Dostupnost řidičů a potvrzení dispečerem pro ${monthLabelFromValue(selectedMonth)}.')}
+        ${header('Kalendář', `Dostupnost řidičů a potvrzení dispečerem pro ${monthLabelFromValue(selectedMonth)}.`)}
         ${calendarSummary()}
         <div class="drayvia-preview-panel drayvia-calendar-panel">
             <div class="drayvia-preview-panel-head"><h2 class="drayvia-preview-panel-title">DOSTUPNOST ŘIDIČŮ – ${monthLabelFromValue(selectedMonth)}</h2>

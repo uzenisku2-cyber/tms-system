@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->uuid('public_id')->unique();
             $table->foreignId('owner_organization_id')->constrained('organizations')->restrictOnDelete();
-            $table->foreignId('financial_settlement_bank_payment_id')->unique()->constrained('financial_settlement_bank_payments')->restrictOnDelete();
-            $table->foreignId('financial_settlement_statement_id')->constrained('financial_settlement_statements')->restrictOnDelete();
+            $table->foreignId('financial_settlement_bank_payment_id')->unique('fsbpr_payment_unique')->constrained('financial_settlement_bank_payments', indexName: 'fsbpr_payment_fk')->restrictOnDelete();
+            $table->foreignId('financial_settlement_statement_id')->constrained('financial_settlement_statements', indexName: 'fsbpr_statement_fk')->restrictOnDelete();
             $table->foreignId('bank_transaction_evidence_id')->constrained('bank_transaction_evidence')->restrictOnDelete();
             $table->unsignedInteger('payment_revision');
             $table->string('status', 16);

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('public_id')->unique();
             $table->foreignId('owner_organization_id')->constrained('organizations')->restrictOnDelete();
-            $table->foreignId('financial_settlement_bank_match_candidate_id')->unique()->constrained('financial_settlement_bank_match_candidates')->restrictOnDelete();
+            $table->foreignId('financial_settlement_bank_match_candidate_id')->unique('fsbp_candidate_unique')->constrained('financial_settlement_bank_match_candidates')->restrictOnDelete();
             $table->foreignId('financial_settlement_statement_id')->constrained('financial_settlement_statements')->restrictOnDelete();
             $table->foreignId('billing_document_id')->constrained('billing_documents')->restrictOnDelete();
             $table->foreignId('bank_transaction_evidence_id')->constrained('bank_transaction_evidence')->restrictOnDelete();
