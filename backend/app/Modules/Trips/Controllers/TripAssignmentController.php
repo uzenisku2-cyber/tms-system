@@ -3,11 +3,12 @@
 namespace App\Modules\Trips\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Trips\Models\Trip;
-use App\Modules\Trips\Models\TripEvent;
-use App\Modules\Trips\Models\TripAssignment;
 use App\Modules\Drivers\Models\Driver;
+use App\Modules\Drivers\Services\DriverAvailabilityConflictService;
 use App\Modules\Fleet\Models\Vehicle;
+use App\Modules\Trips\Models\Trip;
+use App\Modules\Trips\Models\TripAssignment;
+use App\Modules\Trips\Models\TripEvent;
 use Illuminate\Http\Request;
 
 class TripAssignmentController extends Controller
@@ -19,7 +20,6 @@ class TripAssignmentController extends Controller
         if ($trip->user_id !== auth()->id()) {
             abort(403);
         }
-
 
         $data = $request->validate([
 
@@ -35,43 +35,40 @@ class TripAssignmentController extends Controller
 
         ]);
 
-
         if ($trip->status !== Trip::STATUS_PLANNED) {
 
             return response()->json([
-                'error' => 'Trip is not assignable'
+                'error' => 'Trip is not assignable',
             ], 422);
 
         }
-
 
         $driver = Driver::findOrFail(
             $data['driver_id']
         );
 
-
         $vehicle = Vehicle::findOrFail(
             $data['vehicle_id']
         );
 
-
         if ($driver->hasActiveTrip()) {
 
             return response()->json([
-                'error' => 'Driver already has active trip'
+                'error' => 'Driver already has active trip',
             ], 422);
 
         }
-
 
         if ($vehicle->hasActiveTrip()) {
 
             return response()->json([
-                'error' => 'Vehicle already has active trip'
+                'error' => 'Vehicle already has active trip',
             ], 422);
 
         }
 
+        app(DriverAvailabilityConflictService::class)
+            ->assertTripStartAllowed($trip, (int) $driver->id);
 
         TripAssignment::create([
 
@@ -87,9 +84,7 @@ class TripAssignmentController extends Controller
 
         ]);
 
-
         $oldStatus = $trip->status;
-
 
         $trip->update([
 
@@ -100,7 +95,6 @@ class TripAssignmentController extends Controller
             'status' => Trip::STATUS_ASSIGNED,
 
         ]);
-
 
         TripEvent::create([
 
@@ -113,7 +107,6 @@ class TripAssignmentController extends Controller
             'new_status' => Trip::STATUS_ASSIGNED,
 
         ]);
-
 
         return response()->json([
 
@@ -129,7 +122,7 @@ class TripAssignmentController extends Controller
 
                 'events',
 
-            ])
+            ]),
 
         ]);
     }

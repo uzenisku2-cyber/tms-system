@@ -21,6 +21,9 @@ final class StoreDriverAvailabilityDayRequest extends FormRequest
             'availability' => ['required', 'in:available,unavailable'],
             'reason' => ['nullable', 'string', 'max:1000'],
             'expected_revision' => ['required', 'integer', 'min:0'],
+            'windows' => ['sometimes', 'array', 'min:1', 'max:8'],
+            'windows.*.start' => ['required_with:windows', 'date_format:H:i'],
+            'windows.*.end' => ['required_with:windows', 'regex:/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$|^24:00$/'],
         ];
     }
 }
