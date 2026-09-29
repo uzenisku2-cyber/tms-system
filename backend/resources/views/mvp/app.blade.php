@@ -8371,7 +8371,10 @@ summaryParts.push(
         if (!item) return ['—', 'unset'];
         if (item.decision === 'rejected') return ['ZAMÍTNUTO', 'off'];
         const label = item.availability === 'available' ? 'DOSTUPNÝ' : 'NEDOSTUPNÝ';
-        return [item.decision === 'pending' ? `${label} · ČEKÁ` : label,
+        const windows = (item.windows || [{start: '00:00', end: '24:00'}]);
+        const detail = windows.length === 1 && windows[0].start === '00:00' && windows[0].end === '24:00'
+            ? '' : ` (${windows.map((window) => `${window.start}–${window.end}`).join(', ')})`;
+        return [item.decision === 'pending' ? `${label}${detail} · ČEKÁ` : `${label}${detail}`,
             item.decision === 'pending' ? 'unset' : (item.availability === 'available' ? 'working' : 'off')];
     };
     const calendarRows = () => {
@@ -8417,6 +8420,7 @@ summaryParts.push(
                 <label>Řidič <select name="driver_id" required>${calendarState.drivers.map((driver) => `<option value="${driver.id}">${driverText(driver.name)}</option>`).join('')}</select></label>
                 <label>Den <input type="date" name="date" value="${selectedMonth}-01" required></label>
                 <label>Stav <select name="availability"><option value="available">Dostupný</option><option value="unavailable">Nedostupný</option></select></label>
+                <label>Časové úseky <textarea name="windows_text" rows="2" placeholder="Celý den (nechte prázdné), nebo každý úsek na nový řádek:&#10;08:00-12:00&#10;14:00-18:00"></textarea></label>
                 <label>Důvod <input name="reason" maxlength="1000" placeholder="Povinný pro nedostupnost"></label>
                 <button type="submit" ${calendarState.drivers.length ? '' : 'disabled'}>Odeslat k potvrzení</button>
             </form>
@@ -8453,6 +8457,18 @@ summaryParts.push(
             const form = event.currentTarget;
             const data = Object.fromEntries(new FormData(form));
             const current = calendarEntry(data.driver_id, data.date);
+            const lines = String(data.windows_text || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+            const windows = [];
+            for (const line of lines) {
+                const match = /^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/.exec(line);
+                if (!match) {
+                    document.getElementById('drayviaCalendarMessage').textContent = 'Časový úsek zadejte jako 08:00-12:00.';
+                    return;
+                }
+                windows.push({start: match[1], end: match[2]});
+            }
+            delete data.windows_text;
+            if (windows.length) data.windows = windows;
             try {
                 await realDriverApi('/api/v1/driver-availability-calendar', {
                     method: 'POST', body: JSON.stringify({...data, driver_id: Number(data.driver_id), expected_revision: current?.revision || 0})
