@@ -13,7 +13,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('public_id')->unique();
             $table->foreignId('organization_context_id')->constrained('organizations')->cascadeOnDelete();
-            $table->foreignId('bank_statement_import_duplicate_candidate_id')->unique()->constrained('bank_statement_import_duplicate_candidates')->restrictOnDelete();
+            $table->foreignId('bank_statement_import_duplicate_candidate_id')->unique('bank_duplicate_resolution_candidate_unique')->constrained('bank_statement_import_duplicate_candidates')->restrictOnDelete();
             $table->uuid('idempotency_key');
             $table->string('decision', 32);
             $table->text('reason');

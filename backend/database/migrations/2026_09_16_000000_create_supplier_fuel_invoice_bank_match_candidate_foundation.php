@@ -34,7 +34,7 @@ return new class extends Migration
             $table->foreignId('reviewed_by_user_id')->nullable()->constrained('users')->restrictOnDelete();
             $table->timestampTz('reviewed_at')->nullable();
             $table->text('review_reason')->nullable();
-            $table->foreignId('supplier_fuel_invoice_bank_payment_id')->nullable()->unique()->constrained('supplier_fuel_invoice_bank_payments')->restrictOnDelete();
+            $table->foreignId('supplier_fuel_invoice_bank_payment_id')->nullable()->unique('sfibmc_payment_unique')->constrained('supplier_fuel_invoice_bank_payments')->restrictOnDelete();
             $table->foreignId('materialized_by_user_id')->nullable()->constrained('users')->restrictOnDelete();
             $table->timestampTz('materialized_at')->nullable();
             $table->timestampsTz();

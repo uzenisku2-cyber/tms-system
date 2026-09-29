@@ -39,8 +39,8 @@ return new class extends Migration
             $table->uuid('public_id')->unique();
             $table->foreignId('coverage_id')->constrained('supplier_fuel_invoice_rebilling_coverages')->restrictOnDelete();
             $table->foreignId('supplier_fuel_invoice_transaction_allocation_id')->constrained('supplier_fuel_invoice_transaction_allocations')->restrictOnDelete();
-            $table->foreignId('fuel_transaction_id')->constrained('fuel_transactions')->restrictOnDelete();
-            $table->foreignId('fuel_transaction_settlement_application_id')->nullable()->constrained('fuel_transaction_settlement_applications')->restrictOnDelete();
+            $table->foreignId('fuel_transaction_id')->constrained('fuel_transactions', indexName: 'sfircl_fuel_transaction_fk')->restrictOnDelete();
+            $table->foreignId('fuel_transaction_settlement_application_id')->nullable()->constrained('fuel_transaction_settlement_applications', indexName: 'sfircl_settlement_application_fk')->restrictOnDelete();
             $table->foreignId('financial_calculation_id')->nullable()->constrained('financial_calculations')->restrictOnDelete();
             $table->foreignId('financial_settlement_statement_id')->nullable()->constrained('financial_settlement_statements')->restrictOnDelete();
             $table->foreignId('output_billing_document_id')->nullable()->constrained('billing_documents')->restrictOnDelete();
