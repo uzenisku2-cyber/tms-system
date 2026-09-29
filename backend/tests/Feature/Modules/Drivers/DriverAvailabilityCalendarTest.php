@@ -131,7 +131,7 @@ final class DriverAvailabilityCalendarTest extends TestCase
         ])->assertOk();
         $event = DriverAvailabilityDayEvent::query()->where('availability_day_id', $day['id'])
             ->where('revision', 2)->firstOrFail();
-        $this->assertSame('14:00', $event->windows[1]['start']);
+        $this->assertSame('14:00', data_get($event->windows, '1.start'));
 
         $conflicts = app(DriverAvailabilityConflictService::class);
         $trip = new Trip(['scheduled_at' => '2026-10-02 08:30:00']); // Prague 10:30
@@ -141,9 +141,8 @@ final class DriverAvailabilityCalendarTest extends TestCase
         } catch (HttpException $exception) {
             $this->assertSame(409, $exception->getStatusCode());
         }
-        $trip->scheduled_at = '2026-10-02 10:30:00'; // Prague 12:30
+        $trip->scheduled_at = Carbon::parse('2026-10-02 10:30:00'); // Prague 12:30
         $conflicts->assertTripStartAllowed($trip, (int) $driver->getKey());
-        $this->assertTrue(true);
     }
 
     public function test_existing_assigned_trip_blocks_confirmation_of_unavailability(): void
@@ -180,7 +179,7 @@ final class DriverAvailabilityCalendarTest extends TestCase
         $this->assertSame(1, DriverAvailabilityDayEvent::query()
             ->where('availability_day_id', $day['id'])->count());
 
-        $trip->scheduled_at = '2026-10-02 10:30:00';
+        $trip->scheduled_at = Carbon::parse('2026-10-02 10:30:00');
         $trip->save();
         $this->withHeaders($headers)->postJson($url.'/'.$day['id'].'/decision', $decision)
             ->assertOk()->assertJsonPath('data.decision', 'confirmed');
