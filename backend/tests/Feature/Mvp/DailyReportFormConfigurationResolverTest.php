@@ -16,6 +16,61 @@ final class DailyReportFormConfigurationResolverTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_master_organization_keeps_its_form_when_linked_to_customer(): void
+    {
+        $master = Organization::query()->create([
+            'name' => 'Transport company',
+            'type' => Organization::TYPE_MASTER,
+            'status' => Organization::STATUS_ACTIVE,
+        ]);
+
+        $customer = Organization::query()->create([
+            'name' => 'Customer',
+            'type' => 'carrier',
+            'status' => Organization::STATUS_ACTIVE,
+        ]);
+
+        OrganizationRelationship::query()->create([
+            'source_organization_id' => (int) $customer->getKey(),
+            'target_organization_id' => (int) $master->getKey(),
+            'relationship_type' => OrganizationRelationship::TYPE_SUBCONTRACTING,
+            'status' => OrganizationRelationship::STATUS_ACTIVE,
+            'valid_from' => '2025-06-01 00:00:00',
+            'valid_until' => null,
+        ]);
+
+        $user = User::factory()->create();
+
+        $configuration = DailyReportFormConfiguration::query()->create([
+            'organization_id' => (int) $master->getKey(),
+            'version' => 1,
+            'valid_from' => '2025-06-01',
+            'valid_until' => null,
+            'fields' => [
+                [
+                    'key' => 'service_date',
+                    'label' => 'Datum jízdy',
+                    'order' => 1,
+                    'visible' => true,
+                    'required' => true,
+                    'system' => true,
+                ],
+            ],
+            'created_by_user_id' => (int) $user->getKey(),
+        ]);
+
+        $resolver = app(DailyReportFormConfigurationResolver::class);
+
+        self::assertSame(
+            (int) $master->getKey(),
+            $resolver->ownerOrganizationId((int) $master->getKey(), '2026-07-31'),
+        );
+        self::assertSame(
+            (int) $configuration->getKey(),
+            (int) $resolver->resolve((int) $master->getKey(), '2026-07-31')?->getKey(),
+        );
+    }
+
     public function test_historical_child_organization_uses_highest_effective_parent_configuration(): void
     {
         $master = Organization::query()->create([
