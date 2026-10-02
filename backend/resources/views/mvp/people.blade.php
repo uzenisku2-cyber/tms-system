@@ -67,7 +67,8 @@ const cell=document.createElement('td');const roles=person.roles||[];
 if(roles.every(role=>['driver','dispatcher','carrier-admin'].includes(role))){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Upravit role';button.onclick=()=>{editedUser=person.id;document.getElementById('rolePerson').textContent=person.name;roleForm.querySelectorAll('[name=editRoles]').forEach(input=>{input.checked=roles.includes(input.value);input.disabled=input.value==='driver'&&!person.driver_id});roleEditor.hidden=false;roleEditor.scrollIntoView({block:'nearest'})};cell.append(button)}tr.append(cell)})};
 const load=async()=>{try{organization.replaceChildren();const own=document.createElement('option');own.value=ownOrganization;own.textContent='Moje organizace';organization.append(own);
 await loadMembers();
-try{const carriers=await request('carriers');(carriers.items||[]).forEach(carrier=>{const option=document.createElement('option');option.value=carrier.id;option.textContent=carrier.name;organization.append(option)})}catch(error){message('Dopravce se nepodařilo načíst: '+error.message,true)}
+const capabilities=await request('auth/capabilities');
+if((capabilities.permissions||[]).includes('users.manage')){try{const carriers=await request('carriers');(carriers.items||[]).forEach(carrier=>{const option=document.createElement('option');option.value=carrier.id;option.textContent=carrier.name;organization.append(option)})}catch(error){message('Dopravce se nepodařilo načíst: '+error.message,true)}}
 }catch(error){message(error.message,true);form.hidden=true;}};
 document.getElementById('next1').onclick=()=>{const inputs=[...document.querySelectorAll('#step1 input')];if(!inputs.every(input=>input.reportValidity()))return;show(2)};
 document.getElementById('back2').onclick=()=>show(1);
