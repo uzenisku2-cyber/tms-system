@@ -63,6 +63,14 @@ final class OrganizationPeopleManagementTest extends TestCase
         Sanctum::actingAs($manager);
         $this->withHeaders($masterHeader)->getJson('/api/v1/people')->assertForbidden();
         $this->withHeaders($carrierHeader)->getJson('/api/v1/people')->assertOk();
+        $managerCapabilities = $this->withHeaders($carrierHeader)
+            ->getJson('/api/v1/auth/capabilities')->assertOk()->json('data.permissions');
+        self::assertContains('people.manage', $managerCapabilities);
+        self::assertContains('daily-reports.view', $managerCapabilities);
+        self::assertNotContains('pricing.view', $managerCapabilities);
+        self::assertNotContains('compensation.view', $managerCapabilities);
+        $this->withHeaders($masterHeader)->getJson('/api/v1/auth/capabilities')
+            ->assertForbidden();
         $this->withHeaders($carrierHeader)->getJson('/api/v1/financial-settlement-statements')->assertForbidden();
         $this->withHeaders($carrierHeader)->getJson('/api/v1/carriers')->assertForbidden();
         $driverEmail = 'driver-'.strtolower(Str::random(8)).'@example.test';
@@ -75,6 +83,10 @@ final class OrganizationPeopleManagementTest extends TestCase
         self::assertSame(1, Driver::query()->where('user_id', $driver->getKey())->count());
         Sanctum::actingAs($driver);
         $this->withHeaders($carrierHeader)->getJson('/api/v1/people')->assertForbidden();
+        $driverCapabilities = $this->withHeaders($carrierHeader)
+            ->getJson('/api/v1/auth/capabilities')->assertOk()->json('data.permissions');
+        self::assertNotContains('people.manage', $driverCapabilities);
+        self::assertNotContains('pricing.view', $driverCapabilities);
         $this->withHeaders($carrierHeader)->getJson('/api/v1/financial-settlement-statements')->assertForbidden();
         $this->withHeaders($carrierHeader)->getJson('/api/v1/driver-availability-calendar?month=2026-10')->assertOk();
     }

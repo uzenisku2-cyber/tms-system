@@ -17,6 +17,8 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::get('/capabilities', [AuthController::class, 'capabilities'])
+            ->middleware('organization');
     });
 
 });

@@ -8,6 +8,22 @@ use Tests\TestCase;
 
 final class OperationalApplicationShellIntegrationUiTest extends TestCase
 {
+    public function test_navigation_and_draft_actions_use_organization_capabilities(): void
+    {
+        $source = file_get_contents(resource_path('views/mvp/app.blade.php'));
+        $people = file_get_contents(resource_path('views/mvp/people.blade.php'));
+
+        self::assertIsString($source);
+        self::assertIsString($people);
+        self::assertStringContainsString("api('/api/v1/auth/capabilities')", $source);
+        self::assertStringContainsString("finance: can('pricing.view') || can('compensation.view')", $source);
+        self::assertStringContainsString("carriers: can('users.manage')", $source);
+        self::assertStringContainsString('item.entered_by_user_id', $source);
+        self::assertStringContainsString('String(item.organization_id)', $source);
+        self::assertStringContainsString("item.status === 'draft' && mayEditDraft", $source);
+        self::assertStringContainsString("(capabilities.permissions||[]).includes('users.manage')", $people);
+    }
+
     public function test_driver_list_survives_an_individual_assignment_failure(): void
     {
         $source = file_get_contents(

@@ -4202,6 +4202,32 @@
             let token = sessionStorage.getItem(tokenKey) || '';
             let organizationId = sessionStorage.getItem(organizationKey) || '';
             let currentDriver = null;
+            let currentUserId = null;
+            let currentPermissions = [];
+            const capabilityKey = 'tms_mvp_capabilities';
+            const can = (permission) => currentPermissions.includes(permission);
+            const permittedPages = () => ({
+                overview: can('users.manage'),
+                calendar: can('daily-reports.view'),
+                routes: can('daily-reports.view'),
+                'record-review': can('daily-reports.review'),
+                drivers: can('daily-reports.view'),
+                carriers: can('users.manage'),
+                statistics: can('users.manage'),
+                fuel: can('users.manage'),
+                finance: can('pricing.view') || can('compensation.view'),
+                bank: can('pricing.view') || can('compensation.view'),
+                imports: can('users.manage'),
+                settings: can('people.manage') || can('users.manage'),
+            });
+            const applyNavigationVisibility = () => {
+                const allowed = permittedPages();
+                document.querySelectorAll('.drayvia-main-nav [data-drayvia-page]')
+                    .forEach((button) => {
+                        button.style.display = allowed[button.dataset.drayviaPage]
+                            ? '' : 'none';
+                    });
+            };
             let effectiveDailyReportConfiguration = null;
             let dailyReportConfigurationRequestSerial = 0;
             let dailyReportEditItem = null;
@@ -4298,6 +4324,9 @@
             const clearSession = () => {
                 token = '';
                 organizationId = '';
+                currentUserId = null;
+                currentPermissions = [];
+                sessionStorage.removeItem(capabilityKey);
                 sessionStorage.removeItem(tokenKey);
                 sessionStorage.removeItem(organizationKey);
             };
@@ -4689,9 +4718,31 @@
                 const cell = document.createElement('td');
                 cell.className = 'route-actions';
 
+                const isCurrentOrganization = String(item.organization_id)
+                    === organizationId;
+                const isOriginalActor = isCurrentOrganization
+                    && Number(item.entered_by_user_id)
+                    === currentUserId;
+                const isOwnDriver = isCurrentOrganization && currentDriver
+                    && Number(currentDriver.id) === Number(item.performed_by_driver_id);
+                const mayEditDraft = isOriginalActor && (
+                    (item.entry_method === 'driver'
+                        && !item.entered_on_behalf && isOwnDriver
+                        && can('daily-reports.update'))
+                    || (item.entry_method === 'delegated'
+                        && item.entered_on_behalf
+                        && can('daily-reports.enter-for-driver'))
+                    || (item.entry_method === 'authorized_import'
+                        && can('daily-reports.enter-for-driver'))
+                );
+                const mayCorrect = (isOwnDriver && can('daily-reports.update'))
+                    || (isOriginalActor && item.entry_method === 'delegated'
+                        && item.entered_on_behalf
+                        && can('daily-reports.enter-for-driver'));
+
                 if (
-                    item.status === 'draft'
-                    || item.status === 'correction_requested'
+                    (item.status === 'draft' && mayEditDraft)
+                    || (item.status === 'correction_requested' && mayCorrect)
                 ) {
                     const editButton =
                         document.createElement('button');
@@ -4752,7 +4803,7 @@
                     return cell;
                 }
 
-                if (item.status === 'corrected') {
+                if (item.status === 'corrected' && (mayCorrect || mayEditDraft)) {
                     const resubmitButton =
                         document.createElement('button');
 
@@ -6852,8 +6903,13 @@ summaryParts.push(
             };
 
             const loadCurrentDriver = async () => {
-                const body = await api('/api/v1/drivers');
-                const drivers = driverCandidates(body);
+                let drivers = [];
+                try {
+                    const body = await api('/api/v1/drivers');
+                    drivers = driverCandidates(body);
+                } catch (error) {
+                    if (error.status === 401) throw error;
+                }
 
                 currentDriver = drivers.length > 0
                     ? drivers[0]
@@ -6899,6 +6955,14 @@ summaryParts.push(
                     || 'Přihlášený uživatel';
 
                 userBox.textContent = identity;
+                currentUserId = Number(user.id);
+                const accessBody = await api('/api/v1/auth/capabilities');
+                const access = getPayload(accessBody) || {};
+                currentPermissions = Array.isArray(access.permissions)
+                    ? access.permissions : [];
+                sessionStorage.setItem(capabilityKey,
+                    JSON.stringify(currentPermissions));
+                applyNavigationVisibility();
 
                 await loadCurrentDriver();
             };
@@ -18812,6 +18876,22 @@ const embeddedSettingsWorkspace = (title, description, frameId, frameTitle, path
         '/settings/catalogs/routes'
     );
 
+const allowedPreviewPage = (page) => {
+        let permissions = [];
+        try {
+            permissions = JSON.parse(sessionStorage.getItem('tms_mvp_capabilities') || '[]');
+        } catch (_) {
+            return false;
+        }
+        const can = (name) => permissions.includes(name);
+        if (['calendar', 'drivers'].includes(page)) return can('daily-reports.view');
+        if (page === 'record-review') return can('daily-reports.review');
+        if (page === 'settings') return can('people.manage') || can('users.manage');
+        if (['finance', 'bank'].includes(page)) return can('pricing.view') || can('compensation.view');
+        if (['daily-report-settings', 'route-catalog'].includes(page)) return can('settings.catalogs.manage');
+        return can('users.manage');
+    };
+
 const templates = {
         'daily-report-settings': dailyReportSettingsWorkspace,
         'route-catalog': routeCatalogWorkspace,
@@ -25804,7 +25884,7 @@ const loadFinanceCustomers = async () => {
     const render = (page) => {
         const template = templates[page];
 
-        if (!template) {
+        if (!template || !allowedPreviewPage(page)) {
             return;
         }
 
@@ -25841,6 +25921,13 @@ const loadFinanceCustomers = async () => {
         }
 
         if (page === 'settings') {
+            content.querySelectorAll('[data-drayvia-settings-target]')
+                .forEach((tile) => {
+                    if (tile.dataset.drayviaPage
+                        && !allowedPreviewPage(tile.dataset.drayviaPage)) {
+                        tile.style.display = 'none';
+                    }
+                });
             bindSettingsShell();
         }
 
@@ -26939,7 +27026,7 @@ if (page === 'finance') {
             event.preventDefault();
             event.stopPropagation();
 
-            if (page === 'routes') {
+            if (page === 'routes' && allowedPreviewPage('calendar')) {
                 showRoutes();
                 return;
             }
