@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\RequireDailyReportSupervisorRead;
 use App\Http\Middleware\ResolveOrganizationContext;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -42,6 +43,8 @@ return Application::configure(
             'perm' => CheckPermission::class,
 
             'organization' => ResolveOrganizationContext::class,
+
+            'daily-report-supervisor-read' => RequireDailyReportSupervisorRead::class,
         ]);
 
     })

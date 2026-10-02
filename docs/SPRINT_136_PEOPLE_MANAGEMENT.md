@@ -1,0 +1,11 @@
+# Sprint 136 – Organization people management
+
+An authorized organization manager creates a person directly in one organization. The wizard captures name, email and one or more operational roles: carrier manager, dispatcher and driver. A master administrator can bootstrap a manager for a linked carrier; that carrier then manages its own people. A driver role creates a linked driver profile and organization assignment. No email invitation is sent and no invitation table is required.
+
+The service creates an unpredictable initial password and returns it once in the creation response. The wizard shows it only until the page is closed or another account is created; it must be handed to the user through a trusted channel. The password is stored only as a hash. No password is included in member listings. Existing accounts cannot be joined automatically; password rotation and membership suspension require further work before broader deployment.
+
+An authorized manager can now list and change operational roles for existing members of the selected organization. A master administrator can do the same for an active linked subcontractor. Protected roles, direct permissions and self edits are excluded. Adding the driver role requires an existing driver profile and assignment to that organization. Role changes do not create accounts, reset passwords or grant finance access. The isolated preview copy transferred four legacy driver memberships and roles from the master to their assigned carriers after an exact preflight and backup; this one-time data correction is not a production migration.
+
+The people page lists only members of the selected organization and shows the entry point after an authorized API check. Carrier managers and dispatchers receive operational rights but no customer billing or financial settlement permissions. Legacy POST endpoints `/api/v1/drivers` and `/api/v1/own-drivers` return HTTP 410, preventing account creation outside this flow. Existing driver read, update and assignment routes remain.
+
+Tests run against disposable SQLite. The isolated PostgreSQL preview copy may retain an unused invitation table from an earlier local experiment; this source change does not apply or drop that table in the source database.

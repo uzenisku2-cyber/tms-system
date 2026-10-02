@@ -23,11 +23,13 @@ final class DriverSupervisoryAuthorizationService
         int $organizationId,
         int $driverId,
         ?Carbon $moment = null,
+        string $requiredPermission = self::CURRENT_MANAGE_PERMISSION,
     ): Driver {
         $moment ??= now();
 
         $this->assertManagePermission(
             $actor,
+            $requiredPermission,
         );
 
         $this->assertActiveMembership(
@@ -296,10 +298,12 @@ final class DriverSupervisoryAuthorizationService
 
     private function assertManagePermission(
         User $actor,
+        string $requiredPermission = self::CURRENT_MANAGE_PERMISSION,
     ): void {
         if (
-            ! $actor->can(
-                self::CURRENT_MANAGE_PERMISSION,
+            $requiredPermission === ''
+            || ! $actor->can(
+                $requiredPermission,
             )
         ) {
             abort(

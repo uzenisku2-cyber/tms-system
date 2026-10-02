@@ -21,6 +21,8 @@ final class RolePermissionSeeder extends Seeder
         'vehicles.update',
         'vehicles.delete',
         'users.manage',
+        'people.manage',
+        'availability.confirm',
         'pricing.view',
         'pricing.manage',
         'compensation.view',
@@ -40,6 +42,29 @@ final class RolePermissionSeeder extends Seeder
     /** @var array<string, list<string>> */
     private const ROLE_PERMISSIONS = [
         'super-admin' => self::PERMISSIONS,
+        'carrier-admin' => [
+            'people.manage',
+            'daily-reports.view',
+            'daily-reports.enter-for-driver',
+            'daily-reports.review',
+            'daily-reports.request-correction',
+            'daily-reports.approve',
+            'availability.confirm',
+        ],
+        'dispatcher' => [
+            'daily-reports.view',
+            'daily-reports.enter-for-driver',
+            'daily-reports.review',
+            'daily-reports.request-correction',
+            'daily-reports.approve',
+            'availability.confirm',
+        ],
+        'driver' => [
+            'daily-reports.view',
+            'daily-reports.create',
+            'daily-reports.update',
+            'daily-reports.submit',
+        ],
         'admin' => [
             'vehicles.view',
             'vehicles.create',

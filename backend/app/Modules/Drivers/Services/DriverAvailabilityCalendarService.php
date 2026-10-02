@@ -28,25 +28,29 @@ final class DriverAvailabilityCalendarService
             abort(422, 'Invalid month.');
         }
 
-        $supervisor = $actor->can(DriverSupervisoryAuthorizationService::CURRENT_MANAGE_PERMISSION);
+        $supervisor = $this->canConfirm($actor);
         $this->assertMembership($actor, $organizationId, now()->toDateString());
         $driverIds = Driver::query()->where('user_id', $actor->getKey())->pluck('id')->map(static fn ($id): int => (int) $id)->all();
 
+        $ownUsers = OrganizationMembership::query()->where('organization_id', $organizationId)
+            ->where('status', OrganizationMembership::STATUS_ACTIVE)
+            ->where(static function (Builder $q): void {
+                $q->whereNull('valid_from')->orWhereDate('valid_from', '<=', now()->toDateString());
+            })
+            ->where(static function (Builder $q): void {
+                $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', now()->toDateString());
+            })->pluck('user_id');
+        $ownDrivers = Driver::query()->whereIn('user_id', $ownUsers)
+            ->pluck('id')->map(static fn ($id): int => (int) $id)->all();
+        $driverIds = array_merge($driverIds, $ownDrivers);
+
         if ($supervisor) {
             $assignmentIds = $this->supervisory->visibleDriverOrganizationAssignmentIds(
-                $actor, $organizationId, DriverSupervisoryAuthorizationService::CURRENT_MANAGE_PERMISSION,
+                $actor, $organizationId, $this->confirmationPermission($actor),
             );
             $visible = DriverOrganizationAssignment::query()->whereIn('id', $assignmentIds)
                 ->pluck('driver_id')->map(static fn ($id): int => (int) $id)->all();
-            $ownUsers = OrganizationMembership::query()->where('organization_id', $organizationId)
-                ->where('status', OrganizationMembership::STATUS_ACTIVE)
-                ->whereDate('valid_from', '<=', now()->toDateString())
-                ->where(static function (Builder $q): void {
-                    $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', now()->toDateString());
-                })->pluck('user_id');
-            $ownDrivers = Driver::query()->whereIn('user_id', $ownUsers)
-                ->pluck('id')->map(static fn ($id): int => (int) $id)->all();
-            $driverIds = array_merge($driverIds, $visible, $ownDrivers);
+            $driverIds = array_merge($driverIds, $visible);
         }
 
         $driverIds = array_values(array_unique($driverIds));
@@ -66,7 +70,19 @@ final class DriverAvailabilityCalendarService
                 'name' => $driver->full_name,
                 'is_self' => (int) $driver->user_id === (int) $actor->getKey(),
             ])->values()->all(),
-            'days' => $days->map(fn (DriverAvailabilityDay $day): array => $this->resource($day))->values()->all(),
+            'days' => $days->map(function (DriverAvailabilityDay $day) use ($actor, $supervisor, $drivers): array {
+                $owner = $drivers->firstWhere('id', $day->driver_id);
+                if ($supervisor || (int) $owner?->user_id === (int) $actor->getKey()) {
+                    return $this->resource($day);
+                }
+
+                return [
+                    'driver_id' => (int) $day->driver_id,
+                    'date' => CarbonImmutable::parse($day->date)->toDateString(),
+                    'availability' => (string) $day->availability,
+                    'decision' => (string) $day->decision,
+                ];
+            })->values()->all(),
         ];
     }
 
@@ -117,7 +133,7 @@ final class DriverAvailabilityCalendarService
 
     public function decide(User $actor, int $organizationId, int $id, array $input): array
     {
-        if (! $actor->can(DriverSupervisoryAuthorizationService::CURRENT_MANAGE_PERMISSION)) {
+        if (! $this->canConfirm($actor)) {
             abort(403);
         }
         $this->assertMembership($actor, $organizationId, now()->toDateString());
@@ -153,7 +169,10 @@ final class DriverAvailabilityCalendarService
 
             return $driver;
         }
-        $this->supervisory->findVisibleDriver($actor, $organizationId, $driverId);
+        $this->supervisory->findVisibleDriver(
+            $actor, $organizationId, $driverId,
+            requiredPermission: $this->confirmationPermission($actor),
+        );
         $this->assertMembership($actor, $organizationId, $date);
         $ownMembership = OrganizationMembership::query()->where('organization_id', $organizationId)
             ->where('user_id', $driver->user_id)->where('status', OrganizationMembership::STATUS_ACTIVE)
@@ -162,7 +181,7 @@ final class DriverAvailabilityCalendarService
                 $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', $date);
             })->exists();
         $assignmentIds = $this->supervisory->visibleDriverOrganizationAssignmentIds(
-            $actor, $organizationId, DriverSupervisoryAuthorizationService::CURRENT_MANAGE_PERMISSION,
+            $actor, $organizationId, $this->confirmationPermission($actor),
         );
         $assigned = DriverOrganizationAssignment::query()->whereIn('id', $assignmentIds)
             ->where('driver_id', $driverId)->whereDate('valid_from', '<=', $date)
@@ -174,6 +193,19 @@ final class DriverAvailabilityCalendarService
         }
 
         return $driver;
+    }
+
+    private function canConfirm(User $actor): bool
+    {
+        return $actor->can('availability.confirm')
+            || $actor->can(DriverSupervisoryAuthorizationService::CURRENT_MANAGE_PERMISSION);
+    }
+
+    private function confirmationPermission(User $actor): string
+    {
+        return $actor->can('availability.confirm')
+            ? 'availability.confirm'
+            : DriverSupervisoryAuthorizationService::CURRENT_MANAGE_PERMISSION;
     }
 
     private function assertMembership(User $actor, int $organizationId, string $date): void

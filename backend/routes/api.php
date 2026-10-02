@@ -159,10 +159,9 @@ Route::middleware([
 
         Route::post(
             '/',
-            [
-                OwnDriverAdminController::class,
-                'store',
-            ],
+            static fn () => response()->json([
+                'message' => 'Nové účty řidičů se zakládají přes Lidé a přístupy.',
+            ], 410),
         )->name('own-drivers.store');
     });
 

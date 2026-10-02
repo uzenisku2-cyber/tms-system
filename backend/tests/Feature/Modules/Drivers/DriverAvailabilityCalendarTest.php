@@ -10,6 +10,7 @@ use App\Modules\Drivers\Models\DriverAvailabilityDayEvent;
 use App\Modules\Drivers\Services\DriverSupervisoryAuthorizationService;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -73,6 +74,82 @@ final class DriverAvailabilityCalendarTest extends TestCase
             'decision' => 'rejected', 'reason' => 'Pozdní změna směny.', 'expected_revision' => 1,
         ])->assertStatus(409);
         $this->assertSame(2, DriverAvailabilityDayEvent::query()->where('availability_day_id', $day['id'])->count());
+    }
+
+    public function test_dispatcher_can_confirm_without_user_or_financial_administration(): void
+    {
+        $organization = $this->organization();
+        $driverUser = User::factory()->create();
+        $dispatcher = User::factory()->create();
+        $this->member($organization, $driverUser);
+        $this->member($organization, $dispatcher);
+        $driver = $this->driver($driverUser);
+        $this->seed(RolePermissionSeeder::class);
+        $registrar = app(PermissionRegistrar::class);
+        $registrar->setPermissionsTeamId((int) $organization->getKey());
+        $dispatcher->assignRole('dispatcher');
+        $dispatcher->unsetRelation('roles');
+        $dispatcher->unsetRelation('permissions');
+        self::assertFalse($dispatcher->can('users.manage'));
+        self::assertFalse($dispatcher->can('compensation.view'));
+        self::assertFalse($dispatcher->can('people.manage'));
+        $registrar->setPermissionsTeamId(null);
+
+        $url = '/api/v1/driver-availability-calendar';
+        $this->withHeader('X-Organization-ID', (string) $organization->getKey());
+        Sanctum::actingAs($driverUser);
+        $day = $this->postJson($url, [
+            'driver_id' => $driver->getKey(), 'date' => '2026-10-02',
+            'availability' => 'available', 'expected_revision' => 0,
+        ])->assertCreated()->json('data');
+
+        Sanctum::actingAs($dispatcher);
+        $this->getJson($url.'?month=2026-10')
+            ->assertOk()->assertJsonPath('data.can_confirm', true);
+        $this->postJson($url.'/'.$day['id'].'/decision', [
+            'decision' => 'confirmed', 'reason' => 'Ověřeno dispečerem.',
+            'expected_revision' => 1,
+        ])->assertOk()->assertJsonPath('data.decision', 'confirmed');
+    }
+
+    public function test_driver_sees_peer_day_status_without_peer_reason_or_write_access(): void
+    {
+        $organization = $this->organization();
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+        $this->member($organization, $firstUser);
+        $this->member($organization, $secondUser);
+        $first = $this->driver($firstUser);
+        $second = $this->driver($secondUser);
+        $url = '/api/v1/driver-availability-calendar';
+        $this->withHeader('X-Organization-ID', (string) $organization->getKey());
+
+        Sanctum::actingAs($secondUser);
+        $this->postJson($url, [
+            'driver_id' => $second->getKey(), 'date' => '2026-10-02',
+            'availability' => 'unavailable', 'reason' => 'Soukromý důvod',
+            'expected_revision' => 0,
+        ])->assertCreated();
+
+        Sanctum::actingAs($firstUser);
+        $response = $this->getJson($url.'?month=2026-10')->assertOk()
+            ->assertJsonPath('data.can_confirm', false)
+            ->assertJsonCount(2, 'data.drivers')
+            ->assertJsonPath('data.days.0.driver_id', (int) $second->getKey())
+            ->assertJsonPath('data.days.0.availability', 'unavailable');
+        self::assertEqualsCanonicalizing([true, false], array_column($response->json('data.drivers'), 'is_self'));
+        self::assertSame(
+            ['driver_id', 'date', 'availability', 'decision'],
+            array_keys($response->json('data.days.0')),
+        );
+        $this->postJson($url, [
+            'driver_id' => $second->getKey(), 'date' => '2026-10-02',
+            'availability' => 'available', 'expected_revision' => 1,
+        ])->assertForbidden();
+        $this->postJson($url, [
+            'driver_id' => $first->getKey(), 'date' => '2026-10-02',
+            'availability' => 'available', 'expected_revision' => 0,
+        ])->assertCreated();
     }
 
     public function test_other_organization_cannot_read_or_decide_availability(): void

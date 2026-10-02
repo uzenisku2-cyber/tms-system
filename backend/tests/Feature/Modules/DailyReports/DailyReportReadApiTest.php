@@ -7,8 +7,11 @@ namespace Tests\Feature\Modules\DailyReports;
 use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\Drivers\Models\Driver;
+use App\Modules\Drivers\Models\DriverOrganizationAssignment;
+use App\Modules\Drivers\Services\DriverRoleProvisioner;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
+use App\Modules\Organizations\Models\OrganizationRelationship;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -186,6 +189,87 @@ final class DailyReportReadApiTest extends TestCase
         )->getJson(
             self::INDEX_URL.'/'.$foreign->getRouteKey(),
         )->assertNotFound();
+    }
+
+    public function test_driver_role_cannot_read_another_drivers_reports_or_summary(): void
+    {
+        [$actor, $organization, $ownDriver] = $this->createContext();
+        $otherUser = User::factory()->create();
+        $otherDriver = Driver::query()->create([
+            'user_id' => $otherUser->getKey(),
+            'first_name' => 'Other',
+            'last_name' => 'Driver',
+            'license_number' => 'API-'.Str::uuid(),
+            'license_category' => 'B',
+            'active' => true,
+        ]);
+        $own = $this->createReport($organization, $actor, $ownDriver, 'OWN', DailyReport::STATUS_DRAFT);
+        $other = $this->createReport($organization, $otherUser, $otherDriver, 'OTHER', DailyReport::STATUS_DRAFT);
+
+        app(DriverRoleProvisioner::class)->assign($actor, (int) $organization->getKey());
+        Sanctum::actingAs($actor);
+        $this->withHeader('X-Organization-ID', (string) $organization->getKey());
+
+        $this->getJson(self::INDEX_URL)
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 1)
+            ->assertJsonFragment(['public_id' => $own->getRouteKey()])
+            ->assertJsonMissing(['public_id' => $other->getRouteKey()]);
+        $this->getJson(self::INDEX_URL.'/'.$own->getRouteKey())->assertOk();
+        $this->getJson(self::INDEX_URL.'/'.$other->getRouteKey())->assertNotFound();
+        $this->getJson(self::INDEX_URL.'/'.$other->getRouteKey().'/versions')->assertNotFound();
+        $this->getJson(self::INDEX_URL.'/'.$other->getRouteKey().'/events')->assertNotFound();
+        $this->getJson(self::INDEX_URL.'/performance-overview')->assertForbidden();
+        $this->getJson(self::INDEX_URL.'/depot-imports/drafts')->assertForbidden();
+        $this->getJson(self::INDEX_URL.'/quality-profiles')->assertForbidden();
+    }
+
+    public function test_carrier_reads_only_master_reports_for_its_driver_on_assigned_days(): void
+    {
+        [$masterUser, $master, $assignedDriver] = $this->createContext();
+        [$carrierUser, $carrier] = $this->createContext('Carrier');
+        $carrier->update(['type' => Organization::TYPE_SUBCONTRACTOR]);
+        [$otherUser, $otherCarrier, $otherDriver] = $this->createContext('Other carrier');
+        $otherCarrier->update(['type' => Organization::TYPE_SUBCONTRACTOR]);
+
+        OrganizationRelationship::query()->create([
+            'source_organization_id' => $master->getKey(),
+            'target_organization_id' => $carrier->getKey(),
+            'relationship_type' => OrganizationRelationship::TYPE_SUBCONTRACTING,
+            'status' => OrganizationRelationship::STATUS_ACTIVE,
+            'valid_from' => '2026-01-01',
+        ]);
+        DriverOrganizationAssignment::query()->create([
+            'driver_id' => $assignedDriver->getKey(),
+            'organization_id' => $carrier->getKey(),
+            'created_by_user_id' => $masterUser->getKey(),
+            'valid_from' => '2026-07-01',
+            'valid_until' => '2026-07-31',
+        ]);
+        DriverOrganizationAssignment::query()->create([
+            'driver_id' => $otherDriver->getKey(),
+            'organization_id' => $otherCarrier->getKey(),
+            'created_by_user_id' => $masterUser->getKey(),
+            'valid_from' => '2026-07-01',
+        ]);
+        $visible = $this->createReport($master, $masterUser, $assignedDriver, 'CARRIER-OWN', DailyReport::STATUS_DRAFT);
+        $other = $this->createReport($master, $otherUser, $otherDriver, 'OTHER-CARRIER', DailyReport::STATUS_DRAFT);
+        $outside = $this->createReport($master, $masterUser, $assignedDriver, 'AFTER-ASSIGNMENT', DailyReport::STATUS_DRAFT);
+        $outside->update(['service_date' => '2026-08-01']);
+
+        $this->grantViewPermission($carrierUser, $carrier);
+        Sanctum::actingAs($carrierUser);
+        $this->withHeader('X-Organization-ID', (string) $carrier->getKey());
+
+        $this->getJson(self::INDEX_URL)
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 1)
+            ->assertJsonFragment(['public_id' => $visible->getRouteKey()])
+            ->assertJsonMissing(['public_id' => $other->getRouteKey()])
+            ->assertJsonMissing(['public_id' => $outside->getRouteKey()]);
+        $this->getJson(self::INDEX_URL.'/'.$visible->getRouteKey())->assertOk();
+        $this->getJson(self::INDEX_URL.'/'.$other->getRouteKey())->assertNotFound();
+        $this->getJson(self::INDEX_URL.'/'.$outside->getRouteKey())->assertNotFound();
     }
 
     /**

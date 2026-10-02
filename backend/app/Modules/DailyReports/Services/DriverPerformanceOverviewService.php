@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\DailyReports\Services;
 
 use App\Core\Organizations\OrganizationContext;
+use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\Drivers\Models\Driver;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
@@ -25,6 +26,15 @@ final class DriverPerformanceOverviewService
     public function overview(array $filters): array
     {
         $organizationId = $this->organizationContext->requireId();
+        $actor = auth()->user();
+        if (! $actor instanceof User) {
+            abort(401);
+        }
+        if ($actor->hasRole('driver')
+            && ! $actor->can('daily-reports.review')
+            && ! $actor->can('daily-reports.enter-for-driver')) {
+            abort(403);
+        }
 
         $reports = DailyReport::query()
             ->with('performedByDriver')
