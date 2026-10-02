@@ -52,6 +52,8 @@ final class OperationalApplicationShellIntegrationUiTest extends TestCase
             '`/api/v1/own-drivers/${driver.id}/assignments`',
             $source,
         );
+        self::assertStringContainsString("window.location.href = '/settings/people';", $source);
+        self::assertStringContainsString('SPRAVOVAT LIDI A PŘÍSTUPY', $source);
     }
 
     public function test_carrier_navigation_stays_inside_unified_shell(): void

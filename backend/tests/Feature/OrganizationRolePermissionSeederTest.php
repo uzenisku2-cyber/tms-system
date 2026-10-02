@@ -37,12 +37,12 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
 
         self::assertSame(
-            19,
+            21,
             DB::table('permissions')->count(),
         );
 
         self::assertSame(
-            8,
+            14,
             DB::table('roles')->count(),
         );
 
@@ -54,7 +54,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            4,
+            7,
             DB::table('roles')
                 ->where(
                     'organization_id',
@@ -64,7 +64,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            4,
+            7,
             DB::table('roles')
                 ->where(
                     'organization_id',
@@ -74,14 +74,14 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            8,
+            14,
             DB::table('roles')
                 ->where('guard_name', 'web')
                 ->count(),
         );
 
         self::assertSame(
-            19,
+            21,
             DB::table('permissions')
                 ->where('guard_name', 'web')
                 ->count(),
@@ -118,7 +118,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
             ->pluck('id');
 
         self::assertSame(
-            18,
+            46,
             DB::table('role_has_permissions')
                 ->whereIn(
                     'permission_id',
@@ -237,7 +237,7 @@ final class OrganizationRolePermissionSeederTest extends TestCase
         );
 
         self::assertSame(
-            50,
+            88,
             DB::table('role_has_permissions')->count(),
         );
 
@@ -248,6 +248,14 @@ final class OrganizationRolePermissionSeederTest extends TestCase
                 ->distinct()
                 ->count('organization_id'),
         );
+
+        self::assertSame(0, DB::table('role_has_permissions')
+            ->join('roles', 'roles.id', '=', 'role_has_permissions.role_id')
+            ->join('permissions', 'permissions.id', '=', 'role_has_permissions.permission_id')
+            ->whereIn('roles.name', ['driver', 'dispatcher', 'carrier-admin'])
+            ->whereIn('permissions.name', ['pricing.view', 'pricing.manage',
+                'compensation.view', 'compensation.manage', 'users.manage'])
+            ->count());
 
         self::assertNull(
             app(PermissionRegistrar::class)

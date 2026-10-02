@@ -6,7 +6,6 @@ namespace Tests\Feature;
 
 use App\Core\Bus\ProcessCommandJob;
 use App\Models\User;
-use App\Modules\Drivers\Application\Commands\CreateDriverCommand;
 use App\Modules\Drivers\Domain\Events\DriverCreated;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,7 +18,7 @@ class DriverDataPrivacyTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_driver_creation_uses_encrypted_job_and_safe_trace(): void
+    public function test_legacy_self_provisioning_is_closed_and_driver_jobs_remain_encrypted(): void
     {
         Queue::fake();
 
@@ -34,24 +33,13 @@ class DriverDataPrivacyTest extends TestCase
             'email' => 'private.driver@example.test',
             'license_number' => 'PRIVATE-LICENSE-001',
             'license_category' => 'B',
-        ])->assertAccepted();
+        ])->assertStatus(410);
 
         $trace = DB::table('traces')
             ->where('type', 'driver.store')
             ->first();
 
-        $this->assertNotNull($trace);
-
-        $payload = json_decode(
-            (string) $trace->payload,
-            true,
-            512,
-            JSON_THROW_ON_ERROR
-        );
-
-        $this->assertSame([
-            'user_id' => $user->getKey(),
-        ], $payload);
+        $this->assertNull($trace);
 
         $jobReflection = new \ReflectionClass(
             ProcessCommandJob::class
@@ -63,11 +51,7 @@ class DriverDataPrivacyTest extends TestCase
             )
         );
 
-        Queue::assertPushed(
-            ProcessCommandJob::class,
-            static fn (ProcessCommandJob $job): bool => $job->command
-                instanceof CreateDriverCommand
-        );
+        Queue::assertNotPushed(ProcessCommandJob::class);
     }
 
     public function test_driver_created_event_contains_no_personal_payload(): void

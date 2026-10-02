@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Modules\DailyReports\Services;
 
 use App\Core\Organizations\OrganizationContext;
+use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\DailyReports\Models\DailyReportEvent;
 use App\Modules\DailyReports\Models\DailyReportVersion;
 use App\Modules\Drivers\Models\Driver;
+use App\Modules\Organizations\Models\Organization;
+use App\Modules\Organizations\Models\OrganizationRelationship;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 final class DailyReportQueryService
 {
@@ -49,11 +53,10 @@ final class DailyReportQueryService
      */
     public function paginate(array $filters): LengthAwarePaginator
     {
-        $query = DailyReport::query()
-            ->with('performedByDriver')
-            ->forOrganization(
-                $this->organizationContext->requireId(),
-            );
+        $query = DailyReport::query()->with('performedByDriver');
+        $this->scopeToVisibleOrganizations($query);
+
+        $this->scopeToActor($query);
 
         $status = $filters['status'] ?? null;
 
@@ -297,10 +300,12 @@ final class DailyReportQueryService
          * driver with route history selectable while the route
          * query itself remains server-side filtered.
          */
-        $driverRouteRows = DailyReport::query()
-            ->forOrganization(
-                $this->organizationContext->requireId(),
-            )
+        $driverRouteQuery = DailyReport::query();
+        $this->scopeToVisibleOrganizations($driverRouteQuery);
+
+        $this->scopeToActor($driverRouteQuery);
+
+        $driverRouteRows = $driverRouteQuery
             ->selectRaw(
                 'performed_by_driver_id, COUNT(*) AS aggregate, MAX(service_date) AS last_service_date',
             )
@@ -479,10 +484,10 @@ final class DailyReportQueryService
     private function navigationBaseQuery(
         array $filters,
     ): Builder {
-        $query = DailyReport::query()
-            ->forOrganization(
-                $this->organizationContext->requireId(),
-            );
+        $query = DailyReport::query();
+        $this->scopeToVisibleOrganizations($query);
+
+        $this->scopeToActor($query);
 
         $driverId =
             $filters['performed_by_driver_id']
@@ -590,12 +595,76 @@ final class DailyReportQueryService
 
     public function findByPublicId(string $publicId): DailyReport
     {
-        return DailyReport::query()
-            ->with('performedByDriver')
-            ->forOrganization(
-                $this->organizationContext->requireId(),
-            )
-            ->where('public_id', $publicId)
-            ->firstOrFail();
+        $query = DailyReport::query()->with('performedByDriver');
+        $this->scopeToVisibleOrganizations($query);
+
+        $this->scopeToActor($query);
+
+        return $query->where('public_id', $publicId)->firstOrFail();
+    }
+
+    /** @param Builder<DailyReport> $query */
+    private function scopeToVisibleOrganizations(Builder $query): void
+    {
+        $organizationId = $this->organizationContext->requireId();
+
+        $query->where(static function (Builder $visible) use ($organizationId): void {
+            $visible->where('daily_reports.organization_id', $organizationId)
+                ->orWhere(static function (Builder $historical) use ($organizationId): void {
+                    $historical->whereExists(static function (QueryBuilder $assignments) use ($organizationId): void {
+                        $assignments->selectRaw('1')
+                            ->from('driver_organization_assignments')
+                            ->whereColumn('driver_organization_assignments.driver_id', 'daily_reports.performed_by_driver_id')
+                            ->where('driver_organization_assignments.organization_id', $organizationId)
+                            ->whereRaw('DATE(driver_organization_assignments.valid_from) <= daily_reports.service_date')
+                            ->where(static function (QueryBuilder $dates): void {
+                                $dates->whereNull('driver_organization_assignments.valid_until')
+                                    ->orWhereRaw('DATE(driver_organization_assignments.valid_until) >= daily_reports.service_date');
+                            });
+                    })->whereExists(static function (QueryBuilder $relationships) use ($organizationId): void {
+                        $relationships->selectRaw('1')
+                            ->from('organization_relationships')
+                            ->join('organizations as report_owners', 'report_owners.id', '=', 'organization_relationships.source_organization_id')
+                            ->join('organizations as report_carriers', 'report_carriers.id', '=', 'organization_relationships.target_organization_id')
+                            ->whereColumn('organization_relationships.source_organization_id', 'daily_reports.organization_id')
+                            ->where('report_owners.type', Organization::TYPE_MASTER)
+                            ->where('report_carriers.type', Organization::TYPE_SUBCONTRACTOR)
+                            ->where('organization_relationships.target_organization_id', $organizationId)
+                            ->where('organization_relationships.relationship_type', OrganizationRelationship::TYPE_SUBCONTRACTING)
+                            ->whereIn('organization_relationships.status', [OrganizationRelationship::STATUS_ACTIVE, OrganizationRelationship::STATUS_ENDED])
+                            ->whereRaw('DATE(organization_relationships.valid_from) <= daily_reports.service_date')
+                            ->where(static function (QueryBuilder $dates): void {
+                                $dates->whereNull('organization_relationships.valid_until')
+                                    ->orWhereRaw('DATE(organization_relationships.valid_until) >= daily_reports.service_date');
+                            });
+                    });
+                });
+        });
+    }
+
+    /** @param Builder<DailyReport> $query */
+    private function scopeToActor(Builder $query): void
+    {
+        $actor = auth()->user();
+        if (! $actor instanceof User) {
+            abort(401);
+        }
+
+        // The driver role may coexist with a dispatcher role. A driver alone
+        // can read only reports belonging to their linked driver profile.
+        if (! $actor->hasRole('driver')
+            || $actor->can('daily-reports.review')
+            || $actor->can('daily-reports.enter-for-driver')) {
+            return;
+        }
+
+        $driverId = Driver::query()->where('user_id', $actor->getKey())->value('id');
+        if ($driverId === null) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->where('performed_by_driver_id', (int) $driverId);
     }
 }

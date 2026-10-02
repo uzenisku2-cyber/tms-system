@@ -8367,6 +8367,9 @@ summaryParts.push(
     const calendarEntry = (driverId, date) => calendarState.days.find(
         (item) => Number(item.driver_id) === Number(driverId) && item.date === date
     );
+    const calendarEditableDrivers = () => calendarState.drivers.filter(
+        (driver) => driver.is_self || calendarState.canConfirm
+    );
     const calendarStatus = (item) => {
         if (!item) return ['—', 'unset'];
         if (item.decision === 'rejected') return ['ZAMÍTNUTO', 'off'];
@@ -8413,13 +8416,13 @@ summaryParts.push(
             <div class="drayvia-preview-panel-head"><h2 class="drayvia-preview-panel-title">DOSTUPNOST ŘIDIČŮ – ${monthLabelFromValue(selectedMonth)}</h2>
                 <div class="drayvia-preview-panel-subtitle">Záznam dostupnosti nenahrazuje přiřazení jízdy.</div></div>
             <p id="drayviaCalendarMessage" role="status">${driverText(calendarState.error || (calendarState.loading ? 'Načítám kalendář…' : ''))}</p>
-            <form id="drayviaCalendarForm" style="display:flex; flex-wrap:wrap; gap:12px; padding:16px; align-items:end">
-                <label>Řidič <select name="driver_id" required>${calendarState.drivers.map((driver) => `<option value="${driver.id}">${driverText(driver.name)}</option>`).join('')}</select></label>
+            ${calendarEditableDrivers().length ? `<form id="drayviaCalendarForm" style="display:flex; flex-wrap:wrap; gap:12px; padding:16px; align-items:end">
+                <label>Řidič <select name="driver_id" required>${calendarEditableDrivers().map((driver) => `<option value="${driver.id}">${driverText(driver.name)}</option>`).join('')}</select></label>
                 <label>Den <input type="date" name="date" value="${selectedMonth}-01" required></label>
                 <label>Stav <select name="availability"><option value="available">Dostupný</option><option value="unavailable">Nedostupný</option></select></label>
                 <label>Důvod <input name="reason" maxlength="1000" placeholder="Povinný pro nedostupnost"></label>
-                <button type="submit" ${calendarState.drivers.length ? '' : 'disabled'}>Odeslat k potvrzení</button>
-            </form>
+                <button type="submit">Odeslat k potvrzení</button>
+            </form>` : ''}
             <div class="drayvia-month-calendar-wrap"><table class="drayvia-month-calendar">
                 <thead><tr><th>DATUM</th><th>DEN</th><th>TYP DNE</th>
                     ${calendarState.drivers.map((driver) => `<th>${driverText(driver.name)}</th>`).join('')}</tr></thead>
@@ -13903,7 +13906,7 @@ summaryParts.push(
                 class="drayvia-preview-action primary"
                 type="button"
             >
-                PŘIDAT ŘIDIČE
+                SPRAVOVAT LIDI A PŘÍSTUPY
             </button>
 
             <button
@@ -18640,6 +18643,23 @@ const bindFuelWorkspace = () => {
         document
             .getElementById('drayviaSettingsSystemAction')
             ?.addEventListener('click', loadSettingsSystemInfo);
+        const peopleLink = document.getElementById('drayviaSettingsPeopleLink');
+        const token = sessionStorage.getItem('tms_mvp_token');
+        const organizationId = sessionStorage.getItem('tms_mvp_organization_id');
+        if (peopleLink && token && organizationId) {
+            fetch('/api/v1/people', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'X-Organization-ID': organizationId,
+                    Accept: 'application/json',
+                },
+            }).then(response => {
+                if (response.ok && peopleLink.isConnected) {
+                    peopleLink.hidden = false;
+                    peopleLink.style.display = 'block';
+                }
+            }).catch(() => {});
+        }
     };
 
     const settings = () => `
@@ -18649,6 +18669,11 @@ const bindFuelWorkspace = () => {
         )}
 
         <div class="drayvia-settings-grid">
+            <a id="drayviaSettingsPeopleLink" class="drayvia-settings-tile" href="/settings/people" hidden style="display:none;text-decoration:none;color:inherit">
+                <strong>Lidé a přístupy</strong>
+                <span>Pozvánky, role a přiřazení uživatelů k dopravci.</span>
+            </a>
+
             <button class="drayvia-settings-tile drayvia-settings-action" type="button" data-drayvia-page="carriers" data-drayvia-settings-target="carriers">
                 <strong>Firma a provoz</strong>
                 <span>Identifikační údaje hlavní firmy a přehled externích dopravců.</span>
@@ -26856,7 +26881,7 @@ if (page === 'finance') {
                 )
             ) {
                 event.preventDefault();
-                openRealDriverForm();
+                window.location.href = '/settings/people';
                 return;
             }
 

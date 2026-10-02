@@ -26,6 +26,7 @@ Route::middleware([
     'auth:sanctum',
     'organization',
     'perm:daily-reports.view',
+    'daily-report-supervisor-read',
 ])
     ->prefix('daily-reports/depot-imports')
     ->name('daily-reports.depot-imports.')
@@ -333,7 +334,7 @@ Route::middleware([
     ->name('daily-reports.quality-profiles.')
     ->group(function (): void {
         Route::middleware(
-            'perm:daily-reports.view',
+            ['perm:daily-reports.view', 'daily-report-supervisor-read'],
         )->group(function (): void {
             Route::get(
                 '/',

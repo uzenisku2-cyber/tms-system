@@ -16,10 +16,9 @@ Route::middleware('auth:sanctum')
             [DriverController::class, 'index']
         );
 
-        Route::post(
-            '/drivers',
-            [DriverController::class, 'store']
-        );
+        Route::post('/drivers', static fn () => response()->json([
+            'message' => 'Profil řidiče se vytváří prostřednictvím pozvánky v Lidé a přístupy.',
+        ], 410));
 
         Route::get(
             '/drivers/{driver}',

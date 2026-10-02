@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'mvp.app')->name('mvp.home');
 Route::view('/login', 'mvp.app')->name('mvp.login');
 Route::view('/app', 'mvp.app')->name('mvp.app');
+Route::view('/settings/people', 'mvp.people')->name('mvp.settings.people');
 
 /*
 |--------------------------------------------------------------------------
