@@ -186,6 +186,13 @@ Route::middleware([
         )
             ->whereUuid('dailyReport')
             ->name('update');
+        Route::patch(
+            '/{dailyReport}/carrier-import',
+            [DailyReportController::class, 'updateOwnCarrierImport'],
+        )
+            ->middleware('perm:daily-reports.update')
+            ->whereUuid('dailyReport')
+            ->name('carrier-import.update');
         Route::delete(
             '/{dailyReport}',
             [DailyReportController::class, 'destroy'],

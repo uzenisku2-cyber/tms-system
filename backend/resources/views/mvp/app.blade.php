@@ -3934,6 +3934,8 @@
     <button class="nav-item" type="button" data-drayvia-page="drivers">Řidiči</button>
     <button class="nav-item" id="carriersNavButton" type="button" data-drayvia-page="carriers">Dopravci</button>
     <button class="nav-item" type="button" data-drayvia-page="statistics">Statistiky</button>
+    <button class="nav-item" type="button" data-drayvia-page="carrier-prices">Moje ceníky</button>
+    <button class="nav-item" type="button" data-drayvia-page="carrier-summary">Můj provoz a vyúčtování</button>
 <button class="nav-item" type="button" data-drayvia-page="fuel">PHM</button>
     <button class="nav-item" type="button" data-drayvia-page="finance">Finance</button>
     <button class="nav-item" type="button" data-drayvia-page="bank">Banka</button>
@@ -4214,6 +4216,8 @@
                 drivers: can('daily-reports.view'),
                 carriers: can('users.manage'),
                 statistics: can('users.manage'),
+                'carrier-prices': can('people.manage') && !can('users.manage'),
+                'carrier-summary': can('people.manage') && !can('users.manage'),
                 fuel: can('users.manage'),
                 finance: can('pricing.view') || can('compensation.view'),
                 bank: can('pricing.view') || can('compensation.view'),
@@ -4725,7 +4729,11 @@
                     === currentUserId;
                 const isOwnDriver = isCurrentOrganization && currentDriver
                     && Number(currentDriver.id) === Number(item.performed_by_driver_id);
-                const mayEditDraft = isOriginalActor && (
+                const isOwnCarrierImport = !isCurrentOrganization && currentDriver
+                    && Number(currentDriver.id) === Number(item.performed_by_driver_id)
+                    && item.entry_method === 'authorized_import'
+                    && can('daily-reports.update');
+                const mayEditDraft = isOwnCarrierImport || (isOriginalActor && (
                     (item.entry_method === 'driver'
                         && !item.entered_on_behalf && isOwnDriver
                         && can('daily-reports.update'))
@@ -4734,7 +4742,7 @@
                         && can('daily-reports.enter-for-driver'))
                     || (item.entry_method === 'authorized_import'
                         && can('daily-reports.enter-for-driver'))
-                );
+                ));
                 const mayCorrect = (isOwnDriver && can('daily-reports.update'))
                     || (isOriginalActor && item.entry_method === 'delegated'
                         && item.entered_on_behalf
@@ -4771,7 +4779,7 @@
 
                     if (
                         item.status
-                        === 'draft'
+                        === 'draft' && !isOwnCarrierImport
                     ) {
                         const deleteButton =
                             document.createElement(
@@ -7861,6 +7869,14 @@ summaryParts.push(
                         // Datum je při běžné editaci chráněné.
                         delete editPayload.service_date;
 
+                        const ownCarrierImport = editingItem.entry_method === 'authorized_import'
+                            && String(editingItem.organization_id) !== organizationId;
+                        if (ownCarrierImport) {
+                            delete editPayload.route_number;
+                            delete editPayload.surcharge_amount;
+                            delete editPayload.custom_field_values;
+                        }
+
                         if (
                             editingItem.status
                             === 'correction_requested'
@@ -7885,7 +7901,7 @@ summaryParts.push(
                                 'Úprava zapsané trasy řidičem.';
 
                             await api(
-                                `/api/v1/daily-reports/${encodeURIComponent(editingItem.public_id)}`,
+                                `/api/v1/daily-reports/${encodeURIComponent(editingItem.public_id)}${ownCarrierImport ? '/carrier-import' : ''}`,
                                 {
                                     method: 'PATCH',
                                     body: JSON.stringify(
@@ -18886,6 +18902,8 @@ const allowedPreviewPage = (page) => {
         const can = (name) => permissions.includes(name);
         if (['calendar', 'drivers'].includes(page)) return can('daily-reports.view');
         if (page === 'record-review') return can('daily-reports.review');
+        if (page === 'carrier-prices') return can('people.manage') && !can('users.manage');
+        if (page === 'carrier-summary') return can('people.manage') && !can('users.manage');
         if (page === 'settings') return can('people.manage') || can('users.manage');
         if (['finance', 'bank'].includes(page)) return can('pricing.view') || can('compensation.view');
         if (['daily-report-settings', 'route-catalog'].includes(page)) return can('settings.catalogs.manage');
@@ -18893,6 +18911,8 @@ const allowedPreviewPage = (page) => {
     };
 
 const templates = {
+        'carrier-summary': () => `<div class="drayvia-preview-panel"><h2>Můj provoz a vyúčtování</h2><p>Údaje dopravce z výkazů a schválených dokumentů. Pouze ke čtení.</p><div id="carrierSummary">Načítám přehled…</div></div>`,
+        'carrier-prices': () => `<div class="drayvia-preview-panel"><h2>Moje fakturační ceníky</h2><p>Ceníky spravuje nadřazená organizace. Zde jsou pouze ke čtení.</p><div id="carrierPriceLists">Načítám ceníky…</div></div>`,
         'daily-report-settings': dailyReportSettingsWorkspace,
         'route-catalog': routeCatalogWorkspace,
         overview,
@@ -25945,6 +25965,76 @@ const loadFinanceCustomers = async () => {
 
         if (page === 'statistics') {
             bindDriverStatisticsTabs();
+        }
+
+        if (page === 'carrier-prices') {
+            const root = content.querySelector('#carrierPriceLists');
+            api('/api/v1/carrier/price-lists').then((body) => {
+                const lists = Array.isArray(body.data) ? body.data : [];
+                root.replaceChildren();
+                if (!lists.length) {
+                    root.textContent = 'Pro tohoto dopravce zatím není zveřejněný ceník.';
+                    return;
+                }
+                lists.forEach(({price_list: priceList, versions}) => {
+                    const section = document.createElement('section');
+                    section.className = 'drayvia-preview-panel';
+                    const title = document.createElement('h3');
+                    title.textContent = `${priceList.name} (${priceList.currency})`;
+                    section.appendChild(title);
+                    (versions || []).forEach((version) => {
+                        const caption = document.createElement('p');
+                        caption.textContent = `Verze ${version.version_number}, platnost od ${version.valid_from || 'neurčeno'}${version.valid_until ? ` do ${version.valid_until}` : ''}`;
+                        section.appendChild(caption);
+                        const list = document.createElement('ul');
+                        (version.items || []).forEach((item) => {
+                            const row = document.createElement('li');
+                            row.textContent = `${item.description || item.code}: ${item.unit_rate} ${item.currency} / ${item.unit}`;
+                            list.appendChild(row);
+                        });
+                        section.appendChild(list);
+                    });
+                    root.appendChild(section);
+                });
+            }).catch((error) => { root.textContent = `Ceníky se nepodařilo načíst: ${error.message}`; });
+        }
+
+        if (page === 'carrier-summary') {
+            const root = content.querySelector('#carrierSummary');
+            api('/api/v1/carrier/overview').then((body) => {
+                const data = body.data || {};
+                root.replaceChildren();
+                const section = (title, values, format) => {
+                    const box = document.createElement('section');
+                    box.className = 'drayvia-preview-panel';
+                    const heading = document.createElement('h3');
+                    heading.textContent = title;
+                    box.appendChild(heading);
+                    if (!values.length) {
+                        const empty = document.createElement('p');
+                        empty.textContent = 'Zatím nejsou žádné zveřejněné záznamy.';
+                        box.appendChild(empty);
+                    } else {
+                        const list = document.createElement('ul');
+                        values.forEach((item) => {
+                            const row = document.createElement('li');
+                            row.textContent = format(item);
+                            list.appendChild(row);
+                        });
+                        box.appendChild(list);
+                    }
+                    root.appendChild(box);
+                };
+                const stats = data.statistics || {};
+                section('Statistiky tras', [stats], (item) =>
+                    `${item.routes || 0} tras · ${item.delivered || 0} doručených · ${item.redirected || 0} přesměrovaných · ${Math.round(Number(item.actual_km || 0))} km`);
+                section('Vyúčtování od Dominika', data.settlements || [], (item) =>
+                    `${item.period_from} – ${item.period_until}: ${Number(item.net_balance_minor || 0) / 100} ${item.currency} (${item.status})`);
+                section('Fakturační doklady', data.billing_documents || [], (item) =>
+                    `${item.period_from} – ${item.period_until}: ${item.gross_amount} ${item.currency} (${item.status})`);
+                section('Čerpání PHM', data.fuel_transactions || [], (item) =>
+                    `${item.occurred_at}: ${item.product_name || item.provider}, ${item.quantity} ${item.unit_of_measure}, ${item.gross_amount} ${item.currency}`);
+            }).catch((error) => { root.textContent = `Přehled se nepodařilo načíst: ${error.message}`; });
         }
 
         if (page === 'imports') {

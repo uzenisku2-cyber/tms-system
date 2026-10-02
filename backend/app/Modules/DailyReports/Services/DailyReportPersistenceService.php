@@ -8,8 +8,10 @@ use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\DailyReports\Models\DailyReportEvent;
 use App\Modules\DailyReports\Models\DailyReportVersion;
 use App\Modules\Drivers\Models\Driver;
+use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
+use App\Modules\Organizations\Models\OrganizationRelationship;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use DomainException;
@@ -516,6 +518,7 @@ final class DailyReportPersistenceService
         int $expectedVersion,
         array $attributes,
         ?string $reason = null,
+        ?int $carrierImportOrganizationId = null,
     ): DailyReport {
         $organizationId = $this->organizationContext->requireId();
 
@@ -555,6 +558,7 @@ final class DailyReportPersistenceService
                 $expectedVersion,
                 $attributes,
                 $normalizedReason,
+                $carrierImportOrganizationId,
             ): DailyReport {
                 $this->assertActiveOrganization(
                     $organizationId,
@@ -567,12 +571,16 @@ final class DailyReportPersistenceService
 
                 $dailyReport = DailyReport::query()
                     ->whereKey($dailyReportId)
-                    ->where(
-                        'organization_id',
-                        $organizationId,
-                    )
+                    ->when($carrierImportOrganizationId === null,
+                        static fn ($query) => $query->where('organization_id', $organizationId))
                     ->lockForUpdate()
                     ->firstOrFail();
+
+                if ($carrierImportOrganizationId !== null) {
+                    $this->assertOwnCarrierImport(
+                        $dailyReport, $enteredByUserId, $carrierImportOrganizationId,
+                    );
+                }
 
                 if (
                     $dailyReport->getAttribute('status') !==
@@ -614,14 +622,16 @@ final class DailyReportPersistenceService
                     );
                 }
 
-                $this->assertAuthorizedDraftEntryActor(
-                    dailyReport: $dailyReport,
-                    driver: $driver,
-                    enteredByUserId: $enteredByUserId,
-                    organizationId: $organizationId,
-                    directFailureMessage: 'Direct draft update must use the driver user account.',
-                    delegatedFailureMessage: 'Delegated draft update must use the original delegated entry actor.',
-                );
+                if ($carrierImportOrganizationId === null) {
+                    $this->assertAuthorizedDraftEntryActor(
+                        dailyReport: $dailyReport,
+                        driver: $driver,
+                        enteredByUserId: $enteredByUserId,
+                        organizationId: $organizationId,
+                        directFailureMessage: 'Direct draft update must use the driver user account.',
+                        delegatedFailureMessage: 'Delegated draft update must use the original delegated entry actor.',
+                    );
+                }
 
                 $beforeAttributes = $this->snapshotAttributes(
                     $dailyReport,
@@ -684,7 +694,7 @@ final class DailyReportPersistenceService
 
                 $eventPayload = $this->eventPayloadBuilder->build(
                     dailyReportId: (int) $dailyReport->getKey(),
-                    organizationId: $organizationId,
+                    organizationId: (int) $dailyReport->getAttribute('organization_id'),
                     eventType: DailyReportEvent::TYPE_UPDATED,
                     actedByUserId: $enteredByUserId,
                     fromStatus: DailyReport::STATUS_DRAFT,
@@ -710,6 +720,49 @@ final class DailyReportPersistenceService
             },
             3,
         );
+    }
+
+    private function assertOwnCarrierImport(
+        DailyReport $report,
+        int $actorId,
+        int $carrierId,
+    ): void {
+        if ($carrierId !== $this->organizationContext->requireId()
+            || $report->getAttribute('entry_method') !== DailyReport::ENTRY_METHOD_AUTHORIZED_IMPORT) {
+            abort(403);
+        }
+
+        $ownerId = (int) $report->getAttribute('organization_id');
+        $driverId = (int) $report->getAttribute('performed_by_driver_id');
+        $date = CarbonImmutable::parse($report->getAttribute('service_date'))->toDateString();
+        if ($ownerId === $carrierId
+            || ! Organization::query()->whereKey($ownerId)->where('type', Organization::TYPE_MASTER)->exists()
+            || ! Organization::query()->whereKey($carrierId)->where('type', Organization::TYPE_SUBCONTRACTOR)->exists()
+            || ! Driver::query()->whereKey($driverId)->where('user_id', $actorId)->exists()) {
+            abort(403);
+        }
+
+        $assigned = DriverOrganizationAssignment::query()
+            ->where('driver_id', $driverId)
+            ->where('organization_id', $carrierId)
+            ->whereDate('valid_from', '<=', $date)
+            ->where(static function ($query) use ($date): void {
+                $query->whereNull('valid_until')->orWhereDate('valid_until', '>=', $date);
+            })->exists();
+        $related = OrganizationRelationship::query()
+            ->where('source_organization_id', $ownerId)
+            ->where('target_organization_id', $carrierId)
+            ->where('relationship_type', OrganizationRelationship::TYPE_SUBCONTRACTING)
+            ->whereIn('status', [OrganizationRelationship::STATUS_ACTIVE, OrganizationRelationship::STATUS_ENDED])
+            ->whereDate('valid_from', '<=', $date)
+            ->where(static function ($query) use ($date): void {
+                $query->whereNull('valid_until')->orWhereDate('valid_until', '>=', $date);
+            })->exists();
+        if (! $assigned || ! $related) {
+            abort(403);
+        }
+
+        $this->assertOrganizationPermission($actorId, $carrierId, 'daily-reports.update');
     }
 
     public function deleteDraft(
