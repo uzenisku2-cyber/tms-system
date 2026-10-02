@@ -154,6 +154,46 @@ final class DailyReportWriteService
     }
 
     /**
+     * The imported record stays with the master. Its driver may amend only
+     * operational values while assigned to the selected carrier.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function updateOwnCarrierImport(User $actor, string $publicId, array $input): DailyReport
+    {
+        $carrierId = $this->organizationContext->requireId();
+        $report = DailyReport::query()->where('public_id', $publicId)->firstOrFail();
+
+        if ($this->reportDriverUserId($report) !== $this->actorId($actor)
+            || $this->reportString($report, 'entry_method') !== DailyReport::ENTRY_METHOD_AUTHORIZED_IMPORT) {
+            throw new AuthorizationException('Only the imported report driver may amend this record.');
+        }
+
+        $this->assertPermission($actor, 'daily-reports.update');
+        $this->assertDirectOperationalEligibilityIfActorIsDriver($actor, $report);
+
+        $attributes = $this->mutableAttributes($input);
+        $allowed = [
+            'completion_confirmed_at', 'departure_time', 'arrival_time',
+            'loaded_parcels', 'delivered_parcels', 'redirected_parcels',
+            'undelivered_parcels', 'planned_km', 'actual_km',
+            'actual_km_source', 'operational_notes',
+        ];
+        if (array_diff(array_keys($attributes), $allowed) !== []) {
+            throw new AuthorizationException('The imported report field cannot be amended by the driver.');
+        }
+
+        return $this->persistence->updateDraft(
+            dailyReportId: $this->reportId($report),
+            enteredByUserId: $this->actorId($actor),
+            expectedVersion: $this->requiredInteger($input, 'expected_version'),
+            attributes: $attributes,
+            reason: $this->nullableString($input, 'reason'),
+            carrierImportOrganizationId: $carrierId,
+        );
+    }
+
+    /**
      * @param  array<string, mixed>  $input
      */
     public function deleteDraft(

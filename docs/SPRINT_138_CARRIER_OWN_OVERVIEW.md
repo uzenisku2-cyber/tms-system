@@ -1,0 +1,3 @@
+# Sprint 138: přehled dopravce
+
+Správce dopravce vidí statistiku tras svých přiřazených řidičů z master výkazů, vyúčtování a fakturační doklady určené jeho organizaci a PHM doložené přiřazením jeho řidiče v den čerpání. Čtecí endpoint vrací pouze explicitní pole, žádné zdrojové finanční snapshoty. Vyúčtování a doklady se zobrazují až ve stavu approved nebo closed. PHM se zobrazuje jen po přiřazení actual_driver_id; neatributované transakce neodhadujeme. Stávající obecná finanční oprávnění se nepřidělují. Pro současnou databázi jsou doložené historické trasy, finanční a PHM záznamy mohou být prázdné.

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Modules\Pricing\Controllers\BillingOverviewController;
+use App\Modules\Pricing\Controllers\CarrierOperationalOverviewController;
+use App\Modules\Pricing\Controllers\CarrierPriceListReadController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceBankPaymentController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceDeliveryController;
@@ -33,6 +35,14 @@ use App\Modules\Pricing\Controllers\SupplierFuelInvoiceController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceRebillingCoverageController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceTransactionAllocationController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('carrier/price-lists', [CarrierPriceListReadController::class, 'index'])
+    ->middleware(['auth:sanctum', 'organization', 'perm:people.manage'])
+    ->name('carrier.price-lists.index');
+
+Route::get('carrier/overview', [CarrierOperationalOverviewController::class, 'index'])
+    ->middleware(['auth:sanctum', 'organization', 'perm:people.manage'])
+    ->name('carrier.overview');
 
 Route::middleware(['auth:sanctum', 'organization', 'perm:compensation.view'])
     ->group(function (): void {

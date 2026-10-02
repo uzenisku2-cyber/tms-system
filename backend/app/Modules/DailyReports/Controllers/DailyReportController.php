@@ -108,6 +108,19 @@ final class DailyReportController extends BaseController
         );
     }
 
+    public function updateOwnCarrierImport(
+        UpdateDailyReportRequest $request,
+        string $dailyReport,
+        DailyReportWriteService $writes,
+    ): JsonResponse {
+        return $this->success(
+            new DailyReportResource($writes->updateOwnCarrierImport(
+                $this->actor($request), $dailyReport, $request->validated(),
+            )),
+            'Imported daily report amended with a new version.',
+        );
+    }
+
     public function destroy(
         DailyReportTransitionRequest $request,
         string $dailyReport,
