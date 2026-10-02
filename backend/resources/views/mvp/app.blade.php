@@ -1468,6 +1468,23 @@
             margin-bottom: 28px;
         }
 
+        .drayvia-preview-logout {
+            border: 1px solid #aab9c9;
+            border-radius: 9px;
+            background: #fff;
+            color: #17314d;
+            padding: 10px 14px;
+            font: inherit;
+            font-weight: 650;
+            cursor: pointer;
+        }
+
+        .drayvia-preview-logout:focus-visible {
+            outline: 3px solid #397bd6;
+            outline-offset: 2px;
+        }
+
+
         .drayvia-preview-eyebrow {
             margin-bottom: 8px;
             color: #728096;
@@ -3957,9 +3974,12 @@
                     <p>Provozní aplikace DRAYVIA pro práci s reálnými daty.</p>
                 </div>
 
-                <div class="status-pill">
-                    <span class="status-dot"></span>
-                    API připojeno
+                <div class="topbar-actions">
+                    <div class="status-pill">
+                        <span class="status-dot"></span>
+                        API připojeno
+                    </div>
+                    <button type="button" class="danger-button" data-logout>Odhlásit se</button>
                 </div>
             </header>
 
@@ -7782,6 +7802,12 @@ summaryParts.push(
                 }
             });
 
+            document.addEventListener('click', (event) => {
+                if (event.target.closest('[data-logout]')) {
+                    logoutButton.click();
+                }
+            });
+
             logoutButton.addEventListener('click', async () => {
                 try {
                     await api('/api/v1/auth/logout', { method: 'POST' });
@@ -7789,6 +7815,9 @@ summaryParts.push(
                     // Local session is cleared even when logout API is unavailable.
                 } finally {
                     clearSession();
+                    const preview = document.getElementById('drayviaPreviewLayer');
+                    preview?.classList.remove('is-visible');
+                    preview?.setAttribute('aria-hidden', 'true');
                     showLogin();
                 }
             });
@@ -7973,6 +8002,7 @@ summaryParts.push(
     <div class="drayvia-preview-scroll">
         <div id="drayviaPreviewContent" class="drayvia-preview-container"></div>
     </div>
+    <button type="button" class="drayvia-preview-logout drayvia-preview-logout-fixed" data-logout>Odhlásit se</button>
 </div>
 
 <script>

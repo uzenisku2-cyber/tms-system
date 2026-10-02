@@ -15,6 +15,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;border-bottom:1p
 </head>
 <body><main class="wrap">
 <a class="button secondary" href="/app">← Zpět do aplikace</a>
+<button type="button" class="secondary" id="logoutButton">Odhlásit se</button>
 <h1>Lidé a přístupy</h1><p>Účty a role se spravují pro zvolenou organizaci. Řidič uvidí své údaje, dispečer provoz ve svém rozsahu. Finanční oprávnění se při zakládání těchto rolí nepřidělují.</p>
 <div id="status" role="status"></div>
 <section class="panel"><h2>Vytvořit uživatele</h2>
@@ -53,6 +54,11 @@ const token=sessionStorage.getItem('tms_mvp_token')||'';
 const ownOrganization=sessionStorage.getItem('tms_mvp_organization_id')||'';
 const form=document.getElementById('person');const status=document.getElementById('status');
 const organization=document.getElementById('organization');
+document.getElementById('logoutButton').addEventListener('click',async()=>{
+try{if(token)await fetch('/api/v1/auth/logout',{method:'POST',headers:{Authorization:`Bearer ${token}`,Accept:'application/json'}})}
+catch(_){/* Clear the browser session even if the server is unavailable. */}
+finally{sessionStorage.removeItem('tms_mvp_token');sessionStorage.removeItem('tms_mvp_organization_id');sessionStorage.removeItem('tms_mvp_capabilities');window.location.assign('/login')}
+});
 if(!token||!ownOrganization){status.textContent='Nejdříve se přihlaste v aplikaci.';form.hidden=true;return;}
 const headers={'Authorization':`Bearer ${token}`,'X-Organization-ID':ownOrganization,'Accept':'application/json','Content-Type':'application/json'};
 const request=async(path,options={})=>{const response=await fetch('/api/v1/'+path,{...options,headers});const body=await response.json();if(!response.ok)throw new Error(body.message||Object.values(body.errors||{})[0]?.[0]||'Požadavek se nezdařil.');return body.data;};
