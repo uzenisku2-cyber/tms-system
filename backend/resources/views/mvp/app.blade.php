@@ -1286,6 +1286,17 @@
             text-align: left;
         }
 
+        #reportTableBody .route-inline-editor-cell {
+            padding: 14px;
+            text-align: left;
+            font-weight: 400;
+            background: #f5f7fa;
+        }
+
+        #reportTableBody .route-inline-editor-cell .daily-entry-panel {
+            margin: 0;
+        }
+
         #reportTableBody .route-actions {
             text-align: center;
         }
@@ -4016,6 +4027,7 @@
 
             <div id="dailyReportSavedMessage" class="daily-entry-message ok hidden"></div>
 
+            <div id="dailyReportFormHome"></div>
             <section id="dailyReportCreatePanel" class="daily-entry-panel" hidden>
                 <h2>Detail trasy</h2>
                 <div class="daily-entry-subtitle">
@@ -4209,6 +4221,8 @@
             const carriersNavButton = document.getElementById('carriersNavButton');
             const dailyReportAddButton = document.getElementById('dailyReportAddButton');
             const dailyReportCreatePanel = document.getElementById('dailyReportCreatePanel');
+            const dailyReportFormHome = document.getElementById('dailyReportFormHome');
+            let inlineDailyReportRow = null;
             const dailyReportCreateForm = document.getElementById('dailyReportCreateForm');
             const dailyReportCancelButton = document.getElementById('dailyReportCancelButton');
             const dailyReportSaveButton = document.getElementById('dailyReportSaveButton');
@@ -4790,7 +4804,7 @@
 
                     editButton.addEventListener(
                         'click',
-                        () => openDailyReportEdit(item)
+                        () => openDailyReportEdit(item, editButton.closest('tr'))
                     );
 
                     cell.appendChild(
@@ -5234,6 +5248,9 @@
                 return cell;
             };
             const renderReports = (items, pagination) => {
+                if (inlineDailyReportRow) {
+                    closeDailyReportForm();
+                }
                 reportTableBody.replaceChildren();
 
                 const safeItems = Array.isArray(items) ? items : [];
@@ -7043,10 +7060,33 @@ summaryParts.push(
                 dailyReportCreateMessage.classList.add('hidden');
             };
 
+            const restoreDailyReportForm = () => {
+                if (inlineDailyReportRow) {
+                    dailyReportFormHome.after(dailyReportCreatePanel);
+                    inlineDailyReportRow.remove();
+                    inlineDailyReportRow = null;
+                }
+            };
+
             const closeDailyReportForm = () => {
                 dailyReportCreatePanel.hidden = true;
                 dailyReportAddButton.hidden = false;
+                restoreDailyReportForm();
                 resetDailyReportForm(false);
+            };
+
+            const placeDailyReportFormBelow = (routeRow) => {
+                restoreDailyReportForm();
+
+                const detailRow = document.createElement('tr');
+                detailRow.className = 'route-inline-editor';
+                const detailCell = document.createElement('td');
+                detailCell.className = 'route-inline-editor-cell';
+                detailCell.colSpan = routeRow.cells.length;
+                detailCell.appendChild(dailyReportCreatePanel);
+                detailRow.appendChild(detailCell);
+                routeRow.after(detailRow);
+                inlineDailyReportRow = detailRow;
             };
 
             const customFieldInputName = (key) =>
@@ -7359,6 +7399,7 @@ summaryParts.push(
             };
 
             const openDailyReportForm = async () => {
+                restoreDailyReportForm();
                 resetDailyReportForm(false);
                 dailyReportSavedMessage.classList.add('hidden');
                 dailyReportCreateMessage.classList.add('hidden');
@@ -7452,7 +7493,12 @@ summaryParts.push(
                 updateRouteParcelBalance();
             };
 
-            const openDailyReportEdit = async (item) => {
+            const openDailyReportEdit = async (item, routeRow) => {
+                if (!routeRow || !reportTableBody.contains(routeRow)) {
+                    return;
+                }
+
+                placeDailyReportFormBelow(routeRow);
                 resetDailyReportForm(false);
 
                 dailyReportEditItem = item;
@@ -7464,6 +7510,7 @@ summaryParts.push(
                 dailyServiceDate.disabled = true;
 
                 dailyReportCreatePanel.hidden = false;
+                inlineDailyReportRow.scrollIntoView({ block: 'start' });
                 dailyReportAddButton.hidden = true;
                 dailyReportSavedMessage.classList.add('hidden');
 
@@ -7943,12 +7990,11 @@ summaryParts.push(
                                 'Trasa byla upravena.';
                         }
 
-                        resetDailyReportForm(false);
-                        dailyReportCreatePanel.hidden = true;
-                        dailyReportAddButton.hidden = false;
+                        closeDailyReportForm();
                         dailyReportSavedMessage.classList.remove('hidden');
 
                         await loadReports();
+                        dailyReportSavedMessage.scrollIntoView({ block: 'nearest' });
                         return;
                     }
 
