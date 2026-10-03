@@ -44,6 +44,8 @@ final class DailyReportPersistenceService
 
     /** @var list<string> */
     private const ALLOWED_DRAFT_UPDATE_ATTRIBUTES = [
+        'daily_report_form_configuration_id',
+        'custom_field_values',
         'route_number',
         'service_date',
         'completion_confirmed_at',
@@ -538,6 +540,11 @@ final class DailyReportPersistenceService
         );
 
         $this->assertAllowedUpdateAttributes($attributes);
+        if ($carrierImportOrganizationId === null
+            && (array_key_exists('daily_report_form_configuration_id', $attributes)
+                || array_key_exists('custom_field_values', $attributes))) {
+            throw new InvalidArgumentException('Form configuration updates require the carrier import path.');
+        }
 
         if ($attributes === []) {
             throw new InvalidArgumentException(
@@ -579,6 +586,7 @@ final class DailyReportPersistenceService
                 if ($carrierImportOrganizationId !== null) {
                     $this->assertOwnCarrierImport(
                         $dailyReport, $enteredByUserId, $carrierImportOrganizationId,
+                        $attributes['service_date'] ?? null,
                     );
                 }
 
@@ -726,6 +734,7 @@ final class DailyReportPersistenceService
         DailyReport $report,
         int $actorId,
         int $carrierId,
+        mixed $targetDate = null,
     ): void {
         if ($carrierId !== $this->organizationContext->requireId()
             || $report->getAttribute('entry_method') !== DailyReport::ENTRY_METHOD_AUTHORIZED_IMPORT) {
@@ -742,24 +751,30 @@ final class DailyReportPersistenceService
             abort(403);
         }
 
-        $assigned = DriverOrganizationAssignment::query()
-            ->where('driver_id', $driverId)
-            ->where('organization_id', $carrierId)
-            ->whereDate('valid_from', '<=', $date)
-            ->where(static function ($query) use ($date): void {
-                $query->whereNull('valid_until')->orWhereDate('valid_until', '>=', $date);
-            })->exists();
-        $related = OrganizationRelationship::query()
-            ->where('source_organization_id', $ownerId)
-            ->where('target_organization_id', $carrierId)
-            ->where('relationship_type', OrganizationRelationship::TYPE_SUBCONTRACTING)
-            ->whereIn('status', [OrganizationRelationship::STATUS_ACTIVE, OrganizationRelationship::STATUS_ENDED])
-            ->whereDate('valid_from', '<=', $date)
-            ->where(static function ($query) use ($date): void {
-                $query->whereNull('valid_until')->orWhereDate('valid_until', '>=', $date);
-            })->exists();
-        if (! $assigned || ! $related) {
-            abort(403);
+        $dates = [$date];
+        if ($targetDate !== null) {
+            $dates[] = CarbonImmutable::parse($targetDate)->toDateString();
+        }
+        foreach (array_unique($dates) as $effectiveDate) {
+            $assigned = DriverOrganizationAssignment::query()
+                ->where('driver_id', $driverId)
+                ->where('organization_id', $carrierId)
+                ->whereDate('valid_from', '<=', $effectiveDate)
+                ->where(static function ($query) use ($effectiveDate): void {
+                    $query->whereNull('valid_until')->orWhereDate('valid_until', '>=', $effectiveDate);
+                })->exists();
+            $related = OrganizationRelationship::query()
+                ->where('source_organization_id', $ownerId)
+                ->where('target_organization_id', $carrierId)
+                ->where('relationship_type', OrganizationRelationship::TYPE_SUBCONTRACTING)
+                ->whereIn('status', [OrganizationRelationship::STATUS_ACTIVE, OrganizationRelationship::STATUS_ENDED])
+                ->whereDate('valid_from', '<=', $effectiveDate)
+                ->where(static function ($query) use ($effectiveDate): void {
+                    $query->whereNull('valid_until')->orWhereDate('valid_until', '>=', $effectiveDate);
+                })->exists();
+            if (! $assigned || ! $related) {
+                abort(403);
+            }
         }
 
         $this->assertOrganizationPermission($actorId, $carrierId, 'daily-reports.update');
@@ -1372,6 +1387,10 @@ final class DailyReportPersistenceService
         );
 
         $this->assertAllowedUpdateAttributes($attributes);
+        if (array_key_exists('daily_report_form_configuration_id', $attributes)
+            || array_key_exists('custom_field_values', $attributes)) {
+            throw new InvalidArgumentException('Form configuration changes are unavailable in correction.');
+        }
 
         if ($attributes === []) {
             throw new InvalidArgumentException(
@@ -2211,6 +2230,14 @@ final class DailyReportPersistenceService
         array $attributes,
     ): array {
         $normalized = [];
+
+        if (array_key_exists('daily_report_form_configuration_id', $attributes)) {
+            $normalized['daily_report_form_configuration_id'] =
+                $attributes['daily_report_form_configuration_id'];
+        }
+        if (array_key_exists('custom_field_values', $attributes)) {
+            $normalized['custom_field_values'] = $attributes['custom_field_values'];
+        }
 
         if (array_key_exists('route_number', $attributes)) {
             if (! is_string($attributes['route_number'])) {

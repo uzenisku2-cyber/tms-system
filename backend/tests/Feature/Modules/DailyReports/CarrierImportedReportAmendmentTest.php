@@ -6,11 +6,13 @@ namespace Tests\Feature\Modules\DailyReports;
 
 use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
+use App\Modules\DailyReports\Models\DailyReportFormConfiguration;
 use App\Modules\Drivers\Models\Driver;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\OrganizationRelationship;
+use Carbon\CarbonImmutable;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -86,13 +88,61 @@ final class CarrierImportedReportAmendmentTest extends TestCase
             'daily_report_id' => $report->getKey(),
             'acted_by_user_id' => $actor->getKey(),
         ]);
-        $this->patchJson($url, ['expected_version' => 2, 'surcharge_amount' => 500])
-            ->assertForbidden();
+        $keys = [
+            'service_date', 'route_number', 'departure_time', 'arrival_time',
+            'actual_km', 'planned_km', 'loaded_parcels', 'delivered_parcels',
+            'redirected_parcels', 'undelivered_parcels', 'surcharge_amount',
+            'operational_notes',
+        ];
+        $fields = array_map(static fn (string $key, int $index): array => [
+            'key' => $key, 'order' => $index + 1, 'visible' => true,
+            'required' => false,
+        ], $keys, array_keys($keys));
+        $fields[] = [
+            'key' => 'custom_0123456789abcdef0123456789abcdef',
+            'label' => 'Poznámka řidiče', 'type' => 'text', 'order' => 13,
+            'visible' => true, 'required' => false,
+        ];
+        $configuration = DailyReportFormConfiguration::query()->create([
+            'organization_id' => $master->getKey(), 'version' => 1,
+            'valid_from' => '2026-01-01', 'fields' => $fields,
+            'created_by_user_id' => $importer->getKey(),
+        ]);
+        $this->patchJson($url, [
+            'expected_version' => 2,
+            'route_number' => 'VIT-2',
+            'service_date' => '2026-07-30',
+            'surcharge_amount' => 500,
+            'operational_notes' => 'Schválený příplatek.',
+            'custom_field_values' => [
+                'custom_0123456789abcdef0123456789abcdef' => 'Zkontrolováno',
+            ],
+        ])->assertOk()->assertJsonPath('data.current_version', 3);
+        $report->refresh();
+        self::assertSame('VIT-2', $report->route_number);
+        self::assertSame('2026-07-30', CarbonImmutable::parse($report->getAttribute('service_date'))->toDateString());
+        self::assertSame(500.0, (float) $report->surcharge_amount);
+        self::assertSame((int) $configuration->getKey(),
+            (int) $report->daily_report_form_configuration_id);
+        self::assertSame([
+            'custom_0123456789abcdef0123456789abcdef' => 'Zkontrolováno',
+        ], $report->custom_field_values);
+        $this->patchJson($url, [
+            'expected_version' => 3,
+            'custom_field_values' => ['custom_unknownvalue123' => 'Nelze uložit'],
+        ])->assertUnprocessable();
+        $this->assertDatabaseHas('daily_report_versions', [
+            'daily_report_id' => $report->getKey(), 'version_number' => 3,
+            'created_by_user_id' => $actor->getKey(),
+        ]);
+        $this->patchJson($url, [
+            'expected_version' => 3, 'service_date' => '2026-06-30',
+        ])->assertForbidden();
         $this->deleteJson('/api/v1/daily-reports/'.$report->getRouteKey(),
-            ['expected_version' => 2])->assertNotFound();
+            ['expected_version' => 3])->assertNotFound();
         Sanctum::actingAs($stranger);
         $this->withHeader('X-Organization-ID', (string) $other->getKey());
-        $this->patchJson($url, ['expected_version' => 2, 'delivered_parcels' => 99])
+        $this->patchJson($url, ['expected_version' => 3, 'delivered_parcels' => 99])
             ->assertForbidden();
     }
 

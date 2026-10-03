@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
 use App\Modules\DailyReports\Requests\DailyReportRequestRules;
 use App\Modules\Drivers\Models\Driver;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use LogicException;
@@ -154,8 +155,8 @@ final class DailyReportWriteService
     }
 
     /**
-     * The imported record stays with the master. Its driver may amend only
-     * operational values while assigned to the selected carrier.
+     * The imported record stays with the master. Its driver may correct
+     * every report field while assigned to the selected carrier.
      *
      * @param  array<string, mixed>  $input
      */
@@ -170,17 +171,26 @@ final class DailyReportWriteService
         }
 
         $this->assertPermission($actor, 'daily-reports.update');
-        $this->assertDirectOperationalEligibilityIfActorIsDriver($actor, $report);
+        $targetDate = array_key_exists('service_date', $input)
+            ? (string) $input['service_date']
+            : CarbonImmutable::parse($report->getAttribute('service_date'))->toDateString();
+        $this->assertDirectOperationalEligibilityIfActorIsDriver($actor, $report, $targetDate);
 
         $attributes = $this->mutableAttributes($input);
-        $allowed = [
-            'completion_confirmed_at', 'departure_time', 'arrival_time',
-            'loaded_parcels', 'delivered_parcels', 'redirected_parcels',
-            'undelivered_parcels', 'planned_km', 'actual_km',
-            'actual_km_source', 'operational_notes',
-        ];
-        if (array_diff(array_keys($attributes), $allowed) !== []) {
-            throw new AuthorizationException('The imported report field cannot be amended by the driver.');
+        if (array_key_exists('service_date', $attributes)
+            || array_key_exists('custom_field_values', $attributes)) {
+            $effectiveInput = [];
+            foreach (DailyReportRequestRules::MUTABLE_FIELDS as $field) {
+                $effectiveInput[$field] = array_key_exists($field, $input)
+                    ? $input[$field]
+                    : $report->getAttribute($field);
+            }
+            $attributes = $this->effectiveForm->prepareAttributesForCreate(
+                organizationId: (int) $report->getAttribute('organization_id'),
+                serviceDate: $targetDate,
+                input: $effectiveInput,
+                baseAttributes: $attributes,
+            );
         }
 
         return $this->persistence->updateDraft(

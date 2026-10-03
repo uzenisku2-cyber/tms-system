@@ -7505,9 +7505,9 @@ summaryParts.push(
                 dailyServiceDate.value =
                     item.service_date || '';
 
-                // Datum zůstává při běžné editaci chráněné,
-                // protože určuje historickou konfiguraci formuláře.
-                dailyServiceDate.disabled = true;
+                const ownCarrierImport = item.entry_method === 'authorized_import'
+                    && String(item.organization_id) !== organizationId;
+                dailyServiceDate.disabled = !ownCarrierImport;
 
                 dailyReportCreatePanel.hidden = false;
                 inlineDailyReportRow.scrollIntoView({ block: 'start' });
@@ -7532,7 +7532,9 @@ summaryParts.push(
                 setConfigurationState(
                     item.status === 'correction_requested'
                         ? 'Trasa vyžaduje opravu. Upravte požadované údaje a změny uložte.'
-                        : 'Upravujete již zapsanou trasu. Datum jízdy zůstává kvůli historické konfiguraci beze změny.',
+                        : ownCarrierImport
+                            ? 'Upravujete svůj zapsaný výkaz. Změny všech položek se uloží jako nová auditovaná verze.'
+                            : 'Upravujete již zapsanou trasu. Datum jízdy zůstává kvůli historické konfiguraci beze změny.',
                     item.status === 'correction_requested'
                         ? 'error'
                         : 'ok'
@@ -7766,11 +7768,10 @@ summaryParts.push(
                     );
                 }
 
-                if (
-                    Object.keys(customFieldValues).length > 0
-                ) {
-                    payload.custom_field_values =
-                        customFieldValues;
+                if (Object.keys(customFieldValues).length > 0
+                    || (dailyReportEditItem?.entry_method === 'authorized_import'
+                        && String(dailyReportEditItem.organization_id) !== organizationId)) {
+                    payload.custom_field_values = customFieldValues;
                 }
 
                 if (
@@ -7896,9 +7897,21 @@ summaryParts.push(
                     dailyReportCreateMessage.textContent = '';
                     dailyReportCreateMessage.classList.add('hidden');
 
-                    await loadEffectiveDailyReportConfiguration(
-                        dailyServiceDate.value
+                    const previous = new Map(
+                        [...dailyReportDynamicFields.querySelectorAll('[data-field-key]')]
+                            .map((control) => [control.dataset.fieldKey, control.value])
                     );
+                    await loadEffectiveDailyReportConfiguration(dailyServiceDate.value);
+                    if (dailyReportEditItem) {
+                        populateDailyReportEditValues(dailyReportEditItem);
+                        for (const [key, value] of previous) {
+                            const control = dailyReportDynamicFields.querySelector(
+                                `[data-field-key="${CSS.escape(key)}"]`
+                            );
+                            if (control) control.value = value;
+                        }
+                        updateRouteParcelBalance();
+                    }
                 }
             );
 
@@ -7942,15 +7955,10 @@ summaryParts.push(
 
                         delete editPayload.performed_by_driver_id;
 
-                        // Datum je při běžné editaci chráněné.
-                        delete editPayload.service_date;
-
                         const ownCarrierImport = editingItem.entry_method === 'authorized_import'
                             && String(editingItem.organization_id) !== organizationId;
-                        if (ownCarrierImport) {
-                            delete editPayload.route_number;
-                            delete editPayload.surcharge_amount;
-                            delete editPayload.custom_field_values;
+                        if (!ownCarrierImport) {
+                            delete editPayload.service_date;
                         }
 
                         if (
