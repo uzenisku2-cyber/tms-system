@@ -203,6 +203,10 @@ final class DailyReportRequestRules
                 'nullable',
                 'string',
             ],
+            'custom_field_values' => [
+                'sometimes',
+                'array',
+            ],
             'reason' => self::reason(),
         ];
     }
