@@ -18999,7 +18999,37 @@ const allowedPreviewPage = (page) => {
 
 const templates = {
         'carrier-summary': () => `<div class="drayvia-preview-panel"><h2>Můj provoz a vyúčtování</h2><p>Údaje dopravce z výkazů a schválených dokumentů. Pouze ke čtení.</p><div id="carrierSummary">Načítám přehled…</div></div>`,
-        'carrier-remuneration': () => `<div class="drayvia-preview-panel"><h2>Průběžná odměna za trasy</h2><p>Orientační výpočet z aktuálních zápisů řidičů a platných ceníků. K fakturaci je nutná shoda se zápisem depa.</p><div id="carrierRemuneration">Načítám výpočet…</div></div>`,
+        'carrier-remuneration': () => `<style>
+            .carrier-pay { color: #183047; }
+            .carrier-pay-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+            .carrier-pay-head h2 { margin: 0 0 .3rem; font-size: 1.55rem; }
+            .carrier-pay-head p { margin: 0; color: #526477; line-height: 1.5; }
+            .carrier-pay-badge { padding: .45rem .75rem; border-radius: 999px; background: #fff3d6; color: #754d0c; font-weight: 700; white-space: nowrap; }
+            .carrier-pay-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .8rem; margin-bottom: 1rem; }
+            .carrier-pay-stat { border: 1px solid #dce5ef; background: #fff; border-radius: 14px; padding: 1rem 1.1rem; min-height: 92px; }
+            .carrier-pay-stat span { display: block; color: #576b7e; font-size: .9rem; margin-bottom: .35rem; }
+            .carrier-pay-stat strong { display: block; font-size: 1.3rem; line-height: 1.3; }
+            .carrier-pay-note { border-left: 4px solid #d6a13e; background: #fffbf1; padding: .75rem 1rem; border-radius: 0 10px 10px 0; margin: 0 0 1.2rem; color: #614c27; }
+            .carrier-pay-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 1.3rem 0 .75rem; }
+            .carrier-pay-toolbar h3 { margin: 0; }
+            .carrier-pay-toolbar select { min-width: 125px; padding: .45rem .7rem; border: 1px solid #b9cbdc; border-radius: 9px; background: white; }
+            .carrier-pay-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); gap: .7rem; }
+            .carrier-pay-month { text-align: left; border: 1px solid #d8e3ee; background: #fff; border-radius: 13px; padding: .85rem 1rem; cursor: pointer; color: inherit; }
+            .carrier-pay-month:hover, .carrier-pay-month:focus-visible { border-color: #4c86b9; box-shadow: 0 2px 10px #1438591a; }
+            .carrier-pay-month[aria-pressed="true"] { border: 2px solid #28649a; background: #eef6fc; padding: calc(.85rem - 1px) calc(1rem - 1px); }
+            .carrier-pay-month span, .carrier-pay-month small { display: block; }
+            .carrier-pay-month strong { display: block; margin: .28rem 0; font-size: 1.12rem; }
+            .carrier-pay-month small { color: #5a6c7d; }
+            .carrier-pay-detail { margin-top: 1.4rem; border: 1px solid #d8e3ee; border-radius: 14px; background: white; padding: 1rem; }
+            .carrier-pay-detail h3 { margin: 0 0 .25rem; }
+            .carrier-pay-detail p { margin: .2rem 0 1rem; color: #526477; }
+            .carrier-pay-table-wrap { overflow-x: auto; }
+            .carrier-pay-table { width: 100%; border-collapse: collapse; min-width: 770px; font-variant-numeric: tabular-nums; }
+            .carrier-pay-table th, .carrier-pay-table td { padding: .65rem .55rem; border-bottom: 1px solid #e6edf3; text-align: right; white-space: nowrap; }
+            .carrier-pay-table th:first-child, .carrier-pay-table td:first-child { text-align: left; }
+            .carrier-pay-table th { font-size: .82rem; color: #526477; }
+            .carrier-pay-table td:last-child { font-weight: 700; }
+            </style><div class="carrier-pay"><div class="carrier-pay-head"><div><h2>Průběžná odměna</h2><p>Výpočet z aktuálních zápisů řidičů a platných ceníků.</p></div><span class="carrier-pay-badge">Orientační výpočet</span></div><div id="carrierRemuneration">Načítám výpočet…</div></div>`,
         'carrier-prices': () => `<div class="drayvia-preview-panel"><h2>Moje fakturační ceníky</h2><p>Ceníky spravuje nadřazená organizace. Zde jsou pouze ke čtení.</p><div id="carrierPriceLists">Načítám ceníky…</div></div>`,
         'daily-report-settings': dailyReportSettingsWorkspace,
         'route-catalog': routeCatalogWorkspace,
@@ -26092,48 +26122,120 @@ const loadFinanceCustomers = async () => {
             const money = (minor) => new Intl.NumberFormat('cs-CZ', {
                 style: 'currency', currency: 'CZK',
             }).format(Number(minor) / 100);
+            const monthLabel = (month) => new Intl.DateTimeFormat('cs-CZ', {
+                month: 'long', year: 'numeric', timeZone: 'UTC',
+            }).format(new Date(`${month}-01T12:00:00Z`));
+            const element = (tag, className, label) => {
+                const node = document.createElement(tag);
+                if (className) node.className = className;
+                if (label !== undefined) node.textContent = label;
+                return node;
+            };
             api('/api/v1/carrier/provisional-remuneration').then((body) => {
                 if (!root.isConnected) return;
                 const data = body.data || {};
-                root.replaceChildren();
-                const summary = document.createElement('p');
-                summary.textContent = data.total_minor === null
-                    ? `Zatím oceněné trasy: ${money(data.priced_subtotal_minor || 0)}. Neúplné nebo neoceněné trasy: ${data.unpriced_route_count || 0}. Celkovou odměnu zatím nelze určit.`
-                    : `Průběžná odměna: ${money(data.total_minor || 0)} za ${data.route_count || 0} tras.`;
-                root.appendChild(summary);
                 const routes = Array.isArray(data.routes) ? data.routes : [];
-                if (!routes.length) {
-                    const empty = document.createElement('p');
-                    empty.textContent = 'Zatím nejsou oceněné trasy.';
-                    root.appendChild(empty);
-                    return;
-                }
                 const groups = new Map();
                 routes.forEach((route) => {
                     const month = String(route.service_date || '').slice(0, 7);
+                    if (!/^\d{4}-\d{2}$/.test(month)) return;
                     if (!groups.has(month)) groups.set(month, []);
                     groups.get(month).push(route);
                 });
-                Array.from(groups.keys()).sort().reverse().forEach((month) => {
-                    const values = groups.get(month);
-                    const details = document.createElement('details');
-                    details.className = 'drayvia-preview-panel';
-                    const caption = document.createElement('summary');
-                    const subtotal = values.reduce((sum, route) =>
-                        sum + Number(route.amounts_minor?.total_minor || 0), 0);
-                    caption.textContent = `${month}: ${money(subtotal)} · ${values.length} tras${values.some((route) => route.quality_pending) ? ' · příplatek za kvalitu čeká na doplnění měsíce' : ''}`;
-                    details.appendChild(caption);
-                    const list = document.createElement('ul');
+                const months = Array.from(groups.keys()).sort().reverse();
+                const years = Array.from(new Set(months.map((month) => month.slice(0, 4))));
+                let selectedYear = years[0] || String(new Date().getFullYear());
+                let selectedMonth = months[0] || null;
+                root.replaceChildren();
+                const summary = element('div', 'carrier-pay-summary');
+                const stat = (label, value) => {
+                    const card = element('div', 'carrier-pay-stat');
+                    card.append(element('span', '', label), element('strong', '', value));
+                    return card;
+                };
+                summary.append(
+                    stat('Celá historie', data.total_minor === null
+                        ? 'Čeká na doplnění' : money(data.total_minor || 0)),
+                    stat('Oceněné trasy', String(data.route_count || 0)),
+                    stat('Neúplné nebo neoceněné', String(data.unpriced_route_count || 0))
+                );
+                root.appendChild(summary);
+                const note = element('p', 'carrier-pay-note',
+                    data.unpriced_route_count
+                        ? `Dílčí součet oceněných tras je ${money(data.priced_subtotal_minor || 0)}. Celkovou odměnu zatím nelze určit. K fakturaci je nutná shoda se zápisem depa.`
+                        : 'Částky se mění při úpravě zápisů. K fakturaci je nutná shoda se zápisem depa.');
+                root.appendChild(note);
+                if (!months.length) {
+                    root.appendChild(element('p', '', 'Zatím nejsou oceněné trasy.'));
+                    return;
+                }
+                const toolbar = element('div', 'carrier-pay-toolbar');
+                const yearSelect = element('select');
+                yearSelect.setAttribute('aria-label', 'Rok průběžné odměny');
+                years.forEach((year) => {
+                    const option = element('option', '', year);
+                    option.value = year;
+                    yearSelect.appendChild(option);
+                });
+                toolbar.append(element('h3', '', 'Přehled po měsících'), yearSelect);
+                root.appendChild(toolbar);
+                const grid = element('div', 'carrier-pay-months');
+                const detail = element('section', 'carrier-pay-detail');
+                root.append(grid, detail);
+                const subtotal = (values) => values.reduce((sum, route) =>
+                    sum + Number(route.amounts_minor?.total_minor || 0), 0);
+                const showDetail = () => {
+                    const values = groups.get(selectedMonth) || [];
+                    detail.replaceChildren();
+                    detail.appendChild(element('h3', '', monthLabel(selectedMonth)));
+                    detail.appendChild(element('p', '', `${values.length} tras · ${money(subtotal(values))} · rozpis podle aktuálních zápisů`));
+                    const wrap = element('div', 'carrier-pay-table-wrap');
+                    const table = element('table', 'carrier-pay-table');
+                    const header = element('tr');
+                    ['Datum', 'Doručeno', 'Přesměrováno', 'Kilometry', 'Kvalita', 'Příplatek', 'Celkem']
+                        .forEach((label) => header.appendChild(element('th', '', label)));
+                    table.appendChild(element('thead')).appendChild(header);
+                    const tbody = element('tbody');
                     values.sort((a, b) => String(b.service_date).localeCompare(String(a.service_date)))
                         .forEach((route) => {
-                            const item = document.createElement('li');
                             const amount = route.amounts_minor || {};
-                            item.textContent = `${route.service_date}: ${money(amount.total_minor || 0)} (doručeno ${money(amount.delivered_minor || 0)}, přesměrováno ${money(amount.redirected_minor || 0)}, km ${money(amount.km_minor || 0)}, kvalita ${route.quality_pending ? 'čeká' : money(amount.quality_minor || 0)}, samostatný příplatek ${money(amount.surcharge_minor || 0)})`;
-                            list.appendChild(item);
+                            const row = element('tr');
+                            [route.service_date, money(amount.delivered_minor || 0),
+                                money(amount.redirected_minor || 0), money(amount.km_minor || 0),
+                                route.quality_pending ? 'Čeká' : money(amount.quality_minor || 0),
+                                money(amount.surcharge_minor || 0), money(amount.total_minor || 0)]
+                                .forEach((value) => row.appendChild(element('td', '', value)));
+                            tbody.appendChild(row);
                         });
-                    details.appendChild(list);
-                    root.appendChild(details);
+                    table.appendChild(tbody);
+                    wrap.appendChild(table);
+                    detail.appendChild(wrap);
+                };
+                const showMonths = () => {
+                    grid.replaceChildren();
+                    months.filter((month) => month.startsWith(selectedYear)).forEach((month) => {
+                        const values = groups.get(month);
+                        const button = element('button', 'carrier-pay-month');
+                        button.type = 'button';
+                        button.setAttribute('aria-pressed', String(month === selectedMonth));
+                        button.append(element('span', '', monthLabel(month)),
+                            element('strong', '', money(subtotal(values))),
+                            element('small', '', `${values.length} tras${values.some((route) => route.quality_pending) ? ' · kvalita čeká' : ''}`));
+                        button.addEventListener('click', () => {
+                            selectedMonth = month;
+                            showMonths();
+                            showDetail();
+                        });
+                        grid.appendChild(button);
+                    });
+                    showDetail();
+                };
+                yearSelect.addEventListener('change', () => {
+                    selectedYear = yearSelect.value;
+                    selectedMonth = months.find((month) => month.startsWith(selectedYear));
+                    showMonths();
                 });
+                showMonths();
             }).catch((error) => {
                 if (root.isConnected) root.textContent = `Průběžnou odměnu se nepodařilo načíst: ${error.message}`;
             });
