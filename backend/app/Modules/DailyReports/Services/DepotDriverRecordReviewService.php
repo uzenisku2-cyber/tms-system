@@ -69,7 +69,19 @@ final class DepotDriverRecordReviewService
         string $batchPublicId,
         array $filters,
     ): array {
-        $organizationId = $this->organizationContext->requireId();
+        return $this->compareForOrganization(
+            $this->organizationContext->requireId(), $batchPublicId, $filters,
+        );
+    }
+
+    /**
+     * Internal read for a carrier after its master relationship is verified.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    public function compareForOrganization(int $organizationId, string $batchPublicId, array $filters): array
+    {
         $batch = DepotImportBatch::query()
             ->where('organization_id', $organizationId)
             ->where('status', DepotImportBatch::STATUS_IMPORTED)

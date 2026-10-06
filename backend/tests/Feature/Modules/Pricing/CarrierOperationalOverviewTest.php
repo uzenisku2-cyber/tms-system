@@ -69,10 +69,17 @@ final class CarrierOperationalOverviewTest extends TestCase
             ->assertJsonPath('data.billing_documents.0.public_id', $ownDocument->public_id)
             ->assertJsonCount(1, 'data.fuel_transactions')
             ->assertJsonPath('data.fuel_transactions.0.public_id', $ownFuel->public_id);
+        $this->withHeaders($headers)->getJson('/api/v1/carrier/depot-route-status')
+            ->assertOk()
+            ->assertJsonPath('data.summary.awaiting_depot', 1)
+            ->assertJsonPath('data.summary.matched_pending_approval', 0)
+            ->assertJsonPath('data.approval_recorded', false)
+            ->assertJsonCount(1, 'data.routes');
         $this->withHeaders($headers)->getJson('/api/v1/financial-settlement-statements')
             ->assertForbidden();
         Sanctum::actingAs($driverUser);
         $this->withHeaders($headers)->getJson('/api/v1/carrier/overview')->assertForbidden();
+        $this->withHeaders($headers)->getJson('/api/v1/carrier/depot-route-status')->assertForbidden();
         Sanctum::actingAs($manager);
         $this->withHeaders(['X-Organization-ID' => (string) $other->getKey()])
             ->getJson('/api/v1/carrier/overview')->assertForbidden();

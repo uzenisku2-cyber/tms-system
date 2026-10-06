@@ -10,12 +10,14 @@ use App\Modules\DailyReports\Models\DepotImportBatch;
 use App\Modules\DailyReports\Models\DepotImportEvent;
 use App\Modules\DailyReports\Models\DepotImportReviewResolution;
 use App\Modules\DailyReports\Models\DepotImportRow;
+use App\Modules\DailyReports\Services\CarrierImportedReportDepotEditGuard;
 use App\Modules\DailyReports\Services\DepotDriverRecordReviewService;
 use App\Modules\DailyReports\Services\DepotImportIntegrityService;
 use App\Modules\Drivers\Models\Driver;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationMembership;
+use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -320,6 +322,29 @@ final class DepotDriverRecordReviewApiTest extends TestCase
         self::assertDatabaseCount('depot_import_events', 0);
         self::assertDatabaseCount('daily_report_versions', 0);
         self::assertDatabaseCount('daily_report_events', 0);
+    }
+
+    public function test_matching_depot_record_locks_carrier_import_edit_until_a_difference_exists(): void
+    {
+        [$actor, $organization] = $this->context();
+        [$driver, $assignment] = $this->driver($actor, $organization, 'Vít', 'Hrůza');
+        $batch = $this->importedBatch($actor, $organization, [
+            $this->readyRow(10, '2025-06-02', '35', $driver, $assignment, 'Hrůza Vít'),
+        ]);
+        $report = $this->dailyReport($actor, $organization, $driver, '2025-06-02', '35');
+        $comparison = app(DepotDriverRecordReviewService::class)->compareForOrganization(
+            (int) $organization->getKey(), (string) $batch->getRouteKey(), ['per_page' => 100],
+        );
+        self::assertSame(1, $comparison['summary']['matching']);
+        $guard = app(CarrierImportedReportDepotEditGuard::class);
+        try {
+            $guard->assertEditable($report);
+            self::fail('A matching imported report must be locked for driver correction.');
+        } catch (DomainException $exception) {
+            self::assertStringContainsString('not editable', $exception->getMessage());
+        }
+        $report->update(['delivered_parcels' => 79]);
+        $guard->assertEditable($report->refresh());
     }
 
     public function test_status_and_business_filters_are_applied_before_pagination(): void
