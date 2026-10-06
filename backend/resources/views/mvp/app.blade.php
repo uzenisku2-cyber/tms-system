@@ -3964,6 +3964,7 @@
     <button class="nav-item" type="button" data-drayvia-page="statistics">Statistiky</button>
     <button class="nav-item" type="button" data-drayvia-page="carrier-prices">Moje ceníky</button>
     <button class="nav-item" type="button" data-drayvia-page="carrier-summary">Můj provoz a vyúčtování</button>
+    <button class="nav-item" type="button" data-drayvia-page="carrier-remuneration">Průběžná odměna</button>
 <button class="nav-item" type="button" data-drayvia-page="fuel">PHM</button>
     <button class="nav-item" type="button" data-drayvia-page="finance">Finance</button>
     <button class="nav-item" type="button" data-drayvia-page="bank">Banka</button>
@@ -4252,6 +4253,7 @@
                 statistics: can('users.manage'),
                 'carrier-prices': can('people.manage') && !can('users.manage'),
                 'carrier-summary': can('people.manage') && !can('users.manage'),
+                'carrier-remuneration': can('people.manage') && !can('users.manage'),
                 fuel: can('users.manage'),
                 finance: can('pricing.view') || can('compensation.view'),
                 bank: can('pricing.view') || can('compensation.view'),
@@ -18988,6 +18990,7 @@ const allowedPreviewPage = (page) => {
         if (page === 'record-review') return can('daily-reports.review');
         if (page === 'carrier-prices') return can('people.manage') && !can('users.manage');
         if (page === 'carrier-summary') return can('people.manage') && !can('users.manage');
+        if (page === 'carrier-remuneration') return can('people.manage') && !can('users.manage');
         if (page === 'settings') return can('people.manage') || can('users.manage');
         if (['finance', 'bank'].includes(page)) return can('pricing.view') || can('compensation.view');
         if (['daily-report-settings', 'route-catalog'].includes(page)) return can('settings.catalogs.manage');
@@ -18996,6 +18999,7 @@ const allowedPreviewPage = (page) => {
 
 const templates = {
         'carrier-summary': () => `<div class="drayvia-preview-panel"><h2>Můj provoz a vyúčtování</h2><p>Údaje dopravce z výkazů a schválených dokumentů. Pouze ke čtení.</p><div id="carrierSummary">Načítám přehled…</div></div>`,
+        'carrier-remuneration': () => `<div class="drayvia-preview-panel"><h2>Průběžná odměna za trasy</h2><p>Orientační výpočet z aktuálních zápisů řidičů a platných ceníků. K fakturaci je nutná shoda se zápisem depa.</p><div id="carrierRemuneration">Načítám výpočet…</div></div>`,
         'carrier-prices': () => `<div class="drayvia-preview-panel"><h2>Moje fakturační ceníky</h2><p>Ceníky spravuje nadřazená organizace. Zde jsou pouze ke čtení.</p><div id="carrierPriceLists">Načítám ceníky…</div></div>`,
         'daily-report-settings': dailyReportSettingsWorkspace,
         'route-catalog': routeCatalogWorkspace,
@@ -26081,6 +26085,58 @@ const loadFinanceCustomers = async () => {
                     root.appendChild(section);
                 });
             }).catch((error) => { root.textContent = `Ceníky se nepodařilo načíst: ${error.message}`; });
+        }
+
+        if (page === 'carrier-remuneration') {
+            const root = content.querySelector('#carrierRemuneration');
+            const money = (minor) => new Intl.NumberFormat('cs-CZ', {
+                style: 'currency', currency: 'CZK',
+            }).format(Number(minor) / 100);
+            api('/api/v1/carrier/provisional-remuneration').then((body) => {
+                if (!root.isConnected) return;
+                const data = body.data || {};
+                root.replaceChildren();
+                const summary = document.createElement('p');
+                summary.textContent = data.total_minor === null
+                    ? `Zatím oceněné trasy: ${money(data.priced_subtotal_minor || 0)}. Neúplné nebo neoceněné trasy: ${data.unpriced_route_count || 0}. Celkovou odměnu zatím nelze určit.`
+                    : `Průběžná odměna: ${money(data.total_minor || 0)} za ${data.route_count || 0} tras.`;
+                root.appendChild(summary);
+                const routes = Array.isArray(data.routes) ? data.routes : [];
+                if (!routes.length) {
+                    const empty = document.createElement('p');
+                    empty.textContent = 'Zatím nejsou oceněné trasy.';
+                    root.appendChild(empty);
+                    return;
+                }
+                const groups = new Map();
+                routes.forEach((route) => {
+                    const month = String(route.service_date || '').slice(0, 7);
+                    if (!groups.has(month)) groups.set(month, []);
+                    groups.get(month).push(route);
+                });
+                Array.from(groups.keys()).sort().reverse().forEach((month) => {
+                    const values = groups.get(month);
+                    const details = document.createElement('details');
+                    details.className = 'drayvia-preview-panel';
+                    const caption = document.createElement('summary');
+                    const subtotal = values.reduce((sum, route) =>
+                        sum + Number(route.amounts_minor?.total_minor || 0), 0);
+                    caption.textContent = `${month}: ${money(subtotal)} · ${values.length} tras${values.some((route) => route.quality_pending) ? ' · příplatek za kvalitu čeká na doplnění měsíce' : ''}`;
+                    details.appendChild(caption);
+                    const list = document.createElement('ul');
+                    values.sort((a, b) => String(b.service_date).localeCompare(String(a.service_date)))
+                        .forEach((route) => {
+                            const item = document.createElement('li');
+                            const amount = route.amounts_minor || {};
+                            item.textContent = `${route.service_date}: ${money(amount.total_minor || 0)} (doručeno ${money(amount.delivered_minor || 0)}, přesměrováno ${money(amount.redirected_minor || 0)}, km ${money(amount.km_minor || 0)}, kvalita ${route.quality_pending ? 'čeká' : money(amount.quality_minor || 0)}, samostatný příplatek ${money(amount.surcharge_minor || 0)})`;
+                            list.appendChild(item);
+                        });
+                    details.appendChild(list);
+                    root.appendChild(details);
+                });
+            }).catch((error) => {
+                if (root.isConnected) root.textContent = `Průběžnou odměnu se nepodařilo načíst: ${error.message}`;
+            });
         }
 
         if (page === 'carrier-summary') {
