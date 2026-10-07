@@ -58,6 +58,23 @@ final class FinancialSettlementStatementDraftApiTest extends TestCase
             'financial_calculation_public_ids' => [], 'financial_mutual_charge_public_ids' => [$charge->public_id],
             'reason' => 'August settlement draft.',
         ];
+        $this->postJson('/api/v1/financial-settlement-statements', $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('financial_mutual_charge_public_ids');
+        $carrierActor = User::factory()->create();
+        OrganizationMembership::query()->create(['organization_id' => $carrier->id, 'user_id' => $carrierActor->id, 'relationship_type' => OrganizationMembership::RELATIONSHIP_OWNER, 'status' => OrganizationMembership::STATUS_ACTIVE, 'valid_from' => now()->subDay()]);
+        $registrar->setPermissionsTeamId((int) $carrier->id);
+        $registrar->forgetCachedPermissions();
+        $carrierActor->givePermissionTo(Permission::findOrCreate('people.manage', 'web'));
+        Sanctum::actingAs($carrierActor);
+        $this->withHeader('X-Organization-ID', (string) $carrier->id);
+        $this->postJson('/api/v1/counterparty/offset-charges/'.$charge->public_id.'/decision', [
+            'idempotency_key' => (string) Str::uuid(), 'expected_revision' => 2,
+            'decision' => 'accepted', 'reason' => 'Agreed fuel offset.',
+        ])->assertCreated()->assertJsonPath('data.decision', 'accepted');
+        Sanctum::actingAs($actor);
+        $this->withHeader('X-Organization-ID', (string) $owner->id);
+        $registrar->setPermissionsTeamId((int) $owner->id);
+        $registrar->forgetCachedPermissions();
         $created = $this->postJson('/api/v1/financial-settlement-statements', $payload);
         $created->assertCreated()->assertJsonPath('data.earning_amount_minor', 0)
             ->assertJsonPath('data.deduction_amount_minor', 125000)->assertJsonPath('data.net_balance_minor', -125000)

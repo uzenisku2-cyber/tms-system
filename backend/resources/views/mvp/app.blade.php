@@ -3964,6 +3964,7 @@
     <button class="nav-item" type="button" data-drayvia-page="statistics">Statistiky</button>
     <button class="nav-item" type="button" data-drayvia-page="carrier-prices">Moje ceníky</button>
     <button class="nav-item" type="button" data-drayvia-page="carrier-summary">Můj provoz a vyúčtování</button>
+    <button class="nav-item" type="button" data-drayvia-page="offset-consents">Zápočty PHM a vozidla</button>
     <button class="nav-item" type="button" data-drayvia-page="carrier-remuneration">Průběžná odměna</button>
 <button class="nav-item" type="button" data-drayvia-page="fuel">PHM</button>
     <button class="nav-item" type="button" data-drayvia-page="finance">Finance</button>
@@ -4253,6 +4254,7 @@
                 statistics: can('users.manage'),
                 'carrier-prices': can('people.manage') && !can('users.manage'),
                 'carrier-summary': can('people.manage') && !can('users.manage'),
+                'offset-consents': can('daily-reports.view') || can('people.manage'),
                 'carrier-remuneration': can('people.manage') && !can('users.manage'),
                 fuel: can('users.manage'),
                 finance: can('pricing.view') || can('compensation.view'),
@@ -19008,6 +19010,7 @@ const allowedPreviewPage = (page) => {
         if (page === 'record-review') return can('daily-reports.review');
         if (page === 'carrier-prices') return can('people.manage') && !can('users.manage');
         if (page === 'carrier-summary') return can('people.manage') && !can('users.manage');
+        if (page === 'offset-consents') return can('daily-reports.view') || can('people.manage');
         if (page === 'carrier-remuneration') return can('people.manage') && !can('users.manage');
         if (page === 'settings') return can('people.manage') || can('users.manage');
         if (['finance', 'bank'].includes(page)) return can('pricing.view') || can('compensation.view');
@@ -19016,6 +19019,21 @@ const allowedPreviewPage = (page) => {
     };
 
 const templates = {
+        'offset-consents': () => `<style>
+            .offset-workspace { color: #183047; max-width: 1100px; }
+            .offset-workspace h2 { margin: 0 0 .4rem; }
+            .offset-workspace > p { color: #526477; line-height: 1.5; }
+            .offset-list { display: grid; gap: .8rem; margin-top: 1.2rem; }
+            .offset-item { background: #fff; border: 1px solid #d8e3ee; border-radius: 14px; padding: 1rem; }
+            .offset-item h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+            .offset-item p { margin: .3rem 0; color: #526477; }
+            .offset-item strong { font-size: 1.15rem; }
+            .offset-item textarea { display: block; box-sizing: border-box; width: 100%; min-height: 65px; margin: .7rem 0; border: 1px solid #b9cbdc; border-radius: 8px; padding: .6rem; font: inherit; }
+            .offset-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+            .offset-actions button { border: 1px solid #28649a; border-radius: 9px; padding: .5rem .8rem; cursor: pointer; background: #28649a; color: #fff; }
+            .offset-actions button:last-child { border-color: #a06032; background: #fff; color: #7a3d17; }
+            .offset-actions button:disabled { opacity: .5; cursor: wait; }
+            </style><div class="offset-workspace"><h2>Zápočty PHM a vozidla</h2><p>Zkontrolujte každou částku a zdrojový podklad. Souhlas se vztahuje jen na tuto verzi položky. Odmítnutá nebo nepotvrzená položka se nezahrne do vyúčtování.</p><div id="offsetConsentRoot" class="offset-list">Načítám položky…</div></div>`,
         'carrier-summary': () => `<style>
             .carrier-ops { color: #183047; }
             .carrier-ops h2 { margin: 0 0 .3rem; }
@@ -26280,6 +26298,94 @@ const loadFinanceCustomers = async () => {
                 showMonths();
             }).catch((error) => {
                 if (root.isConnected) root.textContent = `Průběžnou odměnu se nepodařilo načíst: ${error.message}`;
+            });
+        }
+
+        if (page === 'offset-consents') {
+            const host = content.querySelector('#offsetConsentRoot');
+            const add = (parent, tag, text, className = '') => {
+                const node = document.createElement(tag);
+                if (className) node.className = className;
+                if (text !== undefined) node.textContent = text;
+                parent.appendChild(node);
+                return node;
+            };
+            const money = (item) => new Intl.NumberFormat('cs-CZ', {
+                style: 'currency', currency: item.currency || 'CZK',
+            }).format(Number(item.amount_minor || 0) / 100);
+            const loadOffsets = async () => {
+                const response = await api('/api/v1/counterparty/offset-charges');
+                if (!host.isConnected) return;
+                host.replaceChildren();
+                const items = response.data || [];
+                if (!items.length) {
+                    add(host, 'p', 'K odsouhlasení zatím nejsou žádné položky.');
+                    return;
+                }
+                items.forEach((item) => {
+                    const card = add(host, 'section', undefined, 'offset-item');
+                    add(card, 'h3', item.category === 'fuel' ? 'Čerpání PHM' : 'Náklad na vozidlo');
+                    add(card, 'strong', money(item));
+                    add(card, 'p', item.description || 'Bez popisu');
+                    add(card, 'p', `Období ${item.service_period_from} – ${item.service_period_until}`);
+                    const evidence = add(card, 'details');
+                    add(evidence, 'summary', 'Zobrazit podklad položky');
+                    add(evidence, 'p', `Zdroj: ${item.source_type || 'neuveden'} · ${item.source_public_id || 'bez identifikátoru'}`);
+                    const snapshot = item.source_snapshot || {};
+                    const labels = {
+                        purchase_cost_minor: 'Nákupní cena (haléře)',
+                        rebilled_amount_minor: 'Přeúčtovaná částka (haléře)',
+                        gross_amount_minor: 'Celková částka (haléře)',
+                        amount_minor: 'Částka (haléře)',
+                        margin_minor: 'Rozdíl (haléře)',
+                    };
+                    Object.entries(snapshot).forEach(([key, value]) => {
+                        const rendered = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                        add(evidence, 'p', `${labels[key] || key}: ${rendered}`);
+                    });
+
+                    add(card, 'p', item.decision === 'accepted' ? 'Souhlas se zápočtem zaznamenán.'
+                        : item.decision === 'rejected' ? 'Nesouhlas zaznamenán; položka se nezapočte.'
+                            : 'Čeká na vaše rozhodnutí.');
+                    if (item.decision) {
+                        if (item.decision_reason) add(card, 'p', `Důvod: ${item.decision_reason}`);
+                        return;
+                    }
+                    const reason = add(card, 'textarea');
+                    reason.placeholder = 'Důvod rozhodnutí (alespoň 3 znaky)';
+                    reason.setAttribute('aria-label', 'Důvod rozhodnutí o zápočtu');
+                    const actions = add(card, 'div', undefined, 'offset-actions');
+                    const status = add(card, 'p', '');
+                    ['accepted', 'rejected'].forEach((decision) => {
+                        const button = add(actions, 'button', decision === 'accepted' ? 'Souhlasím se zápočtem' : 'Nesouhlasím');
+                        button.type = 'button';
+                        button.addEventListener('click', async () => {
+                            const explanation = reason.value.trim();
+                            if (explanation.length < 3) {
+                                status.textContent = 'Uveďte důvod alespoň třemi znaky.';
+                                reason.focus();
+                                return;
+                            }
+                            const buttons = actions.querySelectorAll('button');
+                            buttons.forEach((control) => { control.disabled = true; });
+                            try {
+                                await api(`/api/v1/counterparty/offset-charges/${encodeURIComponent(item.public_id)}/decision`, {
+                                    method: 'POST', body: JSON.stringify({
+                                        idempotency_key: crypto.randomUUID(), expected_revision: item.revision,
+                                        decision, reason: explanation,
+                                    }),
+                                });
+                                await loadOffsets();
+                            } catch (error) {
+                                status.textContent = `Rozhodnutí se nepodařilo uložit: ${error.message}`;
+                                buttons.forEach((control) => { control.disabled = false; });
+                            }
+                        });
+                    });
+                });
+            };
+            loadOffsets().catch((error) => {
+                if (host.isConnected) host.textContent = `Položky se nepodařilo načíst: ${error.message}`;
             });
         }
 
