@@ -70,6 +70,7 @@ final class DailyReportPersistenceService
         private readonly DailyReportWorkflow $workflow,
         private readonly DailyReportEffectiveFormService $effectiveForm,
         private readonly PermissionRegistrar $permissionRegistrar,
+        private readonly CarrierImportedReportDepotEditGuard $depotEditGuard,
     ) {}
 
     /**
@@ -588,6 +589,7 @@ final class DailyReportPersistenceService
                         $dailyReport, $enteredByUserId, $carrierImportOrganizationId,
                         $attributes['service_date'] ?? null,
                     );
+                    $this->depotEditGuard->assertEditable($dailyReport);
                 }
 
                 if (

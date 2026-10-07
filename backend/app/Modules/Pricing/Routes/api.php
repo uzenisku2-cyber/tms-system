@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Pricing\Controllers\BillingOverviewController;
+use App\Modules\Pricing\Controllers\CarrierDepotRouteStatusController;
 use App\Modules\Pricing\Controllers\CarrierOperationalOverviewController;
 use App\Modules\Pricing\Controllers\CarrierPriceListReadController;
 use App\Modules\Pricing\Controllers\CarrierProvisionalRemunerationController;
@@ -44,6 +45,10 @@ Route::get('carrier/price-lists', [CarrierPriceListReadController::class, 'index
 Route::get('carrier/provisional-remuneration', [CarrierProvisionalRemunerationController::class, 'index'])
     ->middleware(['auth:sanctum', 'organization', 'perm:people.manage'])
     ->name('carrier.provisional-remuneration');
+
+Route::get('carrier/depot-route-status', [CarrierDepotRouteStatusController::class, 'index'])
+    ->middleware(['auth:sanctum', 'organization', 'perm:people.manage'])
+    ->name('carrier.depot-route-status');
 
 Route::get('carrier/overview', [CarrierOperationalOverviewController::class, 'index'])
     ->middleware(['auth:sanctum', 'organization', 'perm:people.manage'])

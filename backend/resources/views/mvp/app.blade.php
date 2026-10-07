@@ -18998,7 +18998,31 @@ const allowedPreviewPage = (page) => {
     };
 
 const templates = {
-        'carrier-summary': () => `<div class="drayvia-preview-panel"><h2>Můj provoz a vyúčtování</h2><p>Údaje dopravce z výkazů a schválených dokumentů. Pouze ke čtení.</p><div id="carrierSummary">Načítám přehled…</div></div>`,
+        'carrier-summary': () => `<style>
+            .carrier-ops { color: #183047; }
+            .carrier-ops h2 { margin: 0 0 .3rem; }
+            .carrier-ops > p { margin: 0 0 1rem; color: #526477; }
+            .carrier-ops-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .8rem; margin: 1rem 0; }
+            .carrier-ops-card { border: 1px solid #d8e3ee; background: white; border-radius: 13px; padding: 1rem; }
+            .carrier-ops-card span { display: block; color: #526477; font-size: .9rem; }
+            .carrier-ops-card strong { display: block; font-size: 1.3rem; margin-top: .2rem; }
+            .carrier-ops-section { background: white; border: 1px solid #d8e3ee; border-radius: 14px; padding: 1rem; margin: 1rem 0; }
+            .carrier-ops-section h3 { margin: 0 0 .5rem; }
+            .carrier-ops-section p { color: #526477; margin: .4rem 0; }
+            .carrier-ops-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
+            .carrier-ops-toolbar select { border: 1px solid #b9cbdc; background: white; border-radius: 9px; padding: .45rem .7rem; }
+            .carrier-ops-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: .7rem; }
+            .carrier-ops-month { border: 1px solid #d8e3ee; border-radius: 12px; background: white; padding: .75rem; text-align: left; color: inherit; cursor: pointer; }
+            .carrier-ops-month[aria-pressed="true"] { border: 2px solid #28649a; background: #eef6fc; }
+            .carrier-ops-month span, .carrier-ops-month strong, .carrier-ops-month small { display: block; }
+            .carrier-ops-month strong { margin: .25rem 0; }
+            .carrier-ops-table-wrap { overflow-x: auto; }
+            .carrier-ops-table { width: 100%; min-width: 580px; border-collapse: collapse; }
+            .carrier-ops-table th, .carrier-ops-table td { border-bottom: 1px solid #e6edf3; padding: .55rem; text-align: left; }
+            .carrier-ops-tag { display: inline-block; border-radius: 999px; padding: .18rem .55rem; background: #edf3f9; }
+            .carrier-ops-tag.is-match { background: #e4f4e9; color: #176139; }
+            .carrier-ops-tag.is-review { background: #fff0df; color: #855116; }
+            </style><div class="carrier-ops"><h2>Můj provoz a vyúčtování</h2><p>Stav tras podle zápisů řidičů a depa. Schválení, platba a zaúčtování jsou samostatné kroky.</p><div id="carrierSummary">Načítám přehled…</div></div>`,
         'carrier-remuneration': () => `<style>
             .carrier-pay { color: #183047; }
             .carrier-pay-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
@@ -26243,40 +26267,164 @@ const loadFinanceCustomers = async () => {
 
         if (page === 'carrier-summary') {
             const root = content.querySelector('#carrierSummary');
-            api('/api/v1/carrier/overview').then((body) => {
-                const data = body.data || {};
+            const element = (tag, className, label) => {
+                const node = document.createElement(tag);
+                if (className) node.className = className;
+                if (label !== undefined) node.textContent = label;
+                return node;
+            };
+            const labels = {
+                awaiting_depot: 'Čeká na zápis depa',
+                matched_pending_approval: 'Shoda · čeká na schválení',
+                correction_required: 'Vyžaduje opravu řidiče',
+                assignment_review: 'Prověřit přiřazení řidiče',
+                manual_review: 'Ruční kontrola',
+            };
+            Promise.all([
+                api('/api/v1/carrier/overview'),
+                api('/api/v1/carrier/depot-route-status'),
+            ]).then(([overviewBody, evidenceBody]) => {
+                if (!root.isConnected) return;
+                const overview = overviewBody.data || {};
+                const evidence = evidenceBody.data || {};
+                const stats = overview.statistics || {};
+                const counts = evidence.summary || {};
+                const routes = Array.isArray(evidence.routes) ? evidence.routes : [];
                 root.replaceChildren();
-                const section = (title, values, format) => {
-                    const box = document.createElement('section');
-                    box.className = 'drayvia-preview-panel';
-                    const heading = document.createElement('h3');
-                    heading.textContent = title;
-                    box.appendChild(heading);
-                    if (!values.length) {
-                        const empty = document.createElement('p');
-                        empty.textContent = 'Zatím nejsou žádné zveřejněné záznamy.';
-                        box.appendChild(empty);
-                    } else {
-                        const list = document.createElement('ul');
-                        values.forEach((item) => {
-                            const row = document.createElement('li');
-                            row.textContent = format(item);
-                            list.appendChild(row);
+                const summary = element('div', 'carrier-ops-grid');
+                const card = (label, value) => {
+                    const box = element('div', 'carrier-ops-card');
+                    box.append(element('span', '', label), element('strong', '', value));
+                    return box;
+                };
+                summary.append(
+                    card('Trasy celkem', String(stats.routes || 0)),
+                    card('Shoda s depem · čeká na schválení', String(counts.matched_pending_approval || 0)),
+                    card('Čeká na zápis depa', String(counts.awaiting_depot || 0)),
+                    card('K řešení', String((counts.correction_required || 0) +
+                        (counts.assignment_review || 0) + (counts.manual_review || 0) +
+                        (counts.depot_exceptions || 0)))
+                );
+                root.appendChild(summary);
+                const operating = element('section', 'carrier-ops-section');
+                operating.append(element('h3', '', 'Provozní souhrn'),
+                    element('p', '', `${stats.delivered || 0} doručených · ${stats.redirected || 0} přesměrovaných · ${Math.round(Number(stats.actual_km || 0))} km`));
+                root.appendChild(operating);
+                const evidenceSection = element('section', 'carrier-ops-section');
+                evidenceSection.appendChild(element('h3', '', 'Shoda tras s depem'));
+                evidenceSection.appendChild(element('p', '',
+                    'Shoda je provozní porovnání. Schválení od Dominika ještě neproběhlo automaticky.'));
+                const groups = new Map();
+                routes.forEach((route) => {
+                    const month = String(route.service_date || '').slice(0, 7);
+                    if (!/^\d{4}-\d{2}$/.test(month)) return;
+                    if (!groups.has(month)) groups.set(month, []);
+                    groups.get(month).push(route);
+                });
+                const months = Array.from(groups.keys()).sort().reverse();
+                if (months.length) {
+                    let selectedYear = months[0].slice(0, 4);
+                    let selectedMonth = months[0];
+                    const toolbar = element('div', 'carrier-ops-toolbar');
+                    toolbar.appendChild(element('strong', '', 'Období'));
+                    const select = element('select');
+                    select.setAttribute('aria-label', 'Rok provozních tras');
+                    Array.from(new Set(months.map((month) => month.slice(0, 4))))
+                        .forEach((year) => {
+                            const option = element('option', '', year);
+                            option.value = year;
+                            select.appendChild(option);
                         });
+                    toolbar.appendChild(select);
+                    evidenceSection.appendChild(toolbar);
+                    const grid = element('div', 'carrier-ops-months');
+                    const details = element('div');
+                    evidenceSection.append(grid, details);
+                    const monthName = (month) => new Intl.DateTimeFormat('cs-CZ', {
+                        month: 'long', year: 'numeric', timeZone: 'UTC',
+                    }).format(new Date(`${month}-01T12:00:00Z`));
+                    const showDetail = () => {
+                        const values = groups.get(selectedMonth) || [];
+                        details.replaceChildren();
+                        const panel = element('section', 'carrier-ops-section');
+                        panel.appendChild(element('h3', '', monthName(selectedMonth)));
+                        const wrap = element('div', 'carrier-ops-table-wrap');
+                        const table = element('table', 'carrier-ops-table');
+                        const head = element('tr');
+                        ['Datum', 'Trasa', 'Provozní stav', 'Rozdílná pole']
+                            .forEach((label) => head.appendChild(element('th', '', label)));
+                        table.appendChild(element('thead')).appendChild(head);
+                        const tbody = element('tbody');
+                        values.sort((a, b) => String(b.service_date).localeCompare(String(a.service_date)))
+                            .forEach((route) => {
+                                const row = element('tr');
+                                row.append(element('td', '', route.service_date),
+                                    element('td', '', route.route_number));
+                                const cell = element('td');
+                                cell.appendChild(element('span', `carrier-ops-tag ${route.status === 'matched_pending_approval' ? 'is-match' : route.status === 'awaiting_depot' ? '' : 'is-review'}`, labels[route.status] || route.status));
+                                row.append(cell, element('td', '', (route.difference_fields || []).join(', ') || '—'));
+                                tbody.appendChild(row);
+                            });
+                        table.appendChild(tbody);
+                        wrap.appendChild(table);
+                        panel.appendChild(wrap);
+                        details.appendChild(panel);
+                    };
+                    const showMonths = () => {
+                        grid.replaceChildren();
+                        months.filter((month) => month.startsWith(selectedYear)).forEach((month) => {
+                            const values = groups.get(month);
+                            const matched = values.filter((route) => route.status === 'matched_pending_approval').length;
+                            const button = element('button', 'carrier-ops-month');
+                            button.type = 'button';
+                            button.setAttribute('aria-pressed', String(month === selectedMonth));
+                            button.append(element('span', '', monthName(month)),
+                                element('strong', '', `${matched} / ${values.length} ve shodě`),
+                                element('small', '', `${values.length - matched} čeká nebo vyžaduje řešení`));
+                            button.addEventListener('click', () => {
+                                selectedMonth = month;
+                                showMonths();
+                            });
+                            grid.appendChild(button);
+                        });
+                        showDetail();
+                    };
+                    select.addEventListener('change', () => {
+                        selectedYear = select.value;
+                        selectedMonth = months.find((month) => month.startsWith(selectedYear));
+                        showMonths();
+                    });
+                    showMonths();
+                }
+                if ((evidence.depot_exceptions || []).length) {
+                    evidenceSection.appendChild(element('p', '',
+                        `${evidence.depot_exceptions.length} zápisů depa vyžaduje samostatnou kontrolu přiřazení nebo chybějícího zápisu.`));
+                }
+                root.appendChild(evidenceSection);
+                const section = (title, values, format, emptyText) => {
+                    const box = element('section', 'carrier-ops-section');
+                    box.appendChild(element('h3', '', title));
+                    if (!values.length) {
+                        box.appendChild(element('p', '', emptyText));
+                    } else {
+                        const list = element('ul');
+                        values.forEach((item) => list.appendChild(element('li', '', format(item))));
                         box.appendChild(list);
                     }
                     root.appendChild(box);
                 };
-                const stats = data.statistics || {};
-                section('Statistiky tras', [stats], (item) =>
-                    `${item.routes || 0} tras · ${item.delivered || 0} doručených · ${item.redirected || 0} přesměrovaných · ${Math.round(Number(item.actual_km || 0))} km`);
-                section('Vyúčtování od Dominika', data.settlements || [], (item) =>
-                    `${item.period_from} – ${item.period_until}: ${Number(item.net_balance_minor || 0) / 100} ${item.currency} (${item.status})`);
-                section('Fakturační doklady', data.billing_documents || [], (item) =>
-                    `${item.period_from} – ${item.period_until}: ${item.gross_amount} ${item.currency} (${item.status})`);
-                section('Čerpání PHM', data.fuel_transactions || [], (item) =>
-                    `${item.occurred_at}: ${item.product_name || item.provider}, ${item.quantity} ${item.unit_of_measure}, ${item.gross_amount} ${item.currency}`);
-            }).catch((error) => { root.textContent = `Přehled se nepodařilo načíst: ${error.message}`; });
+                section('Vyúčtování od Dominika', overview.settlements || [],
+                    (item) => `${item.period_from} – ${item.period_until}: ${Number(item.net_balance_minor || 0) / 100} ${item.currency} (${item.status}). Platební a účetní stav se ověřuje samostatně.`,
+                    'Zatím neexistuje schválené vyúčtování. Shoda tras jej sama nevytváří.');
+                section('Fakturační doklady', overview.billing_documents || [],
+                    (item) => `${item.period_from} – ${item.period_until}: ${item.gross_amount} ${item.currency} (${item.status})`,
+                    'Zatím neexistuje schválený doklad.');
+                section('Čerpání PHM', overview.fuel_transactions || [],
+                    (item) => `${item.occurred_at}: ${item.product_name || item.provider}, ${item.quantity} ${item.unit_of_measure}, ${item.gross_amount} ${item.currency}`,
+                    'Zatím nejsou přiřazená čerpání PHM.');
+            }).catch((error) => {
+                if (root.isConnected) root.textContent = `Přehled se nepodařilo načíst: ${error.message}`;
+            });
         }
 
         if (page === 'imports') {
