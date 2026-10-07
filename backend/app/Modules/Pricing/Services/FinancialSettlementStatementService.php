@@ -14,6 +14,7 @@ use App\Modules\Pricing\Models\BillingDocumentCommercialIdentityEvent;
 use App\Modules\Pricing\Models\BillingDocumentLine;
 use App\Modules\Pricing\Models\FinancialCalculation;
 use App\Modules\Pricing\Models\FinancialMutualCharge;
+use App\Modules\Pricing\Models\FinancialMutualChargeOffsetConsent;
 use App\Modules\Pricing\Models\FinancialSettlementStatement;
 use App\Modules\Pricing\Models\FinancialSettlementStatementEvent;
 use App\Modules\Pricing\Models\FinancialSettlementStatementLine;
@@ -374,6 +375,17 @@ final class FinancialSettlementStatementService
             : (int) $charge->counterparty_driver_id === $command['recipient_driver_id'];
         if ((int) $charge->owner_organization_id !== $organizationId || ! $matches || $charge->status !== FinancialMutualCharge::STATUS_CONFIRMED || ! $charge->offset_eligible || $charge->currency !== $command['currency']) {
             throw ValidationException::withMessages(['financial_mutual_charge_public_ids' => ['Mutual charges must be confirmed, eligible and belong to the statement parties and currency.']]);
+        }
+        if ($charge->direction === FinancialMutualCharge::DIRECTION_RECEIVABLE &&
+            in_array($charge->category, [FinancialMutualCharge::CATEGORY_FUEL, FinancialMutualCharge::CATEGORY_VEHICLE_COST], true)) {
+            $accepted = FinancialMutualChargeOffsetConsent::query()
+                ->where('financial_mutual_charge_id', $charge->id)
+                ->where('charge_revision', $charge->revision)
+                ->where('charge_fingerprint', FinancialMutualChargeOffsetConsent::fingerprint($charge))
+                ->where('decision', FinancialMutualChargeOffsetConsent::ACCEPTED)->exists();
+            if (! $accepted) {
+                throw ValidationException::withMessages(['financial_mutual_charge_public_ids' => ['The counterparty must accept this exact fuel or vehicle cost offset first.']]);
+            }
         }
         $from = substr((string) $charge->getRawOriginal('service_period_from'), 0, 10);
         $until = substr((string) $charge->getRawOriginal('service_period_until'), 0, 10);

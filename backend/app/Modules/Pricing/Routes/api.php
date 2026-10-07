@@ -18,6 +18,7 @@ use App\Modules\Pricing\Controllers\CustomerReceivablesOverviewController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
+use App\Modules\Pricing\Controllers\FinancialMutualChargeOffsetConsentController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPeriodAdministrationReadController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPeriodController;
 use App\Modules\Pricing\Controllers\FinancialSettlementAccountingPostingAdministrationReadController;
@@ -86,6 +87,14 @@ Route::middleware([
 ])
     ->post('financial-settlement-statements/{financialSettlementStatement}/materialize-output', [FinancialSettlementStatementController::class, 'materializeOutput'])
     ->name('financial-settlement-statements.output.store');
+
+Route::middleware(['auth:sanctum', 'organization'])
+    ->prefix('counterparty/offset-charges')
+    ->name('counterparty.offset-charges.')
+    ->group(function (): void {
+        Route::get('/', [FinancialMutualChargeOffsetConsentController::class, 'index'])->name('index');
+        Route::post('/{financialMutualCharge}/decision', [FinancialMutualChargeOffsetConsentController::class, 'store'])->whereUuid('financialMutualCharge')->name('decision');
+    });
 
 Route::middleware([
     'auth:sanctum',
