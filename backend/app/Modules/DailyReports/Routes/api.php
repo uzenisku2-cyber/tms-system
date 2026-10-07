@@ -8,6 +8,7 @@ use App\Modules\DailyReports\Controllers\DepotDriverRecordReviewController;
 use App\Modules\DailyReports\Controllers\DepotImportDraftController;
 use App\Modules\DailyReports\Controllers\DepotImportPreviewController;
 use App\Modules\DailyReports\Controllers\DepotImportReviewResolutionController;
+use App\Modules\DailyReports\Controllers\DepotRouteApprovalController;
 use App\Modules\DailyReports\Controllers\DriverQualityProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -130,6 +131,10 @@ Route::middleware([
         Route::post('/{batch}/rows/{row}/ignore-zero', [DepotImportReviewResolutionController::class, 'ignoreZeroValue'])->whereUuid('batch')->whereUuid('row')->name('ignore-zero');
         Route::delete('/{batch}/rows/{row}/resolution', [DepotImportReviewResolutionController::class, 'revert'])->whereUuid('batch')->whereUuid('row')->name('resolution.revert');
     });
+
+Route::post('daily-reports/record-review/depot-driver/{batch}/rows/{row}/approve', [DepotRouteApprovalController::class, 'store'])
+    ->middleware(['auth:sanctum', 'organization', 'perm:daily-reports.approve'])
+    ->whereUuid('batch')->whereUuid('row')->name('daily-reports.record-review.depot-driver.approve');
 
 Route::middleware([
     'auth:sanctum',

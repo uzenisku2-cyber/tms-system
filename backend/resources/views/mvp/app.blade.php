@@ -17829,6 +17829,15 @@ const bindFuelWorkspace = () => {
         ['operational_notes', 'Provozní poznámka'],
     ];
 
+    const depotDriverReviewCanApprove = () => {
+        try {
+            return JSON.parse(sessionStorage.getItem('tms_mvp_capabilities') || '[]')
+                .includes('daily-reports.approve');
+        } catch (_) {
+            return false;
+        }
+    };
+
     const depotDriverReviewState = {
         batches: [],
         selectedBatch: '',
@@ -18260,6 +18269,9 @@ const bindFuelWorkspace = () => {
             </div>`
             : '';
         const actionButtons = [
+            status === 'matching' && driver?.public_id && depotDriverReviewCanApprove()
+                ? `<button type="button" class="drayvia-preview-action" data-review-approve-route data-row-id="${depotDriverReviewEscape(depot.row_public_id)}" data-report-id="${depotDriverReviewEscape(driver.public_id)}" data-report-version="${depotDriverReviewEscape(driver.current_version)}">Schválit shodu trasy</button>`
+                : '',
             actions.driver_attribution_correction_available && actualDriver?.id
                 ? `<button type="button" class="drayvia-preview-action" data-review-correct-driver data-row-id="${depotDriverReviewEscape(depot.row_public_id)}" data-driver-id="${depotDriverReviewEscape(actualDriver.id)}" data-driver-name="${depotDriverReviewEscape(actualDriver.name)}">Opravit depo na ${depotDriverReviewEscape(actualDriver.name)}</button>`
                 : '',
@@ -18422,6 +18434,12 @@ const bindFuelWorkspace = () => {
 
     const depotDriverReviewBindResolutionActions = (host) => {
         const base = () => `/api/v1/daily-reports/record-review/depot-driver/${encodeURIComponent(depotDriverReviewState.selectedBatch)}`;
+
+        host.querySelectorAll('[data-review-approve-route]').forEach((button) => button.addEventListener('click', () => depotDriverReviewResolutionRequest(
+            `${base()}/rows/${encodeURIComponent(button.dataset.rowId)}/approve`, 'POST',
+            { title: 'Schválit provozní shodu', description: 'Aktuální verze řidičova zápisu provozně souhlasí s konkrétním řádkem depa.', impact: 'Uloží se schvalující osoba, verze zápisu, otisk depa a důvod. Tím se nevystaví faktura ani neoznačí platba nebo zaúčtování.', confirmLabel: 'Schválit shodu', defaultReason: 'Provozní shoda ověřena' },
+            { daily_report_public_id: button.dataset.reportId, expected_report_version: Number(button.dataset.reportVersion) }
+        )));
 
         host.querySelectorAll('[data-review-correct-driver]').forEach((button) => button.addEventListener('click', () => depotDriverReviewResolutionRequest(
             `${base()}/rows/${encodeURIComponent(button.dataset.rowId)}/correct-driver`, 'PATCH',
@@ -26276,6 +26294,7 @@ const loadFinanceCustomers = async () => {
             const labels = {
                 awaiting_depot: 'Čeká na zápis depa',
                 matched_pending_approval: 'Shoda · čeká na schválení',
+                approved: 'Provozně schváleno',
                 correction_required: 'Vyžaduje opravu řidiče',
                 assignment_review: 'Prověřit přiřazení řidiče',
                 manual_review: 'Ruční kontrola',
@@ -26299,6 +26318,7 @@ const loadFinanceCustomers = async () => {
                 };
                 summary.append(
                     card('Trasy celkem', String(stats.routes || 0)),
+                    card('Provozně schváleno', String(counts.approved || 0)),
                     card('Shoda s depem · čeká na schválení', String(counts.matched_pending_approval || 0)),
                     card('Čeká na zápis depa', String(counts.awaiting_depot || 0)),
                     card('K řešení', String((counts.correction_required || 0) +
@@ -26313,7 +26333,7 @@ const loadFinanceCustomers = async () => {
                 const evidenceSection = element('section', 'carrier-ops-section');
                 evidenceSection.appendChild(element('h3', '', 'Shoda tras s depem'));
                 evidenceSection.appendChild(element('p', '',
-                    'Shoda je provozní porovnání. Schválení od Dominika ještě neproběhlo automaticky.'));
+                    'Shoda je provozní porovnání. Dominikovo schválení je samostatný doložený krok; fakturace, platba a zaúčtování následují zvlášť.'));
                 const groups = new Map();
                 routes.forEach((route) => {
                     const month = String(route.service_date || '').slice(0, 7);
@@ -26361,7 +26381,7 @@ const loadFinanceCustomers = async () => {
                                 row.append(element('td', '', route.service_date),
                                     element('td', '', route.route_number));
                                 const cell = element('td');
-                                cell.appendChild(element('span', `carrier-ops-tag ${route.status === 'matched_pending_approval' ? 'is-match' : route.status === 'awaiting_depot' ? '' : 'is-review'}`, labels[route.status] || route.status));
+                                cell.appendChild(element('span', `carrier-ops-tag ${['matched_pending_approval', 'approved'].includes(route.status) ? 'is-match' : route.status === 'awaiting_depot' ? '' : 'is-review'}`, labels[route.status] || route.status));
                                 row.append(cell, element('td', '', (route.difference_fields || []).join(', ') || '—'));
                                 tbody.appendChild(row);
                             });
@@ -26374,7 +26394,7 @@ const loadFinanceCustomers = async () => {
                         grid.replaceChildren();
                         months.filter((month) => month.startsWith(selectedYear)).forEach((month) => {
                             const values = groups.get(month);
-                            const matched = values.filter((route) => route.status === 'matched_pending_approval').length;
+                            const matched = values.filter((route) => ['matched_pending_approval', 'approved'].includes(route.status)).length;
                             const button = element('button', 'carrier-ops-month');
                             button.type = 'button';
                             button.setAttribute('aria-pressed', String(month === selectedMonth));
