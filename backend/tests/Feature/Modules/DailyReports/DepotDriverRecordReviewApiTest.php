@@ -347,6 +347,38 @@ final class DepotDriverRecordReviewApiTest extends TestCase
         $guard->assertEditable($report->refresh());
     }
 
+    public function test_master_approves_only_the_current_matching_report_version_with_an_audit_record(): void
+    {
+        [$actor, $organization] = $this->context();
+        [$driver, $assignment] = $this->driver($actor, $organization, 'Vít', 'Hrůza');
+        $batch = $this->importedBatch($actor, $organization, [
+            $this->readyRow(10, '2025-06-02', '35', $driver, $assignment, 'Hrůza Vít'),
+        ]);
+        $row = $batch->rows()->firstOrFail();
+        $report = $this->dailyReport($actor, $organization, $driver, '2025-06-02', '35');
+        $url = self::URL.'/'.$batch->getRouteKey().'/rows/'.$row->getRouteKey().'/approve';
+        $payload = [
+            'daily_report_public_id' => $report->getRouteKey(),
+            'expected_report_version' => (int) $report->getAttribute('current_version'),
+            'reason' => 'Provozní údaje byly zkontrolovány s depem.',
+        ];
+        Sanctum::actingAs($actor);
+        $this->organizationRequest($organization)->postJson($url, $payload)->assertForbidden();
+        $this->grantPermissions($actor, $organization, ['daily-reports.approve']);
+        $this->organizationRequest($organization)->postJson($url, $payload)
+            ->assertOk()->assertJsonPath('data.replayed', false);
+        $this->organizationRequest($organization)->postJson($url, $payload)
+            ->assertOk()->assertJsonPath('data.replayed', true);
+        self::assertDatabaseCount('depot_route_approvals', 1);
+        self::assertSame('submitted', $report->fresh()?->getAttribute('status'));
+
+        $report->update(['delivered_parcels' => 79, 'current_version' => 2]);
+        $this->organizationRequest($organization)->postJson($url, array_merge($payload, [
+            'expected_report_version' => 2,
+        ]))->assertUnprocessable();
+        self::assertDatabaseCount('depot_route_approvals', 1);
+    }
+
     public function test_status_and_business_filters_are_applied_before_pagination(): void
     {
         [$actor, $organization] = $this->context();

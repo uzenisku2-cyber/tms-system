@@ -52,9 +52,14 @@ final class CarrierDepotRouteStatusService
                     });
             })
             ->orderByDesc('r.service_date')
-            ->get(['r.public_id', 'r.organization_id', 'r.performed_by_driver_id',
+            ->get(['r.id', 'r.public_id', 'r.organization_id', 'r.performed_by_driver_id',
                 'r.service_date', 'r.route_number', 'r.current_version']);
         $ownReports = $reports->keyBy('public_id');
+        $approvals = DB::table('depot_route_approvals as approval')
+            ->join('depot_import_rows as depot', 'depot.id', '=', 'approval.depot_import_row_id')
+            ->whereIn('approval.daily_report_id', $reports->pluck('id')->all())
+            ->get(['approval.daily_report_id', 'approval.daily_report_version',
+                'approval.depot_values_sha256', 'depot.public_id as depot_row_public_id']);
         $assignments = DB::table('driver_organization_assignments')
             ->where('organization_id', $carrierId)
             ->get(['driver_id', 'valid_from', 'valid_until']);
@@ -91,6 +96,7 @@ final class CarrierDepotRouteStatusService
                                 'comparison_status' => $item['comparison_status'],
                                 'difference_fields' => array_column($item['differences'], 'field'),
                                 'depot_row_public_id' => $depot['row_public_id'],
+                                'depot_values_sha256' => $depot['protected_values_sha256'],
                             ];
                         } else {
                             $exceptions[] = [
@@ -107,6 +113,7 @@ final class CarrierDepotRouteStatusService
         $counts = [
             'awaiting_depot' => 0,
             'matched_pending_approval' => 0,
+            'approved' => 0,
             'correction_required' => 0,
             'assignment_review' => 0,
             'manual_review' => 0,
@@ -115,9 +122,17 @@ final class CarrierDepotRouteStatusService
         foreach ($reports as $report) {
             $comparisons = $comparisonByReport[(string) $report->public_id] ?? [];
             $comparison = count($comparisons) === 1 ? $comparisons[0] : null;
+            $approved = $comparison !== null
+                && $comparison['comparison_status'] === DepotDriverRecordReviewService::STATUS_MATCHING
+                && $approvals->contains(static fn ($item): bool => (int) $item->daily_report_id === (int) $report->id
+                    && (int) $item->daily_report_version === (int) $report->current_version
+                    && (string) $item->depot_row_public_id === (string) $comparison['depot_row_public_id']
+                    && hash_equals((string) $item->depot_values_sha256, (string) $comparison['depot_values_sha256'])
+                );
             $status = match (true) {
                 count($comparisons) > 1 => 'manual_review',
                 $comparison === null => 'awaiting_depot',
+                $approved => 'approved',
                 $comparison['comparison_status'] === DepotDriverRecordReviewService::STATUS_MATCHING => 'matched_pending_approval',
                 $comparison['comparison_status'] === DepotDriverRecordReviewService::STATUS_DIFFERENT => 'correction_required',
                 $comparison['comparison_status'] === DepotDriverRecordReviewService::STATUS_DRIVER_MISMATCH => 'assignment_review',
@@ -136,7 +151,7 @@ final class CarrierDepotRouteStatusService
 
         return [
             'source' => 'live_depot_driver_comparison',
-            'approval_recorded' => false,
+            'approval_recorded' => $counts['approved'] > 0,
             'summary' => $counts + ['depot_exceptions' => count($exceptions)],
             'routes' => $rows,
             'depot_exceptions' => $exceptions,
