@@ -6,7 +6,12 @@ namespace Tests\Feature\Modules\Pricing;
 
 use App\Models\User;
 use App\Modules\DailyReports\Models\DailyReport;
+use App\Modules\DailyReports\Models\DepotImportBatch;
+use App\Modules\DailyReports\Models\DepotImportRow;
+use App\Modules\DailyReports\Models\DepotRouteApproval;
+use App\Modules\DailyReports\Services\DepotImportIntegrityService;
 use App\Modules\Drivers\Models\Driver;
+use App\Modules\Drivers\Models\DriverOrganizationAssignment;
 use App\Modules\Fleet\Models\BankTransactionEvidence;
 use App\Modules\Fleet\Services\BankTransactionEvidenceCapacityService;
 use App\Modules\Organizations\Models\Organization;
@@ -24,6 +29,8 @@ use App\Modules\Pricing\Models\CustomerInvoiceDeliveryEvent;
 use App\Modules\Pricing\Models\CustomerInvoiceEmailDispatch;
 use App\Modules\Pricing\Models\CustomerInvoicePdfArtifact;
 use App\Modules\Pricing\Models\FinancialCalculation;
+use App\Modules\Pricing\Models\FinancialSettlementStatement;
+use App\Modules\Pricing\Models\FinancialSettlementStatementLine;
 use App\Modules\Pricing\Models\OrganizationTaxProfile;
 use App\Modules\Pricing\Models\PriceList;
 use App\Modules\Pricing\Models\PriceListVersion;
@@ -111,13 +118,18 @@ final class CustomerInvoiceIssuanceTest extends TestCase
             'license_number' => 'INVOICE-TEST', 'active' => true,
         ]);
         $report = DailyReport::query()->create([
-            'organization_id' => $customer->id,
+            'organization_id' => $issuer->id,
             'performed_by_driver_id' => $driver->id,
             'entered_by_user_id' => $user->id,
             'route_number' => 'INV-01', 'route_number_normalized' => 'inv-01',
             'service_date' => '2026-09-10',
-            'status' => DailyReport::STATUS_APPROVED,
+            'status' => DailyReport::STATUS_APPROVED, 'current_version' => 1,
             'entry_method' => DailyReport::ENTRY_METHOD_DRIVER,
+            'departure_time' => '08:00', 'arrival_time' => '16:00',
+            'actual_km' => '164.00', 'planned_km' => '136.00',
+            'loaded_parcels' => 100, 'delivered_parcels' => 80,
+            'redirected_parcels' => 10, 'undelivered_parcels' => 5,
+            'surcharge_amount' => '0.00',
         ]);
         $calculation = FinancialCalculation::query()->create([
             'organization_id' => $issuer->id,
@@ -167,6 +179,33 @@ final class CustomerInvoiceIssuanceTest extends TestCase
             'source_reference' => 'Bank contract 2026', 'reason' => 'Confirmed new invoice account.',
         ])->assertCreated()->assertJsonPath('data.revision', 1);
         $issueUrl = $url.'/'.$invoiceId.'/issue';
+        $this->postJson($issueUrl, $issuePayload)->assertUnprocessable()
+            ->assertJsonValidationErrors('depot_route_approval');
+        $statement = FinancialSettlementStatement::query()->create([
+            'owner_organization_id' => $issuer->id,
+            'recipient_type' => FinancialSettlementStatement::RECIPIENT_DRIVER,
+            'recipient_driver_id' => $driver->id,
+            'period_from' => '2026-09-01', 'period_until' => '2026-09-30',
+            'currency' => 'CZK', 'status' => FinancialSettlementStatement::STATUS_CLOSED,
+            'earning_amount_minor' => 10000, 'deduction_amount_minor' => 0,
+            'net_balance_minor' => 10000, 'source_snapshot' => ['line_count' => 1],
+            'idempotency_key' => (string) Str::uuid(), 'command_fingerprint' => str_repeat('a', 64),
+            'revision' => 1, 'created_by_user_id' => $user->id,
+        ]);
+        FinancialSettlementStatementLine::query()->create([
+            'financial_settlement_statement_id' => $statement->id, 'position' => 1,
+            'source_type' => FinancialSettlementStatementLine::SOURCE_FINANCIAL_CALCULATION,
+            'source_public_id' => $calculation->public_id, 'source_revision' => 1,
+            'financial_calculation_id' => $calculation->id,
+            'effect' => FinancialSettlementStatementLine::EFFECT_EARNING,
+            'description' => 'Route remuneration', 'amount_minor' => 10000,
+            'currency' => 'CZK', 'source_snapshot' => [],
+        ]);
+        $this->postJson('/api/v1/financial-settlement-statements/'.$statement->public_id.'/materialize-output', [
+            'idempotency_key' => (string) Str::uuid(), 'expected_revision' => 1,
+            'reason' => 'Check approved operational route before final driver payout.',
+        ])->assertUnprocessable()->assertJsonValidationErrors('depot_route_approval');
+        $this->approveDepotRoute($user, $issuer, $driver, $report);
         $this->postJson($issueUrl, $issuePayload)->assertOk()
             ->assertJsonPath('data.status', 'approved')
             ->assertJsonPath('data.document_number', 'FV-2026-001')
@@ -392,5 +431,55 @@ final class CustomerInvoiceIssuanceTest extends TestCase
         $this->postJson($url, $payload)->assertUnprocessable()
             ->assertJsonValidationErrors('calculation_public_ids');
         self::assertSame(1, BillingDocument::query()->count());
+    }
+
+    private function approveDepotRoute(User $actor, Organization $owner, Driver $driver, DailyReport $report): void
+    {
+        $assignment = DriverOrganizationAssignment::query()->create([
+            'driver_id' => $driver->id, 'organization_id' => $owner->id,
+            'employment_type' => DriverOrganizationAssignment::EMPLOYMENT_EMPLOYEE,
+            'valid_from' => '2026-09-01', 'created_by_user_id' => $actor->id,
+        ]);
+        $integrity = app(DepotImportIntegrityService::class);
+        $source = [
+            'source_row' => 10, 'status' => DepotImportRow::STATUS_READY,
+            'service_date' => '2026-09-10', 'route_number' => 'INV-01',
+            'route_number_normalized' => 'inv-01', 'carrier_name' => 'Issuer',
+            'source_driver_name' => 'Test Driver', 'source_driver_key' => 'test driver',
+            'assigned_driver_id' => $driver->id,
+            'assigned_driver_organization_assignment_id' => $assignment->id,
+            'departure_time' => '08:00', 'arrival_time' => '16:00',
+            'actual_km' => '164.00', 'planned_km' => '136.00',
+            'loaded_parcels' => 100, 'delivered_parcels' => 80,
+            'redirected_parcels' => 10, 'customer_rejected_parcels' => 5,
+            'computed_not_delivered_parcels' => 5, 'surcharge_amount' => '0.00',
+            'operational_notes' => null, 'errors' => [], 'warnings' => [],
+        ];
+        $totals = $integrity->totals([new DepotImportRow($source)]);
+        $batch = DepotImportBatch::query()->create([
+            'organization_id' => $owner->id, 'created_by_user_id' => $actor->id,
+            'status' => DepotImportBatch::STATUS_IMPORTED, 'lock_version' => 7,
+            'original_filename' => '09-2026.xlsx', 'source_sha256' => hash('sha256', 'invoice-source'),
+            'schema_fingerprint' => hash('sha256', 'invoice-schema'),
+            'sheet_name' => 'List1', 'header_start_row' => 1, 'header_end_row' => 2,
+            'data_start_row' => 3, 'confirmed_carrier_alias' => 'Issuer',
+            'confirmed_carrier_alias_normalized' => 'issuer',
+            'period_from' => '2026-09-10', 'period_until' => '2026-09-10',
+            'row_count' => 1, 'ready_row_count' => 1, 'no_run_row_count' => 0,
+            'excluded_carrier_row_count' => 0, 'source_driver_count' => 1,
+            'unassigned_ready_row_count' => 0, 'source_totals' => $totals,
+            'protected_totals_sha256' => $integrity->totalsHash($totals),
+        ]);
+        $source['depot_import_batch_id'] = $batch->id;
+        $source['protected_values_sha256'] = $integrity->protectedRowHash($source);
+        $row = DepotImportRow::query()->create($source);
+        DepotRouteApproval::query()->create([
+            'organization_id' => $owner->id, 'daily_report_id' => $report->id,
+            'daily_report_version' => $report->current_version,
+            'depot_import_batch_id' => $batch->id, 'depot_import_row_id' => $row->id,
+            'depot_values_sha256' => $row->protected_values_sha256,
+            'approved_by_user_id' => $actor->id, 'reason' => 'Verified operational match.',
+            'approved_at' => now(),
+        ]);
     }
 }

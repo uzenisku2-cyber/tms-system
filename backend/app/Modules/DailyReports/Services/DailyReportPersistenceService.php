@@ -589,8 +589,10 @@ final class DailyReportPersistenceService
                         $dailyReport, $enteredByUserId, $carrierImportOrganizationId,
                         $attributes['service_date'] ?? null,
                     );
-                    $this->depotEditGuard->assertEditable($dailyReport);
                 }
+
+                // A matching depot record locks both imported and directly entered drafts.
+                $this->depotEditGuard->assertEditable($dailyReport);
 
                 if (
                     $dailyReport->getAttribute('status') !==
@@ -829,6 +831,8 @@ final class DailyReportPersistenceService
                         )
                         ->lockForUpdate()
                         ->firstOrFail();
+
+                $this->depotEditGuard->assertEditable($dailyReport);
 
                 if (
                     $dailyReport->getAttribute(

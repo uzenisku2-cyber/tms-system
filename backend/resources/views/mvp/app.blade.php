@@ -1351,6 +1351,14 @@
     .route-overview-unified-weight tbody td * {
         font-weight: 700;
     }
+    .route-depot-detail > td { padding: 0 14px 12px; background: #f8fafc; }
+    .route-depot-detail details { max-width: 900px; }
+    .route-depot-detail summary { cursor: pointer; color: #28466d; padding: 9px 0; }
+    .route-depot-detail table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    .route-depot-detail th, .route-depot-detail table td {
+        padding: 6px 10px; border-bottom: 1px solid #dbe3ed; text-align: left;
+    }
+    .route-depot-detail tr.is-different { background: #fff1ed; }
 
         /* DRAYVIA-07 SIDEBAR BRAND */
         .sidebar .sidebar-brand-drayvia {
@@ -4242,13 +4250,14 @@
             let currentDriver = null;
             let currentUserId = null;
             let currentPermissions = [];
+            let currentOrganizationType = sessionStorage.getItem('tms_mvp_organization_type') || '';
             const capabilityKey = 'tms_mvp_capabilities';
             const can = (permission) => currentPermissions.includes(permission);
             const permittedPages = () => ({
                 overview: can('users.manage'),
                 calendar: can('daily-reports.view'),
                 routes: can('daily-reports.view'),
-                'record-review': can('daily-reports.review'),
+                'record-review': can('daily-reports.review') && currentOrganizationType === 'master',
                 drivers: can('daily-reports.view'),
                 carriers: can('users.manage'),
                 statistics: can('users.manage'),
@@ -4368,6 +4377,8 @@
                 organizationId = '';
                 currentUserId = null;
                 currentPermissions = [];
+                currentOrganizationType = '';
+                sessionStorage.removeItem('tms_mvp_organization_type');
                 sessionStorage.removeItem(capabilityKey);
                 sessionStorage.removeItem(tokenKey);
                 sessionStorage.removeItem(organizationKey);
@@ -4756,9 +4767,12 @@
                     button.disabled = false;
                 }
             };
-            const routeActionCell = (item) => {
+            const routeActionCell = (item, depotEvidence = null) => {
                 const cell = document.createElement('td');
                 cell.className = 'route-actions';
+                const editableDepotState = !depotEvidence || [
+                    'awaiting_depot', 'correction_required',
+                ].includes(depotEvidence.status);
 
                 const isCurrentOrganization = String(item.organization_id)
                     === organizationId;
@@ -4787,8 +4801,10 @@
                         && can('daily-reports.enter-for-driver'));
 
                 if (
-                    (item.status === 'draft' && mayEditDraft)
-                    || (item.status === 'correction_requested' && mayCorrect)
+                    editableDepotState && (
+                        (item.status === 'draft' && mayEditDraft)
+                        || (item.status === 'correction_requested' && mayCorrect)
+                    )
                 ) {
                     const editButton =
                         document.createElement('button');
@@ -5251,7 +5267,23 @@
 
                 return cell;
             };
-            const renderReports = (items, pagination) => {
+            const depotRouteLabels = {
+                awaiting_depot: 'Čeká na zápis depa',
+                matched_pending_approval: 'Souhlasí s depem · čeká na schválení',
+                approved: 'Provozně schváleno',
+                correction_required: 'Údaje trasy se liší',
+                assignment_review: 'Nesouhlasí přiřazení řidiče',
+                manual_review: 'Řeší nadřazená organizace',
+            };
+            const depotFieldLabels = {
+                departure_time: 'Odjezd', arrival_time: 'Příjezd',
+                loaded_parcels: 'Naloženo', delivered_parcels: 'Doručeno',
+                redirected_parcels: 'Přesměrováno', customer_rejected_parcels: 'Odmítnuto',
+                computed_not_delivered_parcels: 'Nedoručeno', actual_km: 'Skutečné km',
+                planned_km: 'Plánované km', surcharge_amount: 'Příplatek',
+                operational_notes: 'Provozní poznámka',
+            };
+            const renderReports = (items, pagination, depotRoutes = null) => {
                 if (inlineDailyReportRow) {
                     closeDailyReportForm();
                 }
@@ -5399,9 +5431,53 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                         kilometreDifference.className
                     ));
                     row.appendChild(statusBadge(item.status));
-                    row.appendChild(routeActionCell(item));
+                    row.appendChild(routeActionCell(
+                        item, depotRoutes?.get(String(item.public_id))
+                    ));
 
                     reportTableBody.appendChild(row);
+                    if (depotRoutes !== null) {
+                        const evidence = depotRoutes.get(String(item.public_id));
+                        const detailRow = document.createElement('tr');
+                        detailRow.className = 'route-depot-detail';
+                        const detailCell = document.createElement('td');
+                        detailCell.colSpan = 14;
+                        const details = document.createElement('details');
+                        const heading = document.createElement('summary');
+                        heading.textContent = `Zápis depa: ${depotRouteLabels[evidence?.status] || (evidence ? 'Vyžaduje kontrolu' : 'Stav není dostupný')}`;
+                        details.appendChild(heading);
+                        if (evidence?.depot_values && evidence?.driver_values) {
+                            const table = document.createElement('table');
+                            const header = document.createElement('tr');
+                            ['Údaj', 'Zápis řidiče', 'Zápis depa'].forEach((label) => {
+                                const th = document.createElement('th'); th.textContent = label; header.appendChild(th);
+                            });
+                            table.appendChild(document.createElement('thead')).appendChild(header);
+                            const tbody = document.createElement('tbody');
+                            Object.keys(depotFieldLabels).forEach((field) => {
+                                const values = [depotFieldLabels[field], evidence.driver_values[field], evidence.depot_values[field]];
+                                const tr = document.createElement('tr');
+                                if ((evidence.difference_fields || []).includes(field)) tr.classList.add('is-different');
+                                values.forEach((value) => {
+                                    const td = document.createElement('td');
+                                    td.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
+                                    tr.appendChild(td);
+                                });
+                                tbody.appendChild(tr);
+                            });
+                            table.appendChild(tbody);
+                            details.appendChild(table);
+                        } else {
+                            const info = document.createElement('p');
+                            info.textContent = evidence?.status === 'awaiting_depot'
+                                ? 'Zápis depa pro tuto trasu dosud nebyl přiřazen.'
+                                : 'Přiřazení zápisu depa řeší nadřazená organizace.';
+                            details.appendChild(info);
+                        }
+                        detailCell.appendChild(details);
+                        detailRow.appendChild(detailCell);
+                        reportTableBody.appendChild(detailRow);
+                    }
                 });
             };
 
@@ -6878,10 +6954,21 @@ summaryParts.push(
                         return;
                     }
 
-                    renderReports(
-                        items,
-                        completeHistory.pagination
-                    );
+                    let depotRoutes = null;
+                    if (!can('users.manage')) {
+                        try {
+                            const endpoint = can('people.manage')
+                                ? '/api/v1/carrier/depot-route-status'
+                                : '/api/v1/driver/depot-route-status';
+                            const evidence = getPayload(await api(endpoint)) || {};
+                            depotRoutes = new Map((evidence.routes || [])
+                                .map((route) => [String(route.report_public_id), route]));
+                        } catch (evidenceError) {
+                            console.warn('Stav zápisu depa se nepodařilo načíst.', evidenceError);
+                        }
+                    }
+                    if (!isCurrentLoad()) return;
+                    renderReports(items, completeHistory.pagination, depotRoutes);
 
                     renderRouteHistoryFilters(
                         navigation,
@@ -6996,6 +7083,8 @@ summaryParts.push(
                 if (availableOrganization) {
                     organizationId = String(availableOrganization.id);
                     sessionStorage.setItem(organizationKey, organizationId);
+                    currentOrganizationType = String(availableOrganization.type || '');
+                    sessionStorage.setItem('tms_mvp_organization_type', currentOrganizationType);
                 }
 
                 const identity = user.email
@@ -19007,7 +19096,8 @@ const allowedPreviewPage = (page) => {
         }
         const can = (name) => permissions.includes(name);
         if (['calendar', 'drivers'].includes(page)) return can('daily-reports.view');
-        if (page === 'record-review') return can('daily-reports.review');
+        if (page === 'record-review') return can('daily-reports.review')
+            && sessionStorage.getItem('tms_mvp_organization_type') === 'master';
         if (page === 'carrier-prices') return can('people.manage') && !can('users.manage');
         if (page === 'carrier-summary') return can('people.manage') && !can('users.manage');
         if (page === 'offset-consents') return can('daily-reports.view') || can('people.manage');

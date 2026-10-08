@@ -16,7 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 final class CustomerInvoiceIssuanceService
 {
-    public function __construct(private readonly OrganizationContext $organizationContext) {}
+    public function __construct(
+        private readonly OrganizationContext $organizationContext,
+        private readonly DepotApprovedCalculationGuard $depotApprovals,
+    ) {}
 
     /** @param array<string, mixed> $data
      * @return array<string, mixed>
@@ -70,7 +73,7 @@ final class CustomerInvoiceIssuanceService
                     || $data['taxable_supply_on'] > (string) $document->getRawOriginal('period_until'))) {
                 $this->invalid('taxable_supply_on', 'Taxable supply date must fall within the billing period.');
             }
-            $lines = $document->lines()->with('financialCalculation:id,public_id')->get();
+            $lines = $document->lines()->with('financialCalculation')->get();
             if ($lines->isEmpty()) {
                 $this->invalid('customer_invoice', 'An invoice must have at least one line.');
             }
@@ -79,6 +82,10 @@ final class CustomerInvoiceIssuanceService
             $grossCents = 0;
             $lineSnapshot = [];
             foreach ($lines as $line) {
+                if ($line->financialCalculation === null) {
+                    $this->invalid('customer_invoice', 'Every invoice line must reference a current calculation.');
+                }
+                $this->depotApprovals->assertApproved($line->financialCalculation);
                 $netCents += $this->cents((string) $line->net_amount);
                 $vatCents += $this->cents((string) $line->vat_amount);
                 $grossCents += $this->cents((string) $line->gross_amount);
@@ -87,7 +94,7 @@ final class CustomerInvoiceIssuanceService
                     'quantity' => (string) $line->quantity, 'unit_rate' => (string) $line->unit_rate,
                     'net_amount' => (string) $line->net_amount, 'vat_amount' => (string) $line->vat_amount,
                     'gross_amount' => (string) $line->gross_amount,
-                    'calculation_public_id' => $line->financialCalculation?->public_id,
+                    'calculation_public_id' => $line->financialCalculation->public_id,
                 ];
             }
             if ($netCents !== $this->cents((string) $document->net_amount)
