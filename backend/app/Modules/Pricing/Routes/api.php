@@ -32,6 +32,7 @@ use App\Modules\Pricing\Controllers\FinancialSettlementBankMatchCandidateControl
 use App\Modules\Pricing\Controllers\FinancialSettlementBankPaymentReconciliationController;
 use App\Modules\Pricing\Controllers\FinancialSettlementStatementController;
 use App\Modules\Pricing\Controllers\InvoicePaymentAccountController;
+use App\Modules\Pricing\Controllers\MasterDepotRouteStatusController;
 use App\Modules\Pricing\Controllers\PriceListController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankMatchCandidateController;
 use App\Modules\Pricing\Controllers\SupplierFuelInvoiceBankPaymentController;
@@ -51,6 +52,10 @@ Route::get('carrier/provisional-remuneration', [CarrierProvisionalRemunerationCo
 Route::get('carrier/depot-route-status', [CarrierDepotRouteStatusController::class, 'index'])
     ->middleware(['auth:sanctum', 'organization', 'perm:people.manage'])
     ->name('carrier.depot-route-status');
+
+Route::get('master/depot-route-status', [MasterDepotRouteStatusController::class, 'index'])
+    ->middleware(['auth:sanctum', 'organization', 'perm:daily-reports.view'])
+    ->name('master.depot-route-status');
 
 Route::get('driver/depot-route-status', [DriverDepotRouteStatusController::class, 'index'])
     ->middleware(['auth:sanctum', 'organization', 'perm:daily-reports.view'])

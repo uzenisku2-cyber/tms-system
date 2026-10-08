@@ -15,11 +15,13 @@ use App\Modules\Organizations\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\OrganizationRelationship;
 use App\Modules\Pricing\Models\BillingDocument;
 use App\Modules\Pricing\Models\FinancialSettlementStatement;
+use App\Modules\Pricing\Services\CarrierDepotRouteStatusService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 final class CarrierOperationalOverviewTest extends TestCase
@@ -90,6 +92,29 @@ final class CarrierOperationalOverviewTest extends TestCase
         Sanctum::actingAs($manager);
         $this->withHeaders(['X-Organization-ID' => (string) $other->getKey()])
             ->getJson('/api/v1/carrier/overview')->assertForbidden();
+    }
+
+    public function test_master_route_status_contains_all_its_reports_and_rejects_carrier_context(): void
+    {
+        $master = $this->organization(Organization::TYPE_MASTER);
+        $otherMaster = $this->organization(Organization::TYPE_MASTER);
+        $carrier = $this->organization(Organization::TYPE_SUBCONTRACTOR);
+        $actor = User::factory()->create();
+        $this->member($carrier, $actor);
+        $this->report($master, $carrier, $actor, 12);
+        $otherActor = User::factory()->create();
+        $this->member($carrier, $otherActor);
+        $this->report($otherMaster, $carrier, $otherActor, 25);
+
+        $service = app(CarrierDepotRouteStatusService::class);
+        $result = $service->forMaster((int) $master->getKey());
+        self::assertCount(1, $result['routes']);
+        self::assertSame(1, $result['summary']['awaiting_depot']);
+        self::assertSame(12, (int) DailyReport::query()
+            ->where('organization_id', $master->getKey())->value('delivered_parcels'));
+
+        $this->expectException(HttpException::class);
+        $service->forMaster((int) $carrier->getKey());
     }
 
     private function organization(string $type): Organization

@@ -5474,6 +5474,38 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                                 : 'Přiřazení zápisu depa řeší nadřazená organizace.';
                             details.appendChild(info);
                         }
+                        if (currentOrganizationType === 'master'
+                            && can('daily-reports.approve')
+                            && evidence?.status === 'matched_pending_approval'
+                            && evidence.depot_batch_public_id
+                            && evidence.depot_row_public_id) {
+                            const approve = document.createElement('button');
+                            approve.type = 'button';
+                            approve.className = 'route-action-button route-action-positive';
+                            approve.textContent = 'Schválit shodu trasy';
+                            approve.addEventListener('click', async () => {
+                                approve.disabled = true;
+                                try {
+                                    const reason = await window.drayviaRouteApprovalReason();
+                                    if (!reason?.trim()) return;
+                                    await api(`/api/v1/daily-reports/record-review/depot-driver/${encodeURIComponent(evidence.depot_batch_public_id)}/rows/${encodeURIComponent(evidence.depot_row_public_id)}/approve`, {
+                                        method: 'POST',
+                                        body: JSON.stringify({
+                                            daily_report_public_id: item.public_id,
+                                            expected_report_version: Number(evidence.report_version),
+                                            reason: reason.trim(),
+                                        }),
+                                    });
+                                    await loadReports();
+                                } catch (error) {
+                                    reportError.textContent = `Schválení trasy selhalo: ${error.message}`;
+                                    reportError.classList.remove('hidden');
+                                } finally {
+                                    approve.disabled = false;
+                                }
+                            });
+                            details.appendChild(approve);
+                        }
                         detailCell.appendChild(details);
                         detailRow.appendChild(detailCell);
                         reportTableBody.appendChild(detailRow);
@@ -6955,11 +6987,13 @@ summaryParts.push(
                     }
 
                     let depotRoutes = null;
-                    if (!can('users.manage')) {
+                    if (can('daily-reports.view')) {
                         try {
-                            const endpoint = can('people.manage')
-                                ? '/api/v1/carrier/depot-route-status'
-                                : '/api/v1/driver/depot-route-status';
+                            const endpoint = currentOrganizationType === 'master'
+                                ? '/api/v1/master/depot-route-status'
+                                : can('people.manage')
+                                    ? '/api/v1/carrier/depot-route-status'
+                                    : '/api/v1/driver/depot-route-status';
                             const evidence = getPayload(await api(endpoint)) || {};
                             depotRoutes = new Map((evidence.routes || [])
                                 .map((route) => [String(route.report_public_id), route]));
@@ -18512,6 +18546,14 @@ const bindFuelWorkspace = () => {
         document.addEventListener('keydown', onKeydown);
         document.body.appendChild(backdrop);
         reason.focus(); reason.select();
+    });
+
+    window.drayviaRouteApprovalReason = () => depotDriverReviewResolutionDialog({
+        title: 'Schválit provozní shodu',
+        description: 'Aktuální verze řidičova zápisu souhlasí se zápisem depa.',
+        impact: 'Uloží se schvalující osoba, verze zápisu a důvod. Faktura ani platba tím nevzniká.',
+        confirmLabel: 'Schválit shodu',
+        defaultReason: 'Provozní shoda ověřena',
     });
 
     const depotDriverReviewResolutionRequest = async (path, method, dialog, extra = {}) => {

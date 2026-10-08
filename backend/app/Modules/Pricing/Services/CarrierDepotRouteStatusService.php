@@ -63,6 +63,25 @@ final class CarrierDepotRouteStatusService
         return $this->compareReports($reports, $owners, $assignments);
     }
 
+    /** All routes owned by the selected master organization. */
+    public function forMaster(int $organizationId): array
+    {
+        abort_unless(Organization::query()->whereKey($organizationId)
+            ->where('type', Organization::TYPE_MASTER)->exists(), 403);
+
+        $reports = DB::table('daily_reports as r')
+            ->where('r.organization_id', $organizationId)
+            ->whereNull('r.deleted_at')
+            ->orderByDesc('r.service_date')
+            ->get(['r.id', 'r.public_id', 'r.organization_id', 'r.performed_by_driver_id',
+                'r.service_date', 'r.route_number', 'r.current_version']);
+        $assignments = DB::table('driver_organization_assignments')
+            ->where('organization_id', $organizationId)
+            ->get(['driver_id', 'valid_from', 'valid_until']);
+
+        return $this->compareReports($reports, [$organizationId], $assignments, false);
+    }
+
     /** Only the authenticated driver's own reports and corresponding depot rows. */
     public function forDriver(int $userId, int $organizationId): array
     {
@@ -161,6 +180,7 @@ final class CarrierDepotRouteStatusService
                                 'comparison_status' => $item['comparison_status'],
                                 'difference_fields' => array_column($item['differences'], 'field'),
                                 'depot_row_public_id' => $depot['row_public_id'],
+                                'depot_batch_public_id' => (string) $batch->public_id,
                                 'depot_values_sha256' => $depot['protected_values_sha256'],
                                 'depot_values' => $depot['values'],
                                 'driver_values' => $item['driver_record']['values'] ?? [],
@@ -213,6 +233,8 @@ final class CarrierDepotRouteStatusService
                 'route_number' => (string) $report->route_number,
                 'status' => $status,
                 'difference_fields' => $comparison['difference_fields'] ?? [],
+                'depot_row_public_id' => $comparison['depot_row_public_id'] ?? null,
+                'depot_batch_public_id' => $comparison['depot_batch_public_id'] ?? null,
                 'depot_values' => $comparison['depot_values'] ?? null,
                 'driver_values' => $comparison['driver_values'] ?? null,
             ];
