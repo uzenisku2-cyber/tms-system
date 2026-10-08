@@ -1351,14 +1351,86 @@
     .route-overview-unified-weight tbody td * {
         font-weight: 700;
     }
-    .route-depot-detail > td { padding: 0 14px 12px; background: #f8fafc; }
-    .route-depot-detail details { max-width: 900px; }
-    .route-depot-detail summary { cursor: pointer; color: #28466d; padding: 9px 0; }
-    .route-depot-detail table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-    .route-depot-detail th, .route-depot-detail table td {
-        padding: 6px 10px; border-bottom: 1px solid #dbe3ed; text-align: left;
+    .route-depot-detail > td { padding: 0 14px 14px; background: #f8fafc; }
+    .route-depot-detail details {
+        border: 1px solid #cbd5e1;
+        border-left: 5px solid #64748b;
+        border-radius: 10px;
+        background: #fff;
+        overflow: hidden;
     }
-    .route-depot-detail tr.is-different { background: #fff1ed; }
+    .route-depot-detail details.is-matching,
+    .route-depot-detail details.is-approved { border-left-color: #15803d; }
+    .route-depot-detail details.is-different,
+    .route-depot-detail details.is-review { border-left-color: #c2410c; }
+    .route-depot-detail summary {
+        cursor: pointer;
+        color: #334155;
+        padding: 12px 16px;
+        font-weight: 700;
+        background: #f1f5f9;
+    }
+    .route-depot-detail details.is-matching summary,
+    .route-depot-detail details.is-approved summary {
+        color: #166534;
+        background: #f0fdf4;
+    }
+    .route-depot-detail details.is-different summary,
+    .route-depot-detail details.is-review summary {
+        color: #9a3412;
+        background: #fff7ed;
+    }
+    .route-depot-detail .route-depot-content { padding: 14px 16px 16px; }
+    .route-depot-detail .route-depot-intro {
+        margin: 0 0 12px;
+        color: #475569;
+        font-size: 0.9rem;
+    }
+    .route-depot-detail .route-depot-fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .route-depot-detail .route-depot-field {
+        border: 1px solid #dbe3ed;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f8fafc;
+    }
+    .route-depot-detail .route-depot-field.is-different {
+        border-color: #fdba74;
+        background: #fff7ed;
+    }
+    .route-depot-detail .route-depot-field-name {
+        margin: 0;
+        padding: 8px 10px;
+        font-weight: 700;
+        color: #334155;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .route-depot-detail .route-depot-value {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 7px 10px;
+    }
+    .route-depot-detail .route-depot-value + .route-depot-value {
+        border-top: 1px solid #e2e8f0;
+        background: #eff6ff;
+    }
+    .route-depot-detail .route-depot-field.is-different .route-depot-value + .route-depot-value {
+        background: #ffedd5;
+    }
+    .route-depot-detail .route-depot-value span { color: #475569; font-size: 0.82rem; }
+    .route-depot-detail .route-depot-value strong {
+        color: #0f172a;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+    .route-depot-detail .route-depot-field.is-different .route-depot-value strong { color: #9a3412; }
 
         /* DRAYVIA-07 SIDEBAR BRAND */
         .sidebar .sidebar-brand-drayvia {
@@ -5443,36 +5515,53 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                         const detailCell = document.createElement('td');
                         detailCell.colSpan = 14;
                         const details = document.createElement('details');
+                        const comparisonState = evidence?.status;
+                        details.classList.add(
+                            comparisonState === 'approved' ? 'is-approved'
+                                : comparisonState === 'matched_pending_approval' ? 'is-matching'
+                                    : comparisonState === 'correction_required' ? 'is-different'
+                                        : ['assignment_review', 'manual_review'].includes(comparisonState)
+                                            ? 'is-review' : 'is-awaiting'
+                        );
                         const heading = document.createElement('summary');
                         heading.textContent = `Zápis depa: ${depotRouteLabels[evidence?.status] || (evidence ? 'Vyžaduje kontrolu' : 'Stav není dostupný')}`;
                         details.appendChild(heading);
+                        const content = document.createElement('div');
+                        content.className = 'route-depot-content';
                         if (evidence?.depot_values && evidence?.driver_values) {
-                            const table = document.createElement('table');
-                            const header = document.createElement('tr');
-                            ['Údaj', 'Zápis řidiče', 'Zápis depa'].forEach((label) => {
-                                const th = document.createElement('th'); th.textContent = label; header.appendChild(th);
-                            });
-                            table.appendChild(document.createElement('thead')).appendChild(header);
-                            const tbody = document.createElement('tbody');
+                            const intro = document.createElement('p');
+                            intro.className = 'route-depot-intro';
+                            intro.textContent = 'U každého údaje je nahoře zápis řidiče a přímo pod ním zápis depa. Oranžová označuje rozdíl.';
+                            content.appendChild(intro);
+                            const fields = document.createElement('div');
+                            fields.className = 'route-depot-fields';
                             Object.keys(depotFieldLabels).forEach((field) => {
-                                const values = [depotFieldLabels[field], evidence.driver_values[field], evidence.depot_values[field]];
-                                const tr = document.createElement('tr');
-                                if ((evidence.difference_fields || []).includes(field)) tr.classList.add('is-different');
-                                values.forEach((value) => {
-                                    const td = document.createElement('td');
-                                    td.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
-                                    tr.appendChild(td);
+                                const card = document.createElement('div');
+                                card.className = 'route-depot-field';
+                                if ((evidence.difference_fields || []).includes(field)) card.classList.add('is-different');
+                                const label = document.createElement('p');
+                                label.className = 'route-depot-field-name';
+                                label.textContent = depotFieldLabels[field];
+                                card.appendChild(label);
+                                [['Řidič', evidence.driver_values[field]], ['Depo', evidence.depot_values[field]]].forEach(([source, value]) => {
+                                    const line = document.createElement('div');
+                                    line.className = 'route-depot-value';
+                                    const sourceLabel = document.createElement('span');
+                                    sourceLabel.textContent = source;
+                                    const amount = document.createElement('strong');
+                                    amount.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
+                                    line.append(sourceLabel, amount);
+                                    card.appendChild(line);
                                 });
-                                tbody.appendChild(tr);
+                                fields.appendChild(card);
                             });
-                            table.appendChild(tbody);
-                            details.appendChild(table);
+                            content.appendChild(fields);
                         } else {
                             const info = document.createElement('p');
                             info.textContent = evidence?.status === 'awaiting_depot'
                                 ? 'Zápis depa pro tuto trasu dosud nebyl přiřazen.'
                                 : 'Přiřazení zápisu depa řeší nadřazená organizace.';
-                            details.appendChild(info);
+                            content.appendChild(info);
                         }
                         if (currentOrganizationType === 'master'
                             && can('daily-reports.approve')
@@ -5504,14 +5593,15 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                                     approve.disabled = false;
                                 }
                             });
-                            details.appendChild(approve);
+                            content.appendChild(approve);
                         } else if (currentOrganizationType === 'master'
                             && evidence?.status === 'matched_pending_approval'
                             && !can('daily-reports.approve')) {
                             const info = document.createElement('p');
                             info.textContent = 'Provozní shodu musí potvrdit uživatel s oprávněním schvalovat trasy.';
-                            details.appendChild(info);
+                            content.appendChild(info);
                         }
+                        details.appendChild(content);
                         detailCell.appendChild(details);
                         detailRow.appendChild(detailCell);
                         reportTableBody.appendChild(detailRow);
