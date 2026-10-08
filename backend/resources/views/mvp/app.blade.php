@@ -5505,6 +5505,12 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                                 }
                             });
                             details.appendChild(approve);
+                        } else if (currentOrganizationType === 'master'
+                            && evidence?.status === 'matched_pending_approval'
+                            && !can('daily-reports.approve')) {
+                            const info = document.createElement('p');
+                            info.textContent = 'Provozní shodu musí potvrdit uživatel s oprávněním schvalovat trasy.';
+                            details.appendChild(info);
                         }
                         detailCell.appendChild(details);
                         detailRow.appendChild(detailCell);
@@ -6988,17 +6994,32 @@ summaryParts.push(
 
                     let depotRoutes = null;
                     if (can('daily-reports.view')) {
-                        try {
-                            const endpoint = currentOrganizationType === 'master'
-                                ? '/api/v1/master/depot-route-status'
-                                : can('people.manage')
+                        const candidates = currentOrganizationType === 'master'
+                            ? ['/api/v1/master/depot-route-status']
+                            : currentOrganizationType === 'subcontractor'
+                                ? [can('people.manage')
                                     ? '/api/v1/carrier/depot-route-status'
-                                    : '/api/v1/driver/depot-route-status';
-                            const evidence = getPayload(await api(endpoint)) || {};
-                            depotRoutes = new Map((evidence.routes || [])
-                                .map((route) => [String(route.report_public_id), route]));
-                        } catch (evidenceError) {
-                            console.warn('Stav zápisu depa se nepodařilo načíst.', evidenceError);
+                                    : '/api/v1/driver/depot-route-status']
+                                : ['/api/v1/master/depot-route-status',
+                                    can('people.manage')
+                                        ? '/api/v1/carrier/depot-route-status'
+                                        : '/api/v1/driver/depot-route-status'];
+                        for (const endpoint of candidates) {
+                            try {
+                                const evidence = getPayload(await api(endpoint)) || {};
+                                depotRoutes = new Map((evidence.routes || [])
+                                    .map((route) => [String(route.report_public_id), route]));
+                                if (endpoint === '/api/v1/master/depot-route-status') {
+                                    currentOrganizationType = 'master';
+                                    sessionStorage.setItem('tms_mvp_organization_type', 'master');
+                                }
+                                break;
+                            } catch (evidenceError) {
+                                if (evidenceError.status !== 403 || endpoint === candidates.at(-1)) {
+                                    console.warn('Stav zápisu depa se nepodařilo načíst.', evidenceError);
+                                    break;
+                                }
+                            }
                         }
                     }
                     if (!isCurrentLoad()) return;
