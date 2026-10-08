@@ -1431,6 +1431,29 @@
         overflow-wrap: anywhere;
     }
     .route-depot-detail .route-depot-field.is-different .route-depot-value strong { color: #9a3412; }
+    .route-bulk-approval {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 12px 0;
+        padding: 12px 14px;
+        border: 1px solid #bbf7d0;
+        border-radius: 9px;
+        background: #f0fdf4;
+    }
+    .route-bulk-approval[hidden] { display: none; }
+    .route-bulk-approval button {
+        border: 0;
+        border-radius: 7px;
+        padding: 9px 14px;
+        background: #15803d;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .route-bulk-approval button:disabled { opacity: 0.65; cursor: wait; }
+    .route-bulk-approval p { margin: 0; color: #166534; }
 
         /* DRAYVIA-07 SIDEBAR BRAND */
         .sidebar .sidebar-brand-drayvia {
@@ -4247,6 +4270,10 @@
                     </div>
 
                     <div id="routeFilterSummary" class="route-filter-summary"></div>
+                    <div id="routeBulkApproval" class="route-bulk-approval" hidden>
+                        <button id="routeBulkApproveButton" type="button"></button>
+                        <p id="routeBulkApprovalStatus" role="status" aria-live="polite"></p>
+                    </div>
                 </div>
                 <div class="table-wrap">
                     <table class="route-overview-unified-weight">
@@ -5679,6 +5706,109 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                 driverId: null,
                 statusGroup: null,
             };
+
+            const routeBulkApprovalPanel = document.getElementById('routeBulkApproval');
+            const routeBulkApproveButton = document.getElementById('routeBulkApproveButton');
+            const routeBulkApprovalStatus = document.getElementById('routeBulkApprovalStatus');
+            let routeBulkApprovalEvidence = null;
+            let routeBulkApprovalRunning = false;
+            let routeBulkApprovalOutcome = null;
+
+            const approvableRoutesForMonth = (routes, monthKey) =>
+                Array.from(routes?.values() || [])
+                    .filter((route) =>
+                        route.status === 'matched_pending_approval'
+                        && String(route.service_date || '').slice(0, 7) === monthKey
+                        && route.report_public_id
+                        && route.depot_batch_public_id
+                        && route.depot_row_public_id
+                        && Number(route.report_version) > 0
+                    )
+                    .sort((a, b) =>
+                        String(a.service_date).localeCompare(String(b.service_date))
+                        || String(a.route_number).localeCompare(String(b.route_number), 'cs-CZ')
+                    );
+
+            const updateRouteBulkApproval = (routes) => {
+                routeBulkApprovalEvidence = routes;
+                const month = routeFilterState.monthKey;
+                const eligible = month
+                    ? approvableRoutesForMonth(routes, month)
+                    : [];
+                const visible = currentOrganizationType === 'master'
+                    && can('daily-reports.approve')
+                    && month
+                    && (eligible.length > 0 || routeBulkApprovalOutcome?.month === month);
+                routeBulkApprovalPanel.hidden = !visible;
+                routeBulkApproveButton.hidden = eligible.length === 0;
+                routeBulkApproveButton.disabled = routeBulkApprovalRunning;
+                if (visible && !routeBulkApprovalRunning) {
+                    routeBulkApproveButton.textContent =
+                        `Schválit všech ${eligible.length} shodných tras za ${month}`;
+                    routeBulkApprovalStatus.textContent =
+                        routeBulkApprovalOutcome?.month === month
+                            ? routeBulkApprovalOutcome.message
+                            : 'Platí pro všechny řidiče v měsíci. Každá trasa se před uložením znovu ověří.';
+                }
+            };
+
+            routeBulkApproveButton.addEventListener('click', async () => {
+                const month = routeFilterState.monthKey;
+                if (routeBulkApprovalRunning
+                    || currentOrganizationType !== 'master'
+                    || !can('daily-reports.approve')
+                    || !/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) return;
+                const eligible = approvableRoutesForMonth(routeBulkApprovalEvidence, month);
+                if (!eligible.length || !window.confirm(
+                    `Schválit ${eligible.length} shodných tras za ${month} u všech řidičů? Neshodné a již schválené trasy zůstanou beze změny.`
+                )) return;
+                const reason = await window.drayviaRouteApprovalReason();
+                if (!reason?.trim()) return;
+
+                routeBulkApprovalRunning = true;
+                routeBulkApproveButton.disabled = true;
+                let approved = 0;
+                let outcomeMessage = '';
+                try {
+                    const live = getPayload(await api('/api/v1/master/depot-route-status')) || {};
+                    const current = approvableRoutesForMonth(
+                        new Map((live.routes || []).map((route) => [String(route.report_public_id), route])),
+                        month
+                    );
+                    if (current.length !== eligible.length
+                        || current.some((route, index) =>
+                            route.report_public_id !== eligible[index].report_public_id
+                            || route.report_version !== eligible[index].report_version
+                            || route.depot_row_public_id !== eligible[index].depot_row_public_id
+                        )) {
+                        throw new Error('Seznam shodných tras se mezitím změnil. Obnovte přehled a zkontrolujte nový počet.');
+                    }
+                    for (const route of current) {
+                        routeBulkApprovalStatus.textContent =
+                            `Schvaluji trasu ${approved + 1} z ${current.length}…`;
+                        await api(`/api/v1/daily-reports/record-review/depot-driver/${encodeURIComponent(route.depot_batch_public_id)}/rows/${encodeURIComponent(route.depot_row_public_id)}/approve`, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                daily_report_public_id: route.report_public_id,
+                                expected_report_version: Number(route.report_version),
+                                reason: reason.trim(),
+                            }),
+                        });
+                        approved++;
+                    }
+                    await loadReports();
+                    outcomeMessage = `Schváleno ${approved} tras za ${month}.`;
+                } catch (error) {
+                    outcomeMessage =
+                        `Schváleno ${approved} tras. Další schvalování zastaveno: ${error.message}`;
+                    try { await loadReports(); } catch (refreshError) { console.warn(refreshError); }
+                } finally {
+                    routeBulkApprovalRunning = false;
+                    routeBulkApprovalOutcome = { month, message: outcomeMessage };
+                    routeBulkApproveButton.disabled = false;
+                    updateRouteBulkApproval(routeBulkApprovalEvidence);
+                }
+            });
 
             const routeFiltersAreActive = () =>
                 routeFilterState.monthKey !== null
@@ -7114,6 +7244,7 @@ summaryParts.push(
                     }
                     if (!isCurrentLoad()) return;
                     renderReports(items, completeHistory.pagination, depotRoutes);
+                    updateRouteBulkApproval(depotRoutes);
 
                     renderRouteHistoryFilters(
                         navigation,
@@ -7149,6 +7280,7 @@ summaryParts.push(
                         [],
                         {}
                     );
+                    updateRouteBulkApproval(null);
                 } finally {
                     /*
                      * An older request must not re-enable UI controls
