@@ -78,6 +78,13 @@ final class CarrierOperationalOverviewTest extends TestCase
         $this->withHeaders($headers)->getJson('/api/v1/financial-settlement-statements')
             ->assertForbidden();
         Sanctum::actingAs($driverUser);
+        $this->withHeaders($headers)->getJson('/api/v1/driver/depot-route-status')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.routes')
+            ->assertJsonPath('data.routes.0.status', 'awaiting_depot')
+            ->assertJsonPath('data.routes.0.depot_values', null);
+        $this->withHeaders($headers)->getJson('/api/v1/daily-reports/record-review/depot-driver/'.Str::uuid())
+            ->assertForbidden();
         $this->withHeaders($headers)->getJson('/api/v1/carrier/overview')->assertForbidden();
         $this->withHeaders($headers)->getJson('/api/v1/carrier/depot-route-status')->assertForbidden();
         Sanctum::actingAs($manager);

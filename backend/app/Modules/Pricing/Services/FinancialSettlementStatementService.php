@@ -26,6 +26,8 @@ use Illuminate\Validation\ValidationException;
 
 final class FinancialSettlementStatementService
 {
+    public function __construct(private readonly DepotApprovedCalculationGuard $depotApprovals) {}
+
     public function store(array $data, int $organizationId, User $actor): array
     {
         $command = $this->normalize($data);
@@ -222,6 +224,11 @@ final class FinancialSettlementStatementService
             }
             if ($statement->output_materialized_at !== null || $statement->billing_document_id !== null) {
                 throw ValidationException::withMessages(['statement' => ['The statement output is already materialized.']]);
+            }
+
+            foreach ($statement->lines()->whereNotNull('financial_calculation_id')->get() as $line) {
+                $calculation = FinancialCalculation::query()->whereKey($line->getAttribute('financial_calculation_id'))->firstOrFail();
+                $this->depotApprovals->assertApproved($calculation);
             }
 
             $balance = (int) $statement->net_balance_minor;

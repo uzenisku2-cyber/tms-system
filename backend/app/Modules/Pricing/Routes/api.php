@@ -15,6 +15,7 @@ use App\Modules\Pricing\Controllers\CustomerInvoiceEmailController;
 use App\Modules\Pricing\Controllers\CustomerInvoiceIssuanceController;
 use App\Modules\Pricing\Controllers\CustomerInvoicePdfController;
 use App\Modules\Pricing\Controllers\CustomerReceivablesOverviewController;
+use App\Modules\Pricing\Controllers\DriverDepotRouteStatusController;
 use App\Modules\Pricing\Controllers\DriverPriceListController;
 use App\Modules\Pricing\Controllers\FinancialCalculationController;
 use App\Modules\Pricing\Controllers\FinancialMutualChargeController;
@@ -50,6 +51,10 @@ Route::get('carrier/provisional-remuneration', [CarrierProvisionalRemunerationCo
 Route::get('carrier/depot-route-status', [CarrierDepotRouteStatusController::class, 'index'])
     ->middleware(['auth:sanctum', 'organization', 'perm:people.manage'])
     ->name('carrier.depot-route-status');
+
+Route::get('driver/depot-route-status', [DriverDepotRouteStatusController::class, 'index'])
+    ->middleware(['auth:sanctum', 'organization', 'perm:daily-reports.view'])
+    ->name('driver.depot-route-status');
 
 Route::get('carrier/overview', [CarrierOperationalOverviewController::class, 'index'])
     ->middleware(['auth:sanctum', 'organization', 'perm:people.manage'])

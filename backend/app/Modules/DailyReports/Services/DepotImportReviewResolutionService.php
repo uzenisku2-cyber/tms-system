@@ -12,6 +12,7 @@ use App\Modules\DailyReports\Models\DepotImportReviewResolution;
 use App\Modules\DailyReports\Models\DepotImportRow;
 use App\Modules\Drivers\Models\Driver;
 use App\Modules\Drivers\Models\DriverOrganizationAssignment;
+use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationRelationship;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
@@ -107,6 +108,8 @@ final class DepotImportReviewResolutionService
     private function lockedContext(string $batchId, string $rowId): array
     {
         $organizationId = $this->organizationContext->requireId();
+        abort_unless(Organization::query()->whereKey($organizationId)
+            ->where('type', Organization::TYPE_MASTER)->exists(), 403);
         $batch = DepotImportBatch::query()->where('organization_id', $organizationId)->where('status', DepotImportBatch::STATUS_IMPORTED)->where('public_id', $batchId)->lockForUpdate()->firstOrFail();
         $row = DepotImportRow::query()->where('depot_import_batch_id', $batch->getKey())->where('public_id', $rowId)->lockForUpdate()->firstOrFail();
         $this->integrity->assertBatchIntegrity($batch, $batch->rows()->orderBy('id')->get());
