@@ -66,6 +66,7 @@ class AuthController extends BaseController
             'daily-reports.update',
             'daily-reports.enter-for-driver',
             'daily-reports.review',
+            'daily-reports.approve',
             'settings.catalogs.manage',
         ];
 
