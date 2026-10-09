@@ -108,6 +108,64 @@ final class VehicleOwnershipEvidenceService
         });
     }
 
+    /** @param array<string, mixed> $data */
+    public function revise(string $vehiclePublicId, string $ownershipPublicId, array $data, int $organizationId, User $actor): array
+    {
+        abort_unless($actor->can('vehicle.manage'), 403);
+
+        return DB::transaction(function () use ($vehiclePublicId, $ownershipPublicId, $data, $organizationId, $actor): array {
+            $vehicle = $this->lockVisibleVehicle($vehiclePublicId, $organizationId);
+            $this->assertVehicleRevision($vehicle, (int) $data['expected_revision']);
+            $ownership = VehicleOwnership::query()
+                ->where('public_id', $ownershipPublicId)
+                ->where('vehicle_id', $vehicle->id)
+                ->where('organization_context_id', $organizationId)
+                ->lockForUpdate()->first();
+            if (! $ownership instanceof VehicleOwnership) {
+                throw (new ModelNotFoundException)->setModel(VehicleOwnership::class, [$ownershipPublicId]);
+            }
+            if ((int) $ownership->revision !== (int) $data['expected_ownership_revision']) {
+                throw new ConflictHttpException('Vehicle ownership revision is stale.');
+            }
+            $document = $this->lockVerifiedDocument($vehicle, (string) $data['source_document_public_id'], $organizationId);
+            $previous = $this->result($vehicle, $ownership, $document)['ownership'];
+            $previousEvidence = VehicleRegistryEvent::query()
+                ->where('vehicle_id', $vehicle->id)
+                ->where('organization_context_id', $organizationId)
+                ->orderByDesc('vehicle_revision')->get()
+                ->first(fn (VehicleRegistryEvent $event): bool => ($event->payload['ownership_public_id'] ?? null) === $ownershipPublicId
+                    && isset($event->payload['source_document_public_id']));
+            $nextOwnershipRevision = (int) $ownership->revision + 1;
+            $nextVehicleRevision = (int) $vehicle->current_revision + 1;
+            $ownership->update([
+                'owner_type' => $data['owner_type'],
+                'owner_organization_id' => $data['owner_type'] === 'organization' ? $data['owner_organization_id'] : null,
+                'owner_user_id' => $data['owner_type'] === 'user' ? $data['owner_user_id'] : null,
+                'external_owner_name' => $data['owner_type'] === 'external_party' ? $data['external_owner_name'] : null,
+                'ownership_share_basis_points' => $data['ownership_share_basis_points'],
+                'valid_from' => $data['valid_from'],
+                'valid_until' => $data['valid_until'] ?? null,
+                'acquisition_basis' => $data['acquisition_basis'] ?? null,
+                'verification_status' => 'unverified',
+                'change_reason' => $data['reason'],
+                'revision' => $nextOwnershipRevision,
+            ]);
+            $vehicle->update(['current_revision' => $nextVehicleRevision]);
+            $this->recordEvent($vehicle, $organizationId, $actor, $nextVehicleRevision, 'vehicle_ownership_evidence_revised', (string) $data['reason'], [
+                'ownership_public_id' => $ownership->public_id,
+                'previous_ownership' => $previous,
+                'ownership' => $this->result($vehicle, $ownership, $document)['ownership'],
+                'previous_source_document_public_id' => $previousEvidence?->payload['source_document_public_id'] ?? null,
+                'previous_source_document_revision' => $previousEvidence?->payload['source_document_revision'] ?? null,
+                'source_document_public_id' => $document->public_id,
+                'source_document_revision' => (int) $document->revision,
+                'ownership_revision' => $nextOwnershipRevision,
+            ]);
+
+            return $this->result($vehicle, $ownership, $document);
+        });
+    }
+
     private function lockVisibleVehicle(string $publicId, int $organizationId): Vehicle
     {
         $vehicle = Vehicle::query()

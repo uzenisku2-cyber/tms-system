@@ -4067,9 +4067,10 @@
     <button class="nav-item" type="button" data-drayvia-page="statistics">Statistiky</button>
     <button class="nav-item" type="button" data-drayvia-page="carrier-prices">Moje ceníky</button>
     <button class="nav-item" type="button" data-drayvia-page="carrier-summary">Můj provoz a vyúčtování</button>
-    <button class="nav-item" type="button" data-drayvia-page="offset-consents">Zápočty PHM a vozidla</button>
+    <button class="nav-item" type="button" data-drayvia-page="offset-consents">Zápočty nákladů</button>
     <button class="nav-item" type="button" data-drayvia-page="carrier-remuneration">Průběžná odměna</button>
 <button class="nav-item" type="button" data-drayvia-page="fuel">PHM</button>
+    <button class="nav-item" type="button" data-drayvia-page="vehicles">Vozidla</button>
     <button class="nav-item" type="button" data-drayvia-page="finance">Finance</button>
     <button class="nav-item" type="button" data-drayvia-page="bank">Banka</button>
 <button class="nav-item" type="button" data-drayvia-page="imports">Importy</button>
@@ -4369,6 +4370,7 @@
                 'offset-consents': can('daily-reports.view') || can('people.manage'),
                 'carrier-remuneration': can('people.manage') && !can('users.manage'),
                 fuel: can('users.manage'),
+                vehicles: can('vehicle.view'),
                 finance: can('pricing.view') || can('compensation.view'),
                 bank: can('pricing.view') || can('compensation.view'),
                 imports: can('users.manage'),
@@ -19462,6 +19464,7 @@ const allowedPreviewPage = (page) => {
         if (page === 'carrier-summary') return can('people.manage') && !can('users.manage');
         if (page === 'offset-consents') return can('daily-reports.view') || can('people.manage');
         if (page === 'carrier-remuneration') return can('people.manage') && !can('users.manage');
+        if (page === 'vehicles') return can('vehicle.view');
         if (page === 'settings') return can('people.manage') || can('users.manage');
         if (['finance', 'bank'].includes(page)) return can('pricing.view') || can('compensation.view');
         if (['daily-report-settings', 'route-catalog'].includes(page)) return can('settings.catalogs.manage');
@@ -19469,6 +19472,15 @@ const allowedPreviewPage = (page) => {
     };
 
 const templates = {
+        vehicles: () => `
+            ${header('Vozidla', 'Evidence vozidel, dokumenty, odpovědnosti, servis a smlouvy.')}
+            <section class="drayvia-preview-panel" style="padding:0;overflow:hidden;margin-top:18px;">
+                <iframe id="drayviaVehiclesFrame" title="Správa vozidel"
+                    src="/settings/vehicles?embedded=1"
+                    style="display:block;width:100%;height:1200px;border:0;background:#f4f7fb;">
+                </iframe>
+            </section>
+        `,
         'offset-consents': () => `<style>
             .offset-workspace { color: #183047; max-width: 1100px; }
             .offset-workspace h2 { margin: 0 0 .4rem; }
@@ -19483,7 +19495,7 @@ const templates = {
             .offset-actions button { border: 1px solid #28649a; border-radius: 9px; padding: .5rem .8rem; cursor: pointer; background: #28649a; color: #fff; }
             .offset-actions button:last-child { border-color: #a06032; background: #fff; color: #7a3d17; }
             .offset-actions button:disabled { opacity: .5; cursor: wait; }
-            </style><div class="offset-workspace"><h2>Zápočty PHM a vozidla</h2><p>Zkontrolujte každou částku a zdrojový podklad. Souhlas se vztahuje jen na tuto verzi položky. Odmítnutá nebo nepotvrzená položka se nezahrne do vyúčtování.</p><div id="offsetConsentRoot" class="offset-list">Načítám položky…</div></div>`,
+            </style><div class="offset-workspace"><h2>Zápočty nákladů</h2><p>Zkontrolujte každou částku a zdrojový podklad. Souhlas se vztahuje jen na tuto verzi položky. Odmítnutá nebo nepotvrzená položka se nezahrne do vyúčtování.</p><div id="offsetConsentRoot" class="offset-list">Načítám položky…</div></div>`,
         'carrier-summary': () => `<style>
             .carrier-ops { color: #183047; }
             .carrier-ops h2 { margin: 0 0 .3rem; }

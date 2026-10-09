@@ -21,7 +21,16 @@ final class StoreVehicleDocumentEvidenceRequest extends FormRequest
             'expected_revision' => ['required', 'integer', 'min:1'],
             'document_type' => ['required', 'string', 'max:64'],
             'title' => ['required', 'string', 'max:255'],
-            'storage_reference' => ['required', 'string', 'max:2048'],
+            'storage_reference' => [
+                'required_without:file', 'nullable', 'string', 'max:2048',
+                'prohibits:file',
+                'not_regex:/^managed-vehicle-document:/i',
+            ],
+            'file' => [
+                'required_without:storage_reference', 'nullable', 'file',
+                'mimes:pdf,jpg,jpeg,png', 'max:10240',
+                'prohibits:storage_reference',
+            ],
             'issue_date' => ['nullable', 'date'],
             'valid_from' => ['nullable', 'date'],
             'valid_until' => ['nullable', 'date', 'after_or_equal:valid_from'],

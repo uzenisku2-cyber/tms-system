@@ -16,6 +16,8 @@ final class RolePermissionSeeder extends Seeder
 
     /** @var list<string> */
     private const PERMISSIONS = [
+        'vehicle.view',
+        'vehicle.manage',
         'vehicles.view',
         'vehicles.create',
         'vehicles.update',

@@ -29,10 +29,23 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
             ->assertSee('data-registry-folder="manage"', false);
     }
 
+    public function test_embedded_vehicle_registry_keeps_management_without_settings_navigation(): void
+    {
+        $this->get('/settings/vehicles?embedded=1')->assertOk()
+            ->assertSee('data-registry-folder="create"', false)
+            ->assertSee('data-registry-folder="manage"', false)
+            ->assertDontSee('href="/settings"', false)
+            ->assertDontSee('<h1>Registr vozidel</h1>', false);
+
+        $this->get('/settings/vehicles')->assertOk()
+            ->assertSee('href="/settings"', false)
+            ->assertSee('<h1>Registr vozidel</h1>', false);
+    }
+
     public function test_vehicle_registry_administration_routes_are_installed_without_delete_action(): void
     {
         $routes = collect(Route::getRoutes()->getRoutes())->filter(fn ($route): bool => str_contains($route->uri(), 'vehicle-registry-administration'));
-        self::assertCount(30, $routes);
+        self::assertCount(32, $routes);
         foreach ([
             ['GET', 'api/v1/vehicle-registry-administration'],
             ['GET', 'api/v1/vehicle-registry-administration/{vehicle}'],
@@ -41,6 +54,7 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/lifecycle'],
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/field-statuses/{fieldKey}'],
             ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/documents'],
+            ['GET', 'api/v1/vehicle-registry-administration/{vehicle}/documents/{document}/download'],
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/documents/{document}/verification'],
             ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/compliance-records'],
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/compliance-records/{record}/revisions'],
@@ -61,6 +75,7 @@ final class VehicleRegistryAdministrationFoundationTest extends TestCase
             ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/installment-schedules'],
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/installment-schedules/{record}/revisions'],
             ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/ownerships'],
+            ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/ownerships/{ownership}/revisions'],
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/ownerships/{ownership}/verification'],
             ['POST', 'api/v1/vehicle-registry-administration/{vehicle}/responsibilities'],
             ['PUT', 'api/v1/vehicle-registry-administration/{vehicle}/responsibilities/{responsibility}/status'],
