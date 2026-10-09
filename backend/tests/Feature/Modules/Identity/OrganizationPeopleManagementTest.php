@@ -49,6 +49,10 @@ final class OrganizationPeopleManagementTest extends TestCase
         $masterCapabilities = $this->withHeaders($masterHeader)
             ->getJson('/api/v1/auth/capabilities')->assertOk()->json('data.permissions');
         self::assertContains('daily-reports.approve', $masterCapabilities);
+        self::assertContains('vehicle.view', $masterCapabilities);
+        self::assertContains('vehicle.manage', $masterCapabilities);
+        $this->withHeaders($masterHeader)
+            ->getJson('/api/v1/vehicle-registry-administration')->assertOk();
         $managerEmail = 'manager-'.strtolower(Str::random(8)).'@example.test';
         $created = $this->withHeaders($masterHeader)->postJson(
             '/api/v1/people/carriers/'.$carrier->getKey(),
@@ -112,6 +116,15 @@ final class OrganizationPeopleManagementTest extends TestCase
         self::assertContains('daily-reports.view', $capabilities);
         self::assertContains('daily-reports.create', $capabilities);
         self::assertNotContains('daily-reports.approve', $capabilities);
+        self::assertNotContains('vehicle.view', $capabilities);
+        self::assertNotContains('vehicle.manage', $capabilities);
+        $this->withHeaders([
+            'X-Organization-ID' => (string) $carrier->getKey(),
+        ])->getJson('/api/v1/vehicle-registry-administration')->assertForbidden();
+        $this->withHeaders([
+            'X-Organization-ID' => (string) $carrier->getKey(),
+        ])->postJson('/api/v1/vehicle-registry-administration', [])
+            ->assertForbidden();
     }
 
     public function test_master_can_promote_existing_carrier_driver_without_creating_another_account(): void

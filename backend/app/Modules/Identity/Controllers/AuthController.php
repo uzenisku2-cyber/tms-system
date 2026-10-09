@@ -56,6 +56,8 @@ class AuthController extends BaseController
         }
 
         $permissions = [
+            'vehicle.view',
+            'vehicle.manage',
             'users.manage',
             'people.manage',
             'availability.confirm',

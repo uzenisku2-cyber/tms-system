@@ -7,6 +7,7 @@ namespace App\Modules\Fleet\Controllers;
 use App\Core\Organizations\OrganizationContext;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Fleet\Models\VehicleDocument;
 use App\Modules\Fleet\Requests\IndexVehicleRegistryAdministrationRequest;
 use App\Modules\Fleet\Requests\ReviewVehicleDocumentEvidenceRequest;
 use App\Modules\Fleet\Requests\ReviewVehicleOwnershipRequest;
@@ -17,6 +18,7 @@ use App\Modules\Fleet\Requests\ReviseVehicleIncidentEvidenceRequest;
 use App\Modules\Fleet\Requests\ReviseVehicleInstallmentRequest;
 use App\Modules\Fleet\Requests\ReviseVehicleInstallmentScheduleRequest;
 use App\Modules\Fleet\Requests\ReviseVehicleInsuranceEvidenceRequest;
+use App\Modules\Fleet\Requests\ReviseVehicleOwnershipRequest;
 use App\Modules\Fleet\Requests\ReviseVehicleProvisionEvidenceRequest;
 use App\Modules\Fleet\Requests\ReviseVehicleProvisionPriceRequest;
 use App\Modules\Fleet\Requests\ReviseVehicleServiceEvidenceRequest;
@@ -53,6 +55,10 @@ use App\Modules\Fleet\Services\VehicleResponsibilityEvidenceService;
 use App\Modules\Fleet\Services\VehicleServiceEvidenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 final class VehicleRegistryAdministrationController extends Controller
 {
@@ -101,7 +107,37 @@ final class VehicleRegistryAdministrationController extends Controller
 
     public function storeDocument(StoreVehicleDocumentEvidenceRequest $request, OrganizationContext $context, string $vehicle): JsonResponse
     {
-        return response()->json($this->documentService->store($vehicle, $request->validated(), $context->requireId(), $this->actor($request)), 201);
+        $organizationId = $context->requireId();
+        $actor = $this->actor($request);
+        $this->service->show($vehicle, $organizationId, $actor);
+        $data = $request->validated();
+        unset($data['file']);
+        $path = null;
+
+        try {
+            if ($request->hasFile('file')) {
+                $file = $request->file('file');
+                $directory = 'vehicle-documents/'.$organizationId.'/'.$vehicle;
+                $name = (string) Str::uuid().'.'.$file->extension();
+                $stored = $file->storeAs($directory, $name, 'local');
+                if (! is_string($stored) || $stored === '') {
+                    abort(500, 'Document file could not be stored.');
+                }
+                $path = $stored;
+                $data['storage_reference'] = 'managed-vehicle-document:'.$path;
+            }
+
+            $result = $this->documentService->store(
+                $vehicle, $data, $organizationId, $actor,
+            );
+        } catch (Throwable $exception) {
+            if ($path !== null) {
+                Storage::disk('local')->delete($path);
+            }
+            throw $exception;
+        }
+
+        return response()->json($result, 201);
     }
 
     public function reviewDocument(ReviewVehicleDocumentEvidenceRequest $request, OrganizationContext $context, string $vehicle, string $document): JsonResponse
@@ -204,6 +240,11 @@ final class VehicleRegistryAdministrationController extends Controller
         return response()->json($this->ownershipService->store($vehicle, $request->validated(), $context->requireId(), $this->actor($request)), 201);
     }
 
+    public function reviseOwnership(ReviseVehicleOwnershipRequest $request, OrganizationContext $context, string $vehicle, string $ownership): JsonResponse
+    {
+        return response()->json($this->ownershipService->revise($vehicle, $ownership, $request->validated(), $context->requireId(), $this->actor($request)));
+    }
+
     public function reviewOwnership(ReviewVehicleOwnershipRequest $request, OrganizationContext $context, string $vehicle, string $ownership): JsonResponse
     {
         return response()->json($this->ownershipService->review($vehicle, $ownership, $request->validated(), $context->requireId(), $this->actor($request)));
@@ -222,6 +263,49 @@ final class VehicleRegistryAdministrationController extends Controller
     public function show(Request $request, OrganizationContext $context, string $vehicle): JsonResponse
     {
         return response()->json($this->service->show($vehicle, $context->requireId(), $this->actor($request)));
+    }
+
+    public function downloadDocument(
+        Request $request,
+        OrganizationContext $context,
+        string $vehicle,
+        string $document,
+    ): StreamedResponse {
+        $organizationId = $context->requireId();
+        $actor = $this->actor($request);
+        $this->service->show($vehicle, $organizationId, $actor);
+
+        $evidence = VehicleDocument::query()
+            ->where('public_id', $document)
+            ->where('organization_context_id', $organizationId)
+            ->whereHas('vehicle', fn ($query) => $query->where('public_id', $vehicle))
+            ->firstOrFail();
+
+        abort_unless(
+            $evidence->access_classification === 'operational'
+                || $actor->can('vehicle.manage'),
+            403,
+        );
+
+        $prefix = 'managed-vehicle-document:vehicle-documents/'
+            .$organizationId.'/'.$vehicle.'/';
+        $reference = (string) $evidence->storage_reference;
+        abort_unless(str_starts_with($reference, $prefix), 404);
+
+        $name = substr($reference, strlen($prefix));
+        abort_unless(
+            preg_match('/^[a-f0-9-]{36}\.(pdf|jpg|jpeg|png)$/i', $name) === 1,
+            404,
+        );
+
+        $path = substr($reference, strlen('managed-vehicle-document:'));
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($path), 404);
+
+        return $disk->download($path, $name, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     private function actor(Request $request): User
