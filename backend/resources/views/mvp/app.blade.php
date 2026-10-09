@@ -7284,9 +7284,11 @@ summaryParts.push(
                                 const evidence = getPayload(await api(endpoint)) || {};
                                 depotRoutes = new Map((evidence.routes || [])
                                     .map((route) => [String(route.report_public_id), route]));
+                                if (!isCurrentLoad()) return;
                                 if (endpoint === '/api/v1/master/depot-route-status') {
                                     currentOrganizationType = 'master';
                                     sessionStorage.setItem('tms_mvp_organization_type', 'master');
+                                    applyNavigationVisibility();
                                 }
                                 break;
                             } catch (evidenceError) {
