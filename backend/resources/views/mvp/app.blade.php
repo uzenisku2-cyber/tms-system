@@ -4269,6 +4269,10 @@
                         </button>
                     </div>
 
+                    <div id="routeDepotFilterRow" class="route-filter-row hidden">
+                        <div class="route-filter-label">POROVNÁNÍ S DEPEM</div>
+                        <div id="routeDepotFilterButtons" class="route-filter-buttons"></div>
+                    </div>
                     <div id="routeFilterSummary" class="route-filter-summary"></div>
                     <div id="routeBulkApproval" class="route-bulk-approval" hidden>
                         <button id="routeBulkApproveButton" type="button"></button>
@@ -5705,6 +5709,7 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                 to: null,
                 driverId: null,
                 statusGroup: null,
+                depotGroup: null,
             };
 
             const routeBulkApprovalPanel = document.getElementById('routeBulkApproval');
@@ -5817,6 +5822,7 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                 || routeFilterState.to !== null
                 || routeFilterState.driverId !== null
                 || routeFilterState.statusGroup !== null
+                || routeFilterState.depotGroup !== null
                 || routeFilterState.selectedYear !== null;
 
             const clearRouteFilters = async () => {
@@ -5828,6 +5834,7 @@ row.appendChild(createCell(formatWholeKilometres(item.planned_km)));
                 routeFilterState.to = null;
                 routeFilterState.driverId = null;
                 routeFilterState.statusGroup = null;
+                routeFilterState.depotGroup = null;
 
                 const customPanel =
                     document.getElementById(
@@ -7083,6 +7090,54 @@ summaryParts.push(
              */
             let routeHistoryLoadSequence = 0;
 
+            // S153: filter the complete route history by existing depot evidence.
+            const routeDepotFilterGroups = [
+                { key: null, label: 'Vše' },
+                { key: 'matching', label: 'Shoda s depem' },
+                { key: 'mismatch', label: 'Neshoda s depem' },
+                { key: 'awaiting', label: 'Bez zápisu depa' },
+                { key: 'review', label: 'K prověření' },
+            ];
+
+            const routeDepotGroup = (item, depotRoutes) => {
+                const status = depotRoutes?.get(String(item.public_id))?.status;
+                if (['matched_pending_approval', 'approved'].includes(status)) return 'matching';
+                if (status === 'correction_required') return 'mismatch';
+                if (status === 'awaiting_depot') return 'awaiting';
+                return 'review';
+            };
+
+            const renderRouteDepotFilters = (items, depotRoutes, visibleCount) => {
+                const row = document.getElementById('routeDepotFilterRow');
+                const buttons = document.getElementById('routeDepotFilterButtons');
+                row.classList.toggle('hidden', depotRoutes === null);
+                buttons.replaceChildren();
+                if (depotRoutes === null) return;
+
+                routeDepotFilterGroups.forEach((group) => {
+                    const count = group.key === null
+                        ? items.length
+                        : items.filter((item) => routeDepotGroup(item, depotRoutes) === group.key).length;
+                    buttons.appendChild(routeFilterButton(
+                        `${group.label} ${count}`,
+                        routeFilterState.depotGroup === group.key,
+                        async () => {
+                            routeFilterState.depotGroup = group.key;
+                            await loadReports();
+                        },
+                        group.key === 'mismatch' ? 'route-status-correction' : ''
+                    ));
+                });
+
+                if (routeFilterState.depotGroup !== null) {
+                    const selected = routeDepotFilterGroups.find(
+                        (group) => group.key === routeFilterState.depotGroup
+                    );
+                    const summary = document.getElementById('routeFilterSummary');
+                    summary.textContent += ` · Depo: ${selected.label} · Zobrazeno: ${visibleCount} z ${items.length}`;
+                }
+            };
+
             const loadReports = async () => {
                 const loadSequence =
                     ++routeHistoryLoadSequence;
@@ -7243,13 +7298,31 @@ summaryParts.push(
                         }
                     }
                     if (!isCurrentLoad()) return;
-                    renderReports(items, completeHistory.pagination, depotRoutes);
+                    if (routeFilterState.depotGroup !== null && depotRoutes === null) {
+                        document.getElementById('routeDepotFilterRow').classList.add('hidden');
+                        throw new Error('Porovnání s depem není dostupné. Obnovte načítání nebo zrušte filtr.');
+                    }
+
+                    const visibleItems = routeFilterState.depotGroup === null
+                        ? items
+                        : items.filter((item) =>
+                            routeDepotGroup(item, depotRoutes) === routeFilterState.depotGroup
+                        );
+                    const visiblePagination = {
+                        ...completeHistory.pagination,
+                        total: visibleItems.length,
+                        per_page: visibleItems.length,
+                        current_page: 1,
+                        last_page: 1,
+                    };
+                    renderReports(visibleItems, visiblePagination, depotRoutes);
                     updateRouteBulkApproval(depotRoutes);
 
                     renderRouteHistoryFilters(
                         navigation,
-                        completeHistory.pagination
+                        visiblePagination
                     );
+                    renderRouteDepotFilters(items, depotRoutes, visibleItems.length);
                 } catch (error) {
                     /*
                      * An obsolete request must never clear or replace
